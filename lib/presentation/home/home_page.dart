@@ -1,14 +1,14 @@
-/// HomePage — tela inicial com data, atalhos e indicador.
-///
-/// Fonte: pianolouvorja/app/src/modules/home/views/HomeView.vue
 library;
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../shared/widgets/glass_card.dart';
 import '../shared/widgets/gradient_background.dart';
+import '../shared/widgets/louvorja_logo.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -23,40 +23,57 @@ class HomePage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.pageMargin),
           children: [
-            _buildWelcomeCard(context, theme, now),
+            _buildHeader(context, theme),
+            const SizedBox(height: AppSpacing.s6),
+            _buildDateCard(context, theme, now),
             const SizedBox(height: AppSpacing.s6),
             _buildShortcuts(context, theme),
             const SizedBox(height: AppSpacing.s6),
-            _buildInfoCard(context, theme),
+            _buildFooter(context, theme),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, ThemeData theme, DateTime now) {
+  Widget _buildHeader(BuildContext context, ThemeData theme) {
+    return Row(
+      children: [
+        const LouvorJaLogo(size: 48),
+        const SizedBox(width: AppSpacing.s3),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'LouvorJA',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                'PIANO',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateCard(BuildContext context, ThemeData theme, DateTime now) {
     final weekdays = [
-      'Domingo',
-      'Segunda-feira',
-      'Terça-feira',
-      'Quarta-feira',
-      'Quinta-feira',
-      'Sexta-feira',
-      'Sábado'
+      'Domingo', 'Segunda-feira', 'Terça-feira',
+      'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'
     ];
     final months = [
-      'janeiro',
-      'fevereiro',
-      'março',
-      'abril',
-      'maio',
-      'junho',
-      'julho',
-      'agosto',
-      'setembro',
-      'outubro',
-      'novembro',
-      'dezembro'
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
     ];
     final dateStr =
         '${weekdays[now.weekday % 7]}, ${now.day} de ${months[now.month - 1]}';
@@ -65,14 +82,6 @@ class HomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'LouvorJA PIANO',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s1),
           Text(
             dateStr,
             style: theme.textTheme.headlineSmall?.copyWith(
@@ -99,8 +108,7 @@ class HomePage extends StatelessWidget {
           label: 'Liturgia',
           route: '/liturgy'),
       _Shortcut(icon: TablerIcons.book2, label: 'Bíblia', route: '/bible'),
-      _Shortcut(
-          icon: TablerIcons.hourglass, label: 'Timer', route: '/timer'),
+      _Shortcut(icon: TablerIcons.hourglass, label: 'Timer', route: '/timer'),
     ];
 
     return GridView.builder(
@@ -119,7 +127,7 @@ class HomePage extends StatelessWidget {
           color: theme.colorScheme.surfaceContainer,
           borderRadius: AppRadius.lg,
           child: InkWell(
-            onTap: () => _navigate(context, s.route),
+            onTap: () => context.push(s.route),
             borderRadius: AppRadius.lg,
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.s4),
@@ -135,6 +143,11 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Icon(
+                    TablerIcons.chevronRight,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
@@ -144,17 +157,21 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, ThemeData theme) {
+  Widget _buildFooter(BuildContext context, ThemeData theme) {
     return GlassCard(
       blurIntensity: 30,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s3,
+      ),
       child: Row(
         children: [
           Icon(
             TablerIcons.infoCircle,
             color: theme.colorScheme.onSurfaceVariant,
-            size: 20,
+            size: 18,
           ),
-          const SizedBox(width: AppSpacing.s3),
+          const SizedBox(width: AppSpacing.s2),
           Expanded(
             child: Text(
               'v0.1.0-alpha — Em desenvolvimento',
@@ -165,14 +182,6 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _navigate(BuildContext context, String route) {
-    // Será conectado ao go_router quando o router estiver implementado
-    // Por agora, usa ScaffoldMessenger para feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Navegando para $route...')),
     );
   }
 }

@@ -2,31 +2,51 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:louvorja_piano_mobile/presentation/home/home_page.dart';
 
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   group('HomePage', () {
     testWidgets('renderiza sem erros', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
+      await tester.pump();
 
       expect(find.byType(HomePage), findsOneWidget);
     });
 
-    testWidgets('exibe "LouvorJA PIANO"', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    testWidgets('exibe "LouvorJA"', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
+      await tester.pump();
 
-      expect(find.text('LouvorJA PIANO'), findsOneWidget);
+      expect(find.text('LouvorJA'), findsOneWidget);
     });
 
-    testWidgets('exibe versão do app', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    testWidgets('exibe versão do app após scroll', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
 
-      expect(find.textContaining('v0.1.0-alpha'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.textContaining('v0.1.0'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.textContaining('v0.1.0'), findsOneWidget);
     });
 
     testWidgets('exibe 4 atalhos: Hinos, Liturgia, Bíblia, Timer',
         (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
+      await tester.pump();
 
       expect(find.text('Hinos'), findsOneWidget);
       expect(find.text('Liturgia'), findsOneWidget);
@@ -35,7 +55,10 @@ void main() {
     });
 
     testWidgets('exibe data atual em português', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
+      await tester.pump();
 
       final now = DateTime.now();
       final months = [
@@ -47,17 +70,13 @@ void main() {
       expect(find.textContaining(expectedMonth), findsOneWidget);
     });
 
-    testWidgets('tap num atalho mostra feedback', (tester) async {
+    testWidgets('exibe codinome PIANO', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: HomePage()),
-        ),
+        const MaterialApp(home: Scaffold(body: HomePage())),
       );
-
-      await tester.tap(find.text('Hinos'));
       await tester.pump();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.text('PIANO'), findsOneWidget);
     });
   });
 }

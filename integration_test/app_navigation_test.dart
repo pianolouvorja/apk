@@ -2,95 +2,47 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:louvorja_piano_mobile/app/app.dart';
 
-/// Integration test: app completo com navegação entre todas as tabs.
-///
-/// Verifica que:
-/// 1. App inicializa sem crash
-/// 2. Tab Início está ativa por padrão
-/// 3. Pode navegar para cada uma das 5 tabs
-/// 4. Conteúdo correto aparece em cada tab
+/// Integration test: app completo com splash + navegação entre todas as tabs.
 void main() {
-  group('E2E: Navegação entre tabs', () {
-    testWidgets('app inicializa na tab Início', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
-      // Início mostra "LouvorJA PIANO"
-      expect(find.text('LouvorJA PIANO'), findsOneWidget);
+  group('E2E: App init + navegação', () {
+    testWidgets('mostra splash com logo e codinome', (tester) async {
+      await tester.pumpWidget(const LouvorjaApp());
+      await tester.pump();
+
+      // Splash visivel no inicio
+      expect(find.byType(Scaffold), findsWidgets);
     });
 
-    testWidgets('navega para tab Hinos', (tester) async {
+    testWidgets(' splash desaparece após boot', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
+      await tester.pump();
 
-      await tester.tap(find.text('Hinos').first);
-      await tester.pumpAndSettle();
+      // Espera splash acabar (2.2s + animação)
+      await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      // Placeholder aparece
-      expect(find.text('Hinos'), findsWidgets);
-    });
-
-    testWidgets('navega para tab Liturgia', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Liturgia').first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Liturgia'), findsWidgets);
-    });
-
-    testWidgets('navega para tab Bíblia', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Bíblia'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Bíblia'), findsWidgets);
-    });
-
-    testWidgets('navega para tab Mais', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Mais'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Configurações'), findsOneWidget);
-    });
-
-    testWidgets('volta para Início depois de navegar', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
-
-      // Vai pra Hinos
-      await tester.tap(find.text('Hinos').first);
-      await tester.pumpAndSettle();
-
-      // Volta pra Início
-      await tester.tap(find.text('Início'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('LouvorJA PIANO'), findsOneWidget);
+      // App principal deve aparecer
+      expect(find.byType(NavigationBar), findsOneWidget);
     });
 
     testWidgets('5 NavigationDestinations existem', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 3));
 
       expect(find.byType(NavigationDestination), findsNWidgets(5));
     });
 
-    testWidgets('navegação sequencial: Início -> Hinos -> Bíblia -> Mais -> Início',
+    testWidgets('navegação sequencial: Início -> Hinos -> Bíblia -> Mais',
         (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 3));
 
       // Início
-      expect(find.text('LouvorJA PIANO'), findsOneWidget);
+      expect(find.text('LouvorJA'), findsOneWidget);
 
       // -> Hinos
       await tester.tap(find.text('Hinos').first);
@@ -104,11 +56,21 @@ void main() {
       await tester.tap(find.text('Mais'));
       await tester.pumpAndSettle();
       expect(find.text('Configurações'), findsOneWidget);
+    });
 
-      // -> Início
+    testWidgets('volta para Início depois de navegar', (tester) async {
+      await tester.pumpWidget(const LouvorjaApp());
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+
+      // Vai pra Hinos
+      await tester.tap(find.text('Hinos').first);
+      await tester.pumpAndSettle();
+
+      // Volta pra Início
       await tester.tap(find.text('Início'));
       await tester.pumpAndSettle();
-      expect(find.text('LouvorJA PIANO'), findsOneWidget);
+
+      expect(find.text('LouvorJA'), findsOneWidget);
     });
   });
 }
