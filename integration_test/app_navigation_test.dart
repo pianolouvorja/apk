@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:louvorja_piano_mobile/app/app.dart';
@@ -8,6 +9,21 @@ import 'package:louvorja_piano_mobile/app/app.dart';
 /// Integration test: app completo com splash + navegação entre todas as tabs.
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
+
+  setUpAll(() {
+    const channel = MethodChannel('dev.fluttercommunity.plus/package_info');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      return <String, dynamic>{
+        'appName': 'LouvorJA PIANO',
+        'packageName': 'com.louvorja.piano.mobile',
+        'version': '0.1.0-alpha',
+        'buildNumber': '1',
+        'buildSignature': '',
+        'installerStore': null,
+      };
+    });
+  });
 
   group('E2E: App init + navegação', () {
     testWidgets('mostra splash ao iniciar', (tester) async {
@@ -21,14 +37,14 @@ void main() {
       await tester.pumpWidget(const LouvorjaApp());
       await tester.pump();
 
-      await tester.pump(const Duration(milliseconds: 2400));
+      await tester.pump(const Duration(seconds: 5));
 
       expect(find.text('LouvorJA'), findsOneWidget);
     });
 
     testWidgets('5 labels de navegação existem após boot', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pump(const Duration(milliseconds: 2400));
+      await tester.pump(const Duration(seconds: 5));
 
       expect(find.text('Início'), findsOneWidget);
       expect(find.text('Hinos'), findsWidgets);
@@ -40,7 +56,7 @@ void main() {
     testWidgets('navegação: Início -> Hinos -> Bíblia -> Mais -> Início',
         (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pump(const Duration(milliseconds: 2400));
+      await tester.pump(const Duration(seconds: 5));
 
       // Início ativo
       expect(find.text('LouvorJA'), findsOneWidget);

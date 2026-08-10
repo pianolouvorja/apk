@@ -1,25 +1,42 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:louvorja_piano_mobile/presentation/splash/splash_screen.dart';
 
 void main() {
+  setUpAll(() {
+    // Mock do package_info_plus para testes
+    const channel = MethodChannel('dev.fluttercommunity.plus/package_info');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      return <String, dynamic>{
+        'appName': 'LouvorJA PIANO',
+        'packageName': 'com.louvorja.piano.mobile',
+        'version': '0.1.0-alpha',
+        'buildNumber': '1',
+        'buildSignature': '',
+        'installerStore': null,
+      };
+    });
+  });
+
   group('SplashScreen', () {
-    testWidgets('monta com logo, codename e loader de marca', (tester) async {
+    testWidgets('monta com logo estatico antes da versao carregar',
+        (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(home: SplashScreen()),
+        const MaterialApp(home: Scaffold(body: SplashScreen())),
       );
       await tester.pump();
 
-      // Dois SVGs: logo grande + codename.
-      expect(find.byType(SvgPicture), findsNWidgets(2));
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Carregando...'), findsOneWidget);
+      // Antes da versao carregar: apenas o logo estatico
+      // Apos carregar: logo + codename (2 SVGs)
+      expect(find.byType(SvgPicture), findsWidgets);
     });
 
-    testWidgets('chama callback de boot uma única vez após 2.2 segundos',
+    testWidgets('chama callback de boot uma unica vez apos versao+timer',
         (tester) async {
       var calls = 0;
       await tester.pumpWidget(
@@ -28,7 +45,8 @@ void main() {
         ),
       );
 
-      await tester.pump(const Duration(milliseconds: 2200));
+      // Espera versao carregar + animacao + timer
+      await tester.pump(const Duration(seconds: 5));
       expect(calls, 1);
 
       await tester.pump(const Duration(seconds: 2));

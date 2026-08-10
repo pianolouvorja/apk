@@ -27,10 +27,10 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fadeLogo;
-  late final Animation<double> _fadeCodename;
-  late final Animation<double> _fadeStatus;
+  AnimationController? _controller;
+  Animation<double>? _fadeLogo;
+  Animation<double>? _fadeCodename;
+  Animation<double>? _fadeStatus;
   Timer? _bootTimer;
   bool _completed = false;
   String _version = '';
@@ -45,28 +45,36 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
+    // Carrega versão e inicia animações+timer juntos.
+    // O timer so comeca depois que a versao chegou, garantindo
+    // que ela apareça na splash.
     AppVersion.displayVersion.then((v) {
-      if (mounted) setState(() => _version = v);
+      if (!mounted) return;
+      setState(() => _version = v);
+      _startBootSequence();
     });
+  }
+
+  void _startBootSequence() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
 
     _fadeLogo = CurvedAnimation(
-      parent: _controller,
+      parent: _controller!,
       curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
     );
     _fadeCodename = CurvedAnimation(
-      parent: _controller,
+      parent: _controller!,
       curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
     );
     _fadeStatus = CurvedAnimation(
-      parent: _controller,
+      parent: _controller!,
       curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
     );
 
-    _controller.forward();
+    _controller!.forward();
 
     // Boot mínimo visual. Será substituído pelo bootstrap real de catálogo.
     _bootTimer = Timer(const Duration(milliseconds: 2200), _completeInitialization);
@@ -75,42 +83,50 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _bootTimer?.cancel();
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final versionLoaded = _version.isNotEmpty;
+    final fadeLogo = _fadeLogo;
+    final fadeCodename = _fadeCodename;
+    final fadeStatus = _fadeStatus;
+
+    // Antes da versao carregar: mostra logo estatico (sem animacao)
+    if (!versionLoaded || fadeLogo == null || fadeCodename == null || fadeStatus == null) {
+      return Scaffold(
+        backgroundColor: EtherealLumensColors.background,
+        body: Center(
+          child: const LouvorJaLogo(size: 140),
+        ),
+      );
+    }
 
     return Scaffold(
-      // O boot desktop usa Ethereal Lumens independente da preferência salva.
-      // Também garante contraste com o codename oficial branco/colorido.
       backgroundColor: EtherealLumensColors.background,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Logo LouvorJA
             FadeTransition(
-              opacity: _fadeLogo,
+              opacity: fadeLogo,
               child: const LouvorJaLogo(size: 140),
             ),
             const SizedBox(height: 32),
 
-            // Codinome PIANO
             FadeTransition(
-              opacity: _fadeCodename,
+              opacity: fadeCodename,
               child: const CodenamePiano(width: 220),
             ),
             const SizedBox(height: 48),
 
-            // Status / loading
             FadeTransition(
-              opacity: _fadeStatus,
+              opacity: fadeStatus,
               child: Column(
                 children: [
-                  // Spinner circular simples na cor primary
                   SizedBox(
                     width: 28,
                     height: 28,
@@ -127,15 +143,14 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (_version.isNotEmpty)
-                    Text(
-                      _version,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w300,
-                      ),
+                  Text(
+                    _version,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w300,
                     ),
+                  ),
                 ],
               ),
             ),
