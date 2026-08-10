@@ -38,4 +38,20 @@ void main() {
     await settings.setGlassIntensity(-20);
     expect(settings.glassIntensity, 0);
   });
+
+  test('ignora valores persistidos inválidos e usa defaults', () async {
+    SharedPreferences.setMockInitialValues({
+      'themeMode': 'invalid',
+      'accent': 'invalid',
+      'interaction': 'invalid',
+      'glassIntensity': 42,
+    });
+    final settings = SettingsController();
+    await settings.loadSettings();
+
+    expect(settings.themeMode, ThemeMode.system);
+    expect(settings.accent, AccentKey.orange);
+    expect(settings.interaction, InteractionKey.dynamic_);
+    expect(settings.glassIntensity, 42);
+  });
 }

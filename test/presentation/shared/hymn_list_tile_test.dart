@@ -38,4 +38,19 @@ void main() {
     await tester.tap(find.text('Hino'));
     expect(tapped, isTrue);
   });
+
+  testWidgets('exibe estado baixado sem subtítulo', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: HymnListTile(
+            number: '002',
+            title: 'Hino Offline',
+            isDownloaded: true,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Hino Offline'), findsOneWidget);
+  });
 }
