@@ -54,33 +54,6 @@ jobs:
           name: coverage-lcov
           path: src/coverage/lcov.info
 
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        working-directory: src
-        run: flutter pub get
-
-      - name: Build Web (release)
-        working-directory: src
-        run: flutter build web --release
-
-      - name: Upload build
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: src/build/web
-
   build-android:
     name: Build Android (debug APK)
     runs-on: ubuntu-latest
@@ -105,3 +78,23 @@ jobs:
       - name: Build APK (debug)
         working-directory: src
         run: flutter build apk --debug
+
+  build-ios:
+    name: Build iOS (debug, no codesign)
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: src
+        run: flutter pub get
+
+      - name: Build iOS (debug, no codesign)
+        working-directory: src
+        run: flutter build ios --debug --no-codesign
