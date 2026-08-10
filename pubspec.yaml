@@ -1,0 +1,64 @@
+name: louvorja_piano_mobile
+description: "LouvorJA PIANO Mobile — App Flutter para gerenciamento de cultos adventistas"
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_bloc: ^9.0.0
+
+  # Networking
+  dio: ^5.7.0
+
+  # Routing
+  go_router: ^16.0.0
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Internationalization
+  easy_localization: ^3.0.7
+
+  # Icons — Tabler Icons (mesma lib do Electron/web, v3.44.0 ≈ v3.45.0)
+  tabler_icons_plus: ^3.44.0
+
+  # Media
+  cached_network_image: ^3.4.1
+
+  # Code generation (runtime annotations)
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+
+  # Logging (substitui print)
+  logger: ^2.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  # Lint
+  flutter_lints: ^5.0.0
+
+  # Code generation
+  build_runner: ^2.4.13
+  freezed: ^3.0.0
+  json_serializable: ^6.8.0
+
+  # Testing
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/translations/
