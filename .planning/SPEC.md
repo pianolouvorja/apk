@@ -44,6 +44,21 @@ Isso significa:
 - O modulo de sync (SPEC-SYNC) ganha uma camada de **controle em tempo real**
 - O operador pode ter múltiplos Palcos pareados (ex: tela principal + lobby)
 
+### Arquitetura de Dados: Online-First + Offline Opcional
+
+O app funciona como o piano-web: **sem obrigar download nenhum**.
+
+| Estado | Comportamento |
+|--------|--------------|
+| **Online (default)** | Hinos, liturgia e bíblia carregam via API em tempo real. Zero download necessário. Streaming de áudio se aplicável. |
+| **Offline (opcional)** | Usuário pode baixar hinos específicos ou o catálogo completo. Botão "Baixar" por hino + "Baixar tudo" nas configurações. |
+| **Cache automático** | Hinos já acessados ficam em cache local (LRU). Reabrir é instantâneo, mesmo offline. Cache transparente ao usuário. |
+
+Isso significa:
+- RF-02 (Offline) deixa de ser "baixar tudo obrigatório" e vira "download opcional"
+- RF-07 (Sync) muda de "download de catálogo" para "sincronização incremental + cache LRU"
+- O app é útil imediatamente após instalar, sem nenhum passo extra
+
 ### Análise Modular (Electron -> Mobile)
 
 | Módulo Electron | LOC | Arquivos | Decisão Mobile | Justificativa |
