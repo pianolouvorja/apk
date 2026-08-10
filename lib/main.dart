@@ -25,8 +25,9 @@ void main() async {
   ]);
 
   final settings = SettingsController();
-  // Carrega preferências em background: não bloqueia a splash.
-  settings.loadSettings();
+  // Tema precisa estar pronto antes da Splash Flutter montar. SharedPreferences
+  // é local/rápido e evita um flash escuro quando o usuário salvou tema claro.
+  await settings.loadSettings();
 
   runApp(
     ChangeNotifierProvider.value(
