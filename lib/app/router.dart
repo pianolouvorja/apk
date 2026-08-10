@@ -37,7 +37,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/hymns',
-              builder: (context, state) => const HymnsPage(),
+              builder: (context, state) => HymnsPage(),
             ),
           ],
         ),
@@ -46,7 +46,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/liturgy',
-              builder: (context, state) => const LiturgyPage(),
+              builder: (context, state) => LiturgyPage(),
             ),
           ],
         ),
@@ -55,7 +55,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/bible',
-              builder: (context, state) => const BiblePage(),
+              builder: (context, state) => BiblePage(),
             ),
           ],
         ),
@@ -64,7 +64,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/settings',
-              builder: (context, state) => const SettingsPage(),
+              builder: (context, state) => SettingsPage(),
             ),
           ],
         ),

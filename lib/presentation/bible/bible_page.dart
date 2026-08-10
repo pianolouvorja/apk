@@ -1,9 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import '../shared/widgets/placeholder_page.dart';
 
 class BiblePage extends PlaceholderPage {
-  const BiblePage({super.key})
+  BiblePage({super.key})
       : super(
-          title: 'Bíblia',
+          title: 'bible.title'.tr(),
           message: 'Livros, capítulos e versículos — Fase 3.',
         );
 }

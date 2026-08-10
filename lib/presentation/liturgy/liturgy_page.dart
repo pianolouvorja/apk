@@ -1,9 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import '../shared/widgets/placeholder_page.dart';
 
 class LiturgyPage extends PlaceholderPage {
-  const LiturgyPage({super.key})
+  LiturgyPage({super.key})
       : super(
-          title: 'Liturgia',
+          title: 'liturgy.title'.tr(),
           message: 'Timeline do culto com hinos associados — Fase 4.',
         );
 }

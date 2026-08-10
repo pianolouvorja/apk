@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "LouvorJA PIANO"
+  },
+  "nav": {
+    "home": "Início",
+    "hymns": "Hinos",
+    "liturgy": "Liturgia",
+    "bible": "Bíblia",
+    "more": "Mais"
+  },
+  "home": {
+    "districtLabel": "Distrito",
+    "districtPlaceholder": "Digite o nome do distrito",
+    "churchLabel": "Igreja",
+    "churchPlaceholder": "Digite o nome da igreja"
+  },
+  "splash": {
+    "loading": "Carregando..."
+  },
+  "common": {
+    "retry": "Tentar novamente",
+    "error": "Algo deu errado",
+    "empty": "Nenhum resultado encontrado",
+    "search": "Buscar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "close": "Fechar",
+    "offline": "Offline",
+    "online": "Online"
+  },
+  "hymns": {
+    "title": "Hinos",
+    "searchPlaceholder": "Buscar por número, título ou trecho",
+    "availableOffline": "Disponível offline",
+    "noResults": "Nenhum hino encontrado"
+  },
+  "liturgy": {
+    "title": "Liturgia",
+    "cloneFrom": "Clonar de outro dia",
+    "addItem": "Adicionar item",
+    "notes": "Notas"
+  },
+  "bible": {
+    "title": "Bíblia",
+    "oldTestament": "Antigo Testamento",
+    "newTestament": "Novo Testamento",
+    "selectVersion": "Versão",
+    "selectBook": "Livro",
+    "selectChapter": "Capítulo",
+    "searchPlaceholder": "Buscar versículo"
+  },
+  "settings": {
+    "title": "Configurações",
+    "appearance": "Aparência",
+    "theme": "Tema",
+    "themeDark": "Ethereal Lumens",
+    "themeLight": "Luminous Clarity",
+    "themeSystem": "Seguir sistema",
+    "accentColor": "Cor de destaque",
+    "language": "Idioma",
+    "glassIntensity": "Intensidade do vidro",
+    "animationProfile": "Perfil de animação",
+    "fontSize": "Tamanho da fonte"
+  },
+  "timer": {
+    "title": "Cronômetro",
+    "countdown": "Contagem regressiva",
+    "stopwatch": "Cronômetro",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "reset": "Resetar",
+    "finished": "Tempo esgotado!"
+  }
+}

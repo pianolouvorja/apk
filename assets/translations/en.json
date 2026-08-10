@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "LouvorJA PIANO"
+  },
+  "nav": {
+    "home": "Home",
+    "hymns": "Hymns",
+    "liturgy": "Liturgy",
+    "bible": "Bible",
+    "more": "More"
+  },
+  "home": {
+    "districtLabel": "District",
+    "districtPlaceholder": "Enter the district name",
+    "churchLabel": "Church",
+    "churchPlaceholder": "Enter the church name"
+  },
+  "splash": {
+    "loading": "Loading..."
+  },
+  "common": {
+    "retry": "Try again",
+    "error": "Something went wrong",
+    "empty": "No results found",
+    "search": "Search",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "offline": "Offline",
+    "online": "Online"
+  },
+  "hymns": {
+    "title": "Hymns",
+    "searchPlaceholder": "Search by number, title or lyric",
+    "availableOffline": "Available offline",
+    "noResults": "No hymns found"
+  },
+  "liturgy": {
+    "title": "Liturgy",
+    "cloneFrom": "Clone from another day",
+    "addItem": "Add item",
+    "notes": "Notes"
+  },
+  "bible": {
+    "title": "Bible",
+    "oldTestament": "Old Testament",
+    "newTestament": "New Testament",
+    "selectVersion": "Version",
+    "selectBook": "Book",
+    "selectChapter": "Chapter",
+    "searchPlaceholder": "Search verse"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeDark": "Ethereal Lumens",
+    "themeLight": "Luminous Clarity",
+    "themeSystem": "Follow system",
+    "accentColor": "Accent color",
+    "language": "Language",
+    "glassIntensity": "Glass intensity",
+    "animationProfile": "Animation profile",
+    "fontSize": "Font size"
+  },
+  "timer": {
+    "title": "Timer",
+    "countdown": "Countdown",
+    "stopwatch": "Stopwatch",
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset",
+    "finished": "Time's up!"
+  }
+}

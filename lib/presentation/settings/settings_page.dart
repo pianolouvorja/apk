@@ -1,9 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import '../shared/widgets/placeholder_page.dart';
 
 class SettingsPage extends PlaceholderPage {
-  const SettingsPage({super.key})
+  SettingsPage({super.key})
       : super(
-          title: 'Configurações',
+          title: 'settings.title'.tr(),
           message: 'Temas, acentos, idioma e preferências — Fase 1.',
         );
 }

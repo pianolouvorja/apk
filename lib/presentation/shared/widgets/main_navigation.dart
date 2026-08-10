@@ -1,5 +1,6 @@
 library;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -25,12 +26,12 @@ class MainNavigation extends StatelessWidget {
     final theme = Theme.of(context);
     final currentIndex = navigationShell.currentIndex;
 
-    final tabs = const [
-      _NavTab(icon: TablerIcons.home, label: 'Início'),
-      _NavTab(icon: TablerIcons.playlist, label: 'Hinos'),
-      _NavTab(icon: TablerIcons.clipboardText, label: 'Liturgia'),
-      _NavTab(icon: TablerIcons.book, label: 'Bíblia'),
-      _NavTab(icon: TablerIcons.settings, label: 'Mais'),
+    final tabs = [
+      _NavTab(icon: TablerIcons.home, label: 'nav.home'.tr()),
+      _NavTab(icon: TablerIcons.playlist, label: 'nav.hymns'.tr()),
+      _NavTab(icon: TablerIcons.clipboardText, label: 'nav.liturgy'.tr()),
+      _NavTab(icon: TablerIcons.book, label: 'nav.bible'.tr()),
+      _NavTab(icon: TablerIcons.settings, label: 'nav.more'.tr()),
     ];
 
     return Scaffold(
@@ -101,7 +102,7 @@ class _NavTab {
   final IconData icon;
   final String label;
 
-  const _NavTab({
+  _NavTab({
     required this.icon,
     required this.label,
   });

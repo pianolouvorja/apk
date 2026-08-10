@@ -2,6 +2,7 @@ library;
 
 import 'dart:async';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -77,7 +78,7 @@ class _HomePageState extends State<HomePage> {
 
                 // Distrito (editavel, size lg)
                 _LocationField(
-                  label: 'Distrito',
+                  label: 'home.districtLabel'.tr(),
                   fontSize: 24,
                   controller: _districtController,
                   editing: _editingDistrict,
@@ -92,7 +93,7 @@ class _HomePageState extends State<HomePage> {
 
                 // Igreja (editavel, size md)
                 _LocationField(
-                  label: 'Igreja',
+                  label: 'home.churchLabel'.tr(),
                   fontSize: 18,
                   controller: _churchController,
                   editing: _editingChurch,

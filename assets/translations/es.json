@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "LouvorJA PIANO"
+  },
+  "nav": {
+    "home": "Inicio",
+    "hymns": "Himnos",
+    "liturgy": "Liturgia",
+    "bible": "Biblia",
+    "more": "Mas"
+  },
+  "home": {
+    "districtLabel": "Distrito",
+    "districtPlaceholder": "Ingrese el nombre del distrito",
+    "churchLabel": "Iglesia",
+    "churchPlaceholder": "Ingrese el nombre de la iglesia"
+  },
+  "splash": {
+    "loading": "Cargando..."
+  },
+  "common": {
+    "retry": "Intentar de nuevo",
+    "error": "Algo salió mal",
+    "empty": "Sin resultados",
+    "search": "Buscar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "offline": "Sin conexión",
+    "online": "En línea"
+  },
+  "hymns": {
+    "title": "Himnos",
+    "searchPlaceholder": "Buscar por número, título o letra",
+    "availableOffline": "Disponible sin conexión",
+    "noResults": "No se encontraron himnos"
+  },
+  "liturgy": {
+    "title": "Liturgia",
+    "cloneFrom": "Clonar de otro día",
+    "addItem": "Añadir elemento",
+    "notes": "Notas"
+  },
+  "bible": {
+    "title": "Biblia",
+    "oldTestament": "Antiguo Testamento",
+    "newTestament": "Nuevo Testamento",
+    "selectVersion": "Versión",
+    "selectBook": "Libro",
+    "selectChapter": "Capítulo",
+    "searchPlaceholder": "Buscar versículo"
+  },
+  "settings": {
+    "title": "Configuración",
+    "appearance": "Apariencia",
+    "theme": "Tema",
+    "themeDark": "Ethereal Lumens",
+    "themeLight": "Luminous Clarity",
+    "themeSystem": "Seguir sistema",
+    "accentColor": "Color de acento",
+    "language": "Idioma",
+    "glassIntensity": "Intensidad de vidrio",
+    "animationProfile": "Perfil de animación",
+    "fontSize": "Tamaño de fuente"
+  },
+  "timer": {
+    "title": "Temporizador",
+    "countdown": "Cuenta regresiva",
+    "stopwatch": "Cronómetro",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "reset": "Reiniciar",
+    "finished": "¡Tiempo agotado!"
+  }
+}

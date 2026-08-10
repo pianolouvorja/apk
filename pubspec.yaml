@@ -26,7 +26,7 @@ dependencies:
   # Internationalization
   easy_localization: ^3.0.7
 
-  # Icons — Tabler Icons (mesma lib do Electron/web, v3.44.0 ≈ v3.45.0)
+  # Icons (mesma lib do Electron/web, v3.44.0 ≈ v3.45.0)
   tabler_icons_plus: ^3.44.0
 
   # SVG rendering (logos e brand assets)
