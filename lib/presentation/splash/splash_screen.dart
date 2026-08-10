@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../core/constants/app_version.dart';
 import '../shared/widgets/codename_piano.dart';
 import '../shared/widgets/louvorja_logo.dart';
 
@@ -32,6 +33,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _fadeStatus;
   Timer? _bootTimer;
   bool _completed = false;
+  String _version = '';
 
   void _completeInitialization() {
     if (_completed || !mounted) return;
@@ -42,6 +44,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    AppVersion.displayVersion.then((v) {
+      if (mounted) setState(() => _version = v);
+    });
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1800),
       vsync: this,
@@ -121,14 +127,15 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'v0.1.0-alpha',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w300,
+                  if (_version.isNotEmpty)
+                    Text(
+                      _version,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w300,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

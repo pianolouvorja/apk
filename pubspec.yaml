@@ -35,6 +35,9 @@ dependencies:
   # Native splash runtime removal
   flutter_native_splash: ^2.4.6
 
+  # App version info (lê version do pubspec em runtime)
+  package_info_plus: ^8.3.0
+
   # Media
   cached_network_image: ^3.4.1
 
