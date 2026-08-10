@@ -34,5 +34,6 @@ void main() {
 
       expect(find.byType(HomePage), findsOneWidget);
     });
+
   });
 }
