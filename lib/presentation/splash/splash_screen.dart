@@ -15,10 +15,12 @@ import '../shared/widgets/louvorja_logo.dart';
 /// Overlay visivel durante inicializacao com logo + codinome + status.
 class SplashScreen extends StatefulWidget {
   final VoidCallback? onInitializationComplete;
+  final Future<String>? versionFuture;
 
   const SplashScreen({
     super.key,
     this.onInitializationComplete,
+    this.versionFuture,
   });
 
   @override
@@ -46,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
 
     // Carrega versão com timeout de 1.5s. Se falhar, usa fallback.
-    AppVersion.displayVersion
+    (widget.versionFuture ?? AppVersion.displayVersion)
         .timeout(const Duration(milliseconds: 1500), onTimeout: () => 'v0.1.0')
         .then((v) {
       if (!mounted) return;

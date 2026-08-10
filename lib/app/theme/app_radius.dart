@@ -7,8 +7,7 @@
 library;
 import 'package:flutter/material.dart';
 
-class AppRadius {
-  AppRadius._();
+abstract final class AppRadius {
 
   /// Inputs, botões, containers pequenos.
   static const BorderRadius sm = BorderRadius.only(

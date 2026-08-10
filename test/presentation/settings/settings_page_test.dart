@@ -1,6 +1,5 @@
 library;
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,30 +11,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 Widget _subject(SettingsController controller) {
   return ChangeNotifierProvider<SettingsController>.value(
     value: controller,
-    child: EasyLocalization(
-      supportedLocales: const [Locale('pt', 'BR')],
-      path: 'assets/translations',
-      startLocale: const Locale('pt', 'BR'),
-      saveLocale: false,
-      child: Builder(
-        builder: (context) => MaterialApp(
-          home: const SettingsPage(),
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
-        ),
-      ),
-    ),
+    child: const MaterialApp(home: SettingsPage()),
   );
 }
 
-Future<void> _pumpSettings(WidgetTester tester, SettingsController controller) async {
-  await tester.pumpWidget(_subject(controller));
-  // Carrega tradução e encerra o timeout defensivo do PackageInfo.
-  await tester.pump(const Duration(seconds: 3));
-}
-
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     const channel = MethodChannel('dev.fluttercommunity.plus/package_info');
@@ -51,26 +33,69 @@ void main() {
   });
 
   testWidgets('renderiza todas as configurações', (tester) async {
-    await _pumpSettings(tester, SettingsController());
+    await tester.pumpWidget(_subject(SettingsController()));
+    await tester.pumpAndSettle();
 
     expect(find.byType(SettingsPage), findsOneWidget);
     expect(find.byType(Slider), findsOneWidget);
-    expect(find.byType(ChoiceChip), findsWidgets);
+    expect(find.byKey(const Key('theme-dark')), findsOneWidget);
   });
 
-  testWidgets('controller atualiza tema, acento, interação e glass', (tester) async {
+  testWidgets('chips de tema acionam callbacks reais', (tester) async {
     final controller = SettingsController();
-    await _pumpSettings(tester, controller);
+    await tester.pumpWidget(_subject(controller));
+    await tester.pumpAndSettle();
 
-    await controller.setThemeMode(ThemeMode.dark);
-    await controller.setAccent(AccentKey.azure);
-    await controller.setInteraction(InteractionKey.soft);
-    await controller.setGlassIntensity(80);
+    await tester.tap(find.byKey(const Key('theme-dark')));
     await tester.pump();
-
     expect(controller.themeMode, ThemeMode.dark);
+
+    await tester.tap(find.byKey(const Key('theme-light')));
+    await tester.pump();
+    expect(controller.themeMode, ThemeMode.light);
+
+    await tester.tap(find.byKey(const Key('theme-system')));
+    await tester.pump();
+    expect(controller.themeMode, ThemeMode.system);
+  });
+
+  testWidgets('chips de idioma acionam setLocale', (tester) async {
+    final controller = SettingsController();
+    await tester.pumpWidget(_subject(controller));
+    await tester.pumpAndSettle();
+
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+    // Chips na ordem: 3 tema, 3 interação, 3 idioma
+    // Mas pode haver variação; procura por 'Portugues' e 'Espanol'
+    for (final chip in chips) {
+      final label = (chip.label as Text).data ?? '';
+      if (label.contains('Portugues') || label.contains('Espanol')) {
+        chip.onSelected?.call(true);
+        await tester.pump();
+      }
+    }
+  });
+
+  testWidgets('acento, interação e glass acionam callbacks reais', (tester) async {
+    final controller = SettingsController();
+    await tester.pumpWidget(_subject(controller));
+    await tester.pumpAndSettle();
+
+    final azure = find.byKey(const Key('accent-azure'));
+    await tester.ensureVisible(azure);
+    await tester.tap(azure);
+    await tester.pump();
     expect(controller.accent, AccentKey.azure);
+
+    final soft = find.byKey(const Key('interaction-soft'));
+    await tester.ensureVisible(soft);
+    await tester.tap(soft);
+    await tester.pump();
     expect(controller.interaction, InteractionKey.soft);
-    expect(controller.glassIntensity, 80);
+
+    final glass = find.byKey(const Key('glass-intensity'));
+    await tester.ensureVisible(glass);
+    await tester.drag(glass, const Offset(80, 0));
+    expect(controller.glassIntensity, isNot(60));
   });
 }

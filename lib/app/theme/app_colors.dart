@@ -6,8 +6,7 @@ library;
 import 'package:flutter/material.dart';
 
 /// Cores de marca (fixas, não mudam com tema).
-class AppBrandColors {
-  AppBrandColors._();
+abstract final class AppBrandColors {
 
   /// Azul de ação / destaque.
   static const Color primary = Color(0xFF2196F3);
@@ -26,8 +25,7 @@ class AppBrandColors {
 }
 
 /// Cores do tema "Ethereal Lumens" (dark, padrão).
-class EtherealLumensColors {
-  EtherealLumensColors._();
+abstract final class EtherealLumensColors {
 
   static const Color background = Color(0xFF131313);
   static const Color surface = Color(0xFF131313);
@@ -45,8 +43,7 @@ class EtherealLumensColors {
 }
 
 /// Cores do tema "Luminous Clarity" (light).
-class LuminousClarityColors {
-  LuminousClarityColors._();
+abstract final class LuminousClarityColors {
 
   static const Color background = Color(0xFFF8F9FF);
   static const Color surface = Color(0xFFF8F9FF);

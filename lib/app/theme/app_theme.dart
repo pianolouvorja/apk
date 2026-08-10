@@ -10,8 +10,7 @@ import 'app_colors.dart';
 import 'app_radius.dart';
 import 'app_spacing.dart';
 
-class AppTheme {
-  AppTheme._();
+abstract final class AppTheme {
 
   /// Tema "Ethereal Lumens" (dark, padrão).
   static ThemeData dark({AccentColor accent = AppAccents.defaultAccent}) {

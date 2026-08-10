@@ -35,8 +35,7 @@ extension InteractionProfileX on InteractionProfile {
 }
 
 /// Tokens de animação do dock (macOS-style).
-class DockAnimation {
-  DockAnimation._();
+abstract final class DockAnimation {
 
   static const double hoverScale = 1.25;
   static const double hoverLift = -4;

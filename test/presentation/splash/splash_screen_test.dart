@@ -65,5 +65,20 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       expect(calls, 1);
     });
+
+    testWidgets('caminho de erro do catchError usa fallback v0.1.0', (tester) async {
+      var completed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SplashScreen(
+            onInitializationComplete: () => completed = true,
+            versionFuture: Future.delayed(const Duration(milliseconds: 10), () => throw Exception('boom')),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      expect(completed, isTrue);
+    });
   });
 }

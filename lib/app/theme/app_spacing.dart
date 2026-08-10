@@ -2,8 +2,7 @@
 ///
 /// Fonte: pianolouvorja/app/src/design-system/tokens/spacing.ts
 library;
-class AppSpacing {
-  AppSpacing._();
+abstract final class AppSpacing {
 
   static const double s0 = 0;
   static const double s1 = 4;

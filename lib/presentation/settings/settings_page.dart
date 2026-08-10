@@ -24,15 +24,18 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final settings = context.watch<SettingsController>();
+    final locale = EasyLocalization.of(context)?.locale ?? Localizations.localeOf(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('settings.title'.tr()),
         automaticallyImplyLeading: false,
       ),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // --- Aparencia ---
           _SectionHeader(
             icon: TablerIcons.palette,
@@ -48,16 +51,19 @@ class SettingsPage extends StatelessWidget {
               spacing: 8,
               children: [
                 _ChoiceChip<ThemeMode>(
+                  key: const Key('theme-dark'),
                   label: 'settings.themeDark'.tr(),
                   selected: settings.themeMode == ThemeMode.dark,
                   onTap: () => settings.setThemeMode(ThemeMode.dark),
                 ),
                 _ChoiceChip<ThemeMode>(
+                  key: const Key('theme-light'),
                   label: 'settings.themeLight'.tr(),
                   selected: settings.themeMode == ThemeMode.light,
                   onTap: () => settings.setThemeMode(ThemeMode.light),
                 ),
                 _ChoiceChip<ThemeMode>(
+                  key: const Key('theme-system'),
                   label: 'settings.themeSystem'.tr(),
                   selected: settings.themeMode == ThemeMode.system,
                   onTap: () => settings.setThemeMode(ThemeMode.system),
@@ -78,6 +84,7 @@ class SettingsPage extends StatelessWidget {
                 final accent = AppAccents.byId(key.name);
                 final isSelected = settings.accent == key;
                 return GestureDetector(
+                  key: Key('accent-${key.name}'),
                   onTap: () => settings.setAccent(key),
                   child: Container(
                     width: 40,
@@ -109,6 +116,7 @@ class SettingsPage extends StatelessWidget {
                   InteractionKey.mist: 'Mist',
                 };
                 return _ChoiceChip<InteractionKey>(
+                  key: Key('interaction-${key.name}'),
                   label: labels[key]!,
                   selected: settings.interaction == key,
                   onTap: () => settings.setInteraction(key),
@@ -126,6 +134,7 @@ class SettingsPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: Slider(
+                    key: const Key('glass-intensity'),
                     value: settings.glassIntensity.toDouble(),
                     min: 0,
                     max: 100,
@@ -156,19 +165,19 @@ class SettingsPage extends StatelessWidget {
               children: [
                 _ChoiceChip(
                   label: 'Portugues (BR)',
-                  selected: context.locale == const Locale('pt', 'BR'),
-                  onTap: () => context.setLocale(const Locale('pt', 'BR')),
+                  selected: locale == const Locale('pt', 'BR'),
+                  onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('pt', 'BR')),
                 ),
                 _ChoiceChip(
                   label: 'English — em breve',
-                  selected: context.locale == const Locale('en'),
+                  selected: locale == const Locale('en'),
                   enabled: false,
-                  onTap: () {},
+                  onTap: null,
                 ),
                 _ChoiceChip(
                   label: 'Espanol',
-                  selected: context.locale == const Locale('es'),
-                  onTap: () => context.setLocale(const Locale('es')),
+                  selected: locale == const Locale('es'),
+                  onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('es')),
                 ),
               ],
             ),
@@ -198,11 +207,10 @@ class SettingsPage extends StatelessWidget {
             leading: Icon(TablerIcons.shieldCheck, color: theme.colorScheme.primary),
             title: const Text('Termos de Uso e Privacidade'),
             trailing: const Icon(TablerIcons.chevronRight),
-            onTap: () {
-              // TODO: Fase 6 - abrir termos
-            },
+            // Destino será ligado na Fase 6; sem interação enganosa por ora.
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -277,9 +285,10 @@ class _ChoiceChip<T> extends StatelessWidget {
   final String label;
   final bool selected;
   final bool enabled;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ChoiceChip({
+    super.key,
     required this.label,
     required this.selected,
     this.enabled = true,
@@ -298,7 +307,7 @@ class _ChoiceChip<T> extends StatelessWidget {
           child: ChoiceChip(
             label: Text(label),
             selected: selected,
-            onSelected: enabled ? (_) => onTap() : null,
+            onSelected: enabled ? (_) => onTap?.call() : null,
             selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
             labelStyle: TextStyle(
               color: selected ? theme.colorScheme.primary : null,

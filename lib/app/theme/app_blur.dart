@@ -7,8 +7,7 @@
 ///   blurPx = 4 + (intensity / 100) * 24  → range: 4-28px
 ///   fillAlpha = 42 + (intensity / 100) * 40 → range: 42%-82%
 library;
-class AppBlur {
-  AppBlur._();
+abstract final class AppBlur {
 
   static const double defaultIntensity = 60;
 

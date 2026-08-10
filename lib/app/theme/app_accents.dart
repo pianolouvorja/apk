@@ -21,8 +21,7 @@ class AccentColor {
 }
 
 /// Todos os acentos disponíveis.
-class AppAccents {
-  AppAccents._();
+abstract final class AppAccents {
 
   static const AccentColor defaultAccent = orange;
 
