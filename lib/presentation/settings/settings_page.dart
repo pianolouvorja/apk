@@ -160,9 +160,10 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => context.setLocale(const Locale('pt', 'BR')),
                 ),
                 _ChoiceChip(
-                  label: 'English',
+                  label: 'English — em breve',
                   selected: context.locale == const Locale('en'),
-                  onTap: () => context.setLocale(const Locale('en')),
+                  enabled: false,
+                  onTap: () {},
                 ),
                 _ChoiceChip(
                   label: 'Espanol',
@@ -275,32 +276,40 @@ class _SettingsCard extends StatelessWidget {
 class _ChoiceChip<T> extends StatelessWidget {
   final String label;
   final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
 
   const _ChoiceChip({
     required this.label,
     required this.selected,
+    this.enabled = true,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-        labelStyle: TextStyle(
-          color: selected ? theme.colorScheme.primary : null,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-        ),
-        side: BorderSide(
-          color: selected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outline,
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: IgnorePointer(
+        ignoring: !enabled,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: ChoiceChip(
+            label: Text(label),
+            selected: selected,
+            onSelected: enabled ? (_) => onTap() : null,
+            selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+            labelStyle: TextStyle(
+              color: selected ? theme.colorScheme.primary : null,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+            ),
+            side: BorderSide(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outline,
+            ),
+          ),
         ),
       ),
     );
