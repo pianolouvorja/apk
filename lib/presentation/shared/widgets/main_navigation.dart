@@ -10,7 +10,8 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 /// + DockFooter.vue
 ///
 /// Tabs: Início, Hinos, Liturgia, Bíblia, Mais.
-/// Tab ativa mostra ícone destacado + label em negrito na cor primary.
+/// Tab ativa: icone + label na cor primary, sem fundo/pílula.
+/// Tabs inativas: icone + label em cinza (onSurfaceVariant).
 class MainNavigation extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -43,12 +44,15 @@ class MainNavigation extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(tabs.length, (i) {
                 final tab = tabs[i];
                 final isSelected = i == currentIndex;
+                final color = isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant;
 
                 return Expanded(
                   child: GestureDetector(
@@ -56,37 +60,20 @@ class MainNavigation extends StatelessWidget {
                     onTap: () => _onTap(i),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Indicador: pílula com cor primary quando ativo
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            isSelected ? tab.selectedIcon : tab.icon,
-                            size: 24,
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
+                        Icon(
+                          isSelected ? tab.selectedIcon : tab.icon,
+                          size: 24,
+                          color: color,
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           tab.label,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
+                            color: color,
                           ),
                         ),
                       ],
