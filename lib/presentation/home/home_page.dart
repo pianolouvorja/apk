@@ -1,194 +1,193 @@
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
-import '../shared/widgets/glass_card.dart';
 import '../shared/widgets/gradient_background.dart';
-import '../shared/widgets/louvorja_logo.dart';
 
-class HomePage extends StatelessWidget {
+/// HomePage — tela inicial identica ao app desktop.
+///
+/// Fonte: pianolouvorja/app/src/modules/home/views/HomeView.vue
+///
+/// Layout centralizado:
+/// - Logo LouvorJA (128px)
+/// - Campo editavel: Distrito (lg)
+/// - Campo editavel: Igreja (md)
+/// - Relogio digital em tempo real (32px, cor primary, glow)
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late DateTime _now;
+  Timer? _clockTimer;
+  final _districtController = TextEditingController();
+  final _churchController = TextEditingController();
+  bool _editingDistrict = true;
+  bool _editingChurch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    _districtController.dispose();
+    _churchController.dispose();
+    super.dispose();
+  }
+
+  String get _formattedTime {
+    final h = _now.hour.toString().padLeft(2, '0');
+    final m = _now.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final now = DateTime.now();
 
     return GradientBackground(
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.pageMargin),
-          children: [
-            _buildHeader(context, theme),
-            const SizedBox(height: AppSpacing.s6),
-            _buildDateCard(context, theme, now),
-            const SizedBox(height: AppSpacing.s6),
-            _buildShortcuts(context, theme),
-            const SizedBox(height: AppSpacing.s6),
-            _buildFooter(context, theme),
-          ],
-        ),
-      ),
-    );
-  }
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.pageMargin),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo LouvorJA 128px centralizado
+                SvgPicture.asset(
+                  'assets/images/logo-louvor-ja.svg',
+                  width: 128,
+                  height: 128,
+                ),
+                const SizedBox(height: 40),
 
-  Widget _buildHeader(BuildContext context, ThemeData theme) {
-    return Center(
-      child: Column(
-        children: [
-          const LouvorJaLogo(size: 64),
-          const SizedBox(height: AppSpacing.s2),
-          Text(
-            'LouvorJA',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Text(
-            'PIANO',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                // Distrito (editavel, size lg)
+                _LocationField(
+                  label: 'Distrito',
+                  fontSize: 24,
+                  controller: _districtController,
+                  editing: _editingDistrict,
+                  onEdit: () => setState(() => _editingDistrict = true),
+                  onSubmit: (value) => setState(() {
+                    _districtController.text = value;
+                    _editingDistrict = false;
+                    _editingChurch = _churchController.text.isEmpty;
+                  }),
+                ),
+                const SizedBox(height: 12),
 
-  Widget _buildDateCard(BuildContext context, ThemeData theme, DateTime now) {
-    final weekdays = [
-      'Domingo', 'Segunda-feira', 'Terça-feira',
-      'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'
-    ];
-    final months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-    ];
-    final dateStr =
-        '${weekdays[now.weekday % 7]}, ${now.day} de ${months[now.month - 1]}';
+                // Igreja (editavel, size md)
+                _LocationField(
+                  label: 'Igreja',
+                  fontSize: 18,
+                  controller: _churchController,
+                  editing: _editingChurch,
+                  onEdit: () => setState(() => _editingChurch = true),
+                  onSubmit: (value) => setState(() {
+                    _churchController.text = value;
+                    _editingChurch = false;
+                  }),
+                ),
+                const SizedBox(height: 24),
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            dateStr,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s2),
-          Text(
-            'Bem-vindo! Use os atalhos abaixo para acessar rapidamente o que precisa para o culto.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShortcuts(BuildContext context, ThemeData theme) {
-    final shortcuts = [
-      _Shortcut(icon: TablerIcons.playlist, label: 'Hinos', route: '/hymns'),
-      _Shortcut(
-          icon: TablerIcons.clipboardText,
-          label: 'Liturgia',
-          route: '/liturgy'),
-      _Shortcut(icon: TablerIcons.book2, label: 'Bíblia', route: '/bible'),
-      _Shortcut(icon: TablerIcons.hourglass, label: 'Timer', route: '/timer'),
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: AppSpacing.s3,
-        crossAxisSpacing: AppSpacing.s3,
-        childAspectRatio: 2.2,
-      ),
-      itemCount: shortcuts.length,
-      itemBuilder: (context, index) {
-        final s = shortcuts[index];
-        return Material(
-          color: theme.colorScheme.surfaceContainer,
-          borderRadius: AppRadius.lg,
-          child: InkWell(
-            onTap: () => context.push(s.route),
-            borderRadius: AppRadius.lg,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.s4),
-              child: Row(
-                children: [
-                  Icon(s.icon, color: theme.colorScheme.primary, size: 28),
-                  const SizedBox(width: AppSpacing.s3),
-                  Expanded(
-                    child: Text(
-                      s.label,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                // Relogio digital em tempo real
+                Text(
+                  _formattedTime,
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: theme.colorScheme.primary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    shadows: [
+                      Shadow(
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.5),
+                        blurRadius: 8,
                       ),
-                    ),
+                    ],
                   ),
-                  Icon(
-                    TablerIcons.chevronRight,
-                    color: theme.colorScheme.onSurfaceVariant,
-                    size: 20,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFooter(BuildContext context, ThemeData theme) {
-    return GlassCard(
-      blurIntensity: 30,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s4,
-        vertical: AppSpacing.s3,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            TablerIcons.infoCircle,
-            color: theme.colorScheme.onSurfaceVariant,
-            size: 18,
-          ),
-          const SizedBox(width: AppSpacing.s2),
-          Expanded(
-            child: Text(
-              'v0.1.0-alpha — Em desenvolvimento',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _Shortcut {
-  final IconData icon;
+class _LocationField extends StatelessWidget {
   final String label;
-  final String route;
+  final double fontSize;
+  final TextEditingController controller;
+  final bool editing;
+  final VoidCallback onEdit;
+  final ValueChanged<String> onSubmit;
 
-  const _Shortcut({
-    required this.icon,
+  const _LocationField({
     required this.label,
-    required this.route,
+    required this.fontSize,
+    required this.controller,
+    required this.editing,
+    required this.onEdit,
+    required this.onSubmit,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final filled = controller.text.trim().isNotEmpty;
+
+    if (editing) {
+      return SizedBox(
+        width: 320,
+        child: TextField(
+          controller: controller,
+          textAlign: TextAlign.center,
+          autofocus: true,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+          decoration: InputDecoration(
+            hintText: label,
+            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+          ),
+          onSubmitted: onSubmit,
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: onEdit,
+      child: Text(
+        filled ? controller.text : label,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: filled ? FontWeight.w600 : FontWeight.w400,
+          color: filled
+              ? theme.colorScheme.onSurface
+              : theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
 }

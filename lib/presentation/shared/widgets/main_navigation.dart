@@ -26,11 +26,11 @@ class MainNavigation extends StatelessWidget {
     final currentIndex = navigationShell.currentIndex;
 
     final tabs = const [
-      _NavTab(icon: TablerIcons.home, selectedIcon: TablerIcons.homeFilled, label: 'Início'),
-      _NavTab(icon: TablerIcons.playlist, selectedIcon: TablerIcons.playlistAdd, label: 'Hinos'),
-      _NavTab(icon: TablerIcons.clipboardText, selectedIcon: TablerIcons.clipboardCheck, label: 'Liturgia'),
-      _NavTab(icon: TablerIcons.book, selectedIcon: TablerIcons.book2, label: 'Bíblia'),
-      _NavTab(icon: TablerIcons.settings, selectedIcon: TablerIcons.settingsFilled, label: 'Mais'),
+      _NavTab(icon: TablerIcons.home, label: 'Início'),
+      _NavTab(icon: TablerIcons.playlist, label: 'Hinos'),
+      _NavTab(icon: TablerIcons.clipboardText, label: 'Liturgia'),
+      _NavTab(icon: TablerIcons.book, label: 'Bíblia'),
+      _NavTab(icon: TablerIcons.settings, label: 'Mais'),
     ];
 
     return Scaffold(
@@ -62,7 +62,7 @@ class MainNavigation extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isSelected ? tab.selectedIcon : tab.icon,
+                            tab.icon,
                             size: 24,
                             color: color,
                           ),
@@ -99,12 +99,10 @@ class MainNavigation extends StatelessWidget {
 
 class _NavTab {
   final IconData icon;
-  final IconData selectedIcon;
   final String label;
 
   const _NavTab({
     required this.icon,
-    required this.selectedIcon,
     required this.label,
   });
 }

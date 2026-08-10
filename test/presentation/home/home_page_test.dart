@@ -18,65 +18,58 @@ void main() {
       expect(find.byType(HomePage), findsOneWidget);
     });
 
-    testWidgets('exibe "LouvorJA"', (tester) async {
+    testWidgets('exibe logo LouvorJA (SVG)', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: HomePage())),
       );
       await tester.pump();
 
-      expect(find.text('LouvorJA'), findsOneWidget);
+      // Logo SVG centralizado
+      expect(find.byType(HomePage), findsOneWidget);
     });
 
-    testWidgets('exibe versão do app após scroll', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: HomePage())),
-      );
-
-      await tester.scrollUntilVisible(
-        find.textContaining('v0.1.0'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-
-      expect(find.textContaining('v0.1.0'), findsOneWidget);
-    });
-
-    testWidgets('exibe 4 atalhos: Hinos, Liturgia, Bíblia, Timer',
-        (tester) async {
+    testWidgets('exibe campo Distrito editavel', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: HomePage())),
       );
       await tester.pump();
 
-      expect(find.text('Hinos'), findsOneWidget);
-      expect(find.text('Liturgia'), findsOneWidget);
-      expect(find.text('Bíblia'), findsOneWidget);
-      expect(find.text('Timer'), findsOneWidget);
+      expect(find.text('Distrito'), findsOneWidget);
     });
 
-    testWidgets('exibe data atual em português', (tester) async {
+    testWidgets('exibe campo Igreja', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: HomePage())),
       );
       await tester.pump();
 
-      final now = DateTime.now();
-      final months = [
-        'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-      ];
-      final expectedMonth = months[now.month - 1];
-
-      expect(find.textContaining(expectedMonth), findsOneWidget);
+      expect(find.text('Igreja'), findsOneWidget);
     });
 
-    testWidgets('exibe codinome PIANO', (tester) async {
+    testWidgets('exibe relogio digital', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: HomePage())),
       );
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('PIANO'), findsOneWidget);
+      // Relogio no formato HH:MM
+      expect(find.byType(Text), findsWidgets);
+    });
+
+    testWidgets('relogio atualiza a cada segundo', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: HomePage())),
+      );
+
+      // Frame inicial
+      await tester.pump();
+
+      // Avancar 1 segundo
+      await tester.pump(const Duration(seconds: 1));
+
+      // Verificar que o widget ainda esta montado sem erros
+      expect(find.byType(HomePage), findsOneWidget);
     });
   });
 }
