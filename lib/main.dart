@@ -27,6 +27,9 @@ void main() async {
       supportedLocales: const [Locale('pt', 'BR'), Locale('en'), Locale('es')],
       path: 'assets/translations',
       fallbackLocale: const Locale('pt', 'BR'),
+      // Sem startLocale: easy_localization detecta o idioma do OS.
+      // saveLocale true (default): se o usuario trocar nas Configuracoes,
+      // a escolha persiste em SharedPreferences e sobrescreve o OS locale.
       child: const LouvorjaApp(),
     ),
   );

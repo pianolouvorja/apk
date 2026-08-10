@@ -2,33 +2,43 @@ library;
 
 import 'package:package_info_plus/package_info_plus.dart';
 
-/// Versão do app lida dinamicamente do pubspec.yaml.
+/// Versao do app lida dinamicamente do pubspec.yaml.
 ///
-/// Nunca hardcodar versão em widgets -- sempre usar esta classe.
+/// Nunca hardcodar versao em widgets -- sempre usar esta classe.
 /// Quando o version do pubspec.yaml muda, todos os widgets atualizam.
 class AppVersion {
   AppVersion._();
 
-  static String? _cached;
+  static String? _cachedVersion;
 
-  /// Retorna a versão completa (ex: "0.1.0-alpha").
-  static Future<String> get versionString async {
-    if (_cached != null) return _cached!;
-    final info = await PackageInfo.fromPlatform();
-    _cached = '${info.version}'
-        '${info.buildNumber.isNotEmpty ? '+${info.buildNumber}' : ''}';
-    return _cached!;
+  static Future<String> _getVersion() async {
+    if (_cachedVersion != null) return _cachedVersion!;
+    try {
+      final info = await PackageInfo.fromPlatform().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => PackageInfo(
+          appName: 'LouvorJA PIANO',
+          packageName: 'com.louvorja.piano.mobile',
+          version: '0.0.0',
+          buildNumber: '',
+          buildSignature: '',
+          installerStore: null,
+        ),
+      );
+      _cachedVersion = info.version;
+      return _cachedVersion!;
+    } catch (_) {
+      _cachedVersion = '0.0.0';
+      return _cachedVersion!;
+    }
   }
 
-  /// Retorna apenas o número de versão (ex: "0.1.0-alpha").
-  static Future<String> get version async {
-    final info = await PackageInfo.fromPlatform();
-    return info.version;
-  }
+  /// Retorna apenas o numero de versao (ex: "0.1.0-alpha").
+  static Future<String> get version => _getVersion();
 
-  /// Versão curta para splash/footer (ex: "v0.1.0-alpha").
+  /// Versao curta para splash/footer (ex: "v0.1.0-alpha").
   static Future<String> get displayVersion async {
-    final v = await version;
+    final v = await _getVersion();
     return 'v$v';
   }
 }

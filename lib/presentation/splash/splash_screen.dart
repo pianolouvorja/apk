@@ -46,12 +46,16 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Carrega versão e inicia animações+timer juntos.
-    // O timer so comeca depois que a versao chegou, garantindo
-    // que ela apareça na splash.
-    AppVersion.displayVersion.then((v) {
+    // Carrega versão com timeout de 1.5s. Se falhar, usa fallback.
+    AppVersion.displayVersion
+        .timeout(const Duration(milliseconds: 1500), onTimeout: () => 'v0.1.0')
+        .then((v) {
       if (!mounted) return;
       setState(() => _version = v);
+      _startBootSequence();
+    }).catchError((_) {
+      if (!mounted) return;
+      setState(() => _version = 'v0.1.0');
       _startBootSequence();
     });
   }
