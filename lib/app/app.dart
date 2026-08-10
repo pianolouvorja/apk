@@ -1,5 +1,6 @@
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
@@ -23,13 +24,17 @@ class _LouvorjaAppState extends State<LouvorjaApp> {
     // Libera a splash nativa após o primeiro frame. A splash Flutter interna
     // assume a apresentação com logo LouvorJA + codename PIANO + loader.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      FlutterNativeSplash.remove();
+      if (!kIsWeb) {
+        FlutterNativeSplash.remove();
+      }
     });
   }
 
   void _hideSplash() {
     if (mounted) {
-      FlutterNativeSplash.remove();
+      if (!kIsWeb) {
+        FlutterNativeSplash.remove();
+      }
       setState(() => _showSplash = false);
     }
   }

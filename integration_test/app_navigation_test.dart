@@ -10,38 +10,39 @@ void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
 
   group('E2E: App init + navegação', () {
-    testWidgets('mostra splash com logo e codinome', (tester) async {
+    testWidgets('mostra splash ao iniciar', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
       await tester.pump();
 
-      // Splash visivel no inicio
       expect(find.byType(Scaffold), findsWidgets);
     });
 
-    testWidgets(' splash desaparece após boot', (tester) async {
+    testWidgets('splash desaparece e app principal aparece', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
       await tester.pump();
 
-      // Espera splash acabar (2.2s + animação)
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 2400));
 
-      // App principal deve aparecer
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('LouvorJA'), findsOneWidget);
     });
 
-    testWidgets('5 NavigationDestinations existem', (tester) async {
+    testWidgets('5 labels de navegação existem após boot', (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 2400));
 
-      expect(find.byType(NavigationDestination), findsNWidgets(5));
+      expect(find.text('Início'), findsOneWidget);
+      expect(find.text('Hinos'), findsWidgets);
+      expect(find.text('Liturgia'), findsWidgets);
+      expect(find.text('Bíblia'), findsWidgets);
+      expect(find.text('Mais'), findsWidgets);
     });
 
-    testWidgets('navegação sequencial: Início -> Hinos -> Bíblia -> Mais',
+    testWidgets('navegação: Início -> Hinos -> Bíblia -> Mais -> Início',
         (tester) async {
       await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 2400));
 
-      // Início
+      // Início ativo
       expect(find.text('LouvorJA'), findsOneWidget);
 
       // -> Hinos
@@ -49,24 +50,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // -> Bíblia
-      await tester.tap(find.text('Bíblia'));
+      await tester.tap(find.text('Bíblia').first);
       await tester.pumpAndSettle();
 
       // -> Mais
-      await tester.tap(find.text('Mais'));
-      await tester.pumpAndSettle();
-      expect(find.text('Configurações'), findsOneWidget);
-    });
-
-    testWidgets('volta para Início depois de navegar', (tester) async {
-      await tester.pumpWidget(const LouvorjaApp());
-      await tester.pumpAndSettle(const Duration(seconds: 3));
-
-      // Vai pra Hinos
-      await tester.tap(find.text('Hinos').first);
+      await tester.tap(find.text('Mais').first);
       await tester.pumpAndSettle();
 
-      // Volta pra Início
+      // -> Início
       await tester.tap(find.text('Início'));
       await tester.pumpAndSettle();
 

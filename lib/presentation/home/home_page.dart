@@ -37,32 +37,27 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context, ThemeData theme) {
-    return Row(
-      children: [
-        const LouvorJaLogo(size: 48),
-        const SizedBox(width: AppSpacing.s3),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'LouvorJA',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                'PIANO',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
+    return Center(
+      child: Column(
+        children: [
+          const LouvorJaLogo(size: 64),
+          const SizedBox(height: AppSpacing.s2),
+          Text(
+            'LouvorJA',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
+          Text(
+            'PIANO',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

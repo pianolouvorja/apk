@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -23,12 +25,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final AnimationController _loaderController;
   late final Animation<double> _fadeLogo;
   late final Animation<double> _fadeCodename;
   late final Animation<double> _fadeStatus;
+  Timer? _bootTimer;
   bool _completed = false;
 
   void _completeInitialization() {
@@ -64,16 +67,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Simula boot de 2s depois chama callback
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) {
-        _completeInitialization();
-      }
-    });
+    // Boot mínimo visual. Será substituído pelo bootstrap real de catálogo.
+    _bootTimer = Timer(const Duration(milliseconds: 2200), _completeInitialization);
   }
 
   @override
   void dispose() {
+    _bootTimer?.cancel();
     _loaderController.dispose();
     _controller.dispose();
     super.dispose();
