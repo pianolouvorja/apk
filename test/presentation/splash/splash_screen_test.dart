@@ -36,6 +36,19 @@ void main() {
       expect(find.byType(SvgPicture), findsWidgets);
     });
 
+    testWidgets('usa fundo claro quando o tema é light', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.light(),
+          home: const SplashScreen(),
+        ),
+      );
+      await tester.pump();
+
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+      expect(scaffold.backgroundColor, ThemeData.light().colorScheme.surface);
+    });
+
     testWidgets('chama callback de boot uma unica vez apos versao+timer',
         (tester) async {
       var calls = 0;

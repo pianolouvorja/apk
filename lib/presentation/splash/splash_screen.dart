@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../app/theme/app_colors.dart';
 import '../../core/constants/app_version.dart';
 import '../shared/widgets/codename_piano.dart';
 import '../shared/widgets/louvorja_logo.dart';
@@ -103,7 +102,9 @@ class _SplashScreenState extends State<SplashScreen>
     // Antes da versao carregar: mostra logo estatico (sem animacao)
     if (!versionLoaded || fadeLogo == null || fadeCodename == null || fadeStatus == null) {
       return Scaffold(
-        backgroundColor: EtherealLumensColors.background,
+        // A splash acompanha o tema ativo: branca no Luminous Clarity,
+        // escura no Ethereal Lumens.
+        backgroundColor: theme.colorScheme.surface,
         body: Center(
           child: const LouvorJaLogo(size: 140),
         ),
@@ -111,7 +112,8 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     return Scaffold(
-      backgroundColor: EtherealLumensColors.background,
+      // Luminous Clarity: superfície clara; Ethereal Lumens: #131313.
+      backgroundColor: theme.colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
