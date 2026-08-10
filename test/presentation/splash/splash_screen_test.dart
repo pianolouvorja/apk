@@ -13,9 +13,8 @@ void main() {
       );
       await tester.pump();
 
-      // Dois SVGs: logo grande + codename + logo dentro do loader.
-      expect(find.byType(SvgPicture), findsNWidgets(3));
-      expect(find.byType(RotationTransition), findsWidgets);
+      // Dois SVGs: logo grande + codename.
+      expect(find.byType(SvgPicture), findsNWidgets(2));
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('Carregando...'), findsOneWidget);
     });
