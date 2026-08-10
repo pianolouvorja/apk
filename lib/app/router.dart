@@ -10,6 +10,7 @@ import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
 import '../presentation/liturgy/liturgy_page.dart';
 import '../presentation/settings/settings_page.dart';
+import '../presentation/shared/widgets/detail_placeholder_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -38,6 +39,24 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/hymns',
               builder: (context, state) => HymnsPage(),
+              routes: [
+                GoRoute(
+                  path: ':albumId',
+                  builder: (context, state) => DetailPlaceholderPage(
+                    title: 'Álbum',
+                    identifier: state.pathParameters['albumId']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: ':hymnId',
+                      builder: (context, state) => DetailPlaceholderPage(
+                        title: 'Hino',
+                        identifier: state.pathParameters['hymnId']!,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

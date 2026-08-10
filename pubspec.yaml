@@ -26,6 +26,15 @@ dependencies:
   # Internationalization
   easy_localization: ^3.0.7
 
+  # Persistent key-value storage (settings)
+  shared_preferences: ^2.3.3
+
+  # State provider for application settings
+  provider: ^6.1.2
+
+  # Connectivity checking
+  connectivity_plus: ^6.1.1
+
   # Icons (mesma lib do Electron/web, v3.44.0 ≈ v3.45.0)
   tabler_icons_plus: ^3.44.0
 

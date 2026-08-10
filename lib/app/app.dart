@@ -4,9 +4,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:provider/provider.dart';
 
+import '../core/services/settings_controller.dart';
 import '../presentation/splash/splash_screen.dart';
 import 'router.dart';
+import 'theme/app_accents.dart';
 import 'theme/app_theme.dart';
 
 class LouvorjaApp extends StatefulWidget {
@@ -42,12 +45,15 @@ class _LouvorjaAppState extends State<LouvorjaApp> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsController>();
+    final accent = AppAccents.byId(settings.accent.name);
+
     return MaterialApp.router(
       title: 'LouvorJA PIANO',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      theme: AppTheme.light(accent: accent),
+      darkTheme: AppTheme.dark(accent: accent),
+      themeMode: settings.themeMode,
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
