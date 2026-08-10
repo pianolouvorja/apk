@@ -32,6 +32,9 @@ dependencies:
   # SVG rendering (logos e brand assets)
   flutter_svg: ^2.0.16
 
+  # Native splash runtime removal
+  flutter_native_splash: ^2.4.6
+
   # Media
   cached_network_image: ^3.4.1
 
@@ -62,7 +65,6 @@ dev_dependencies:
 
   # Brand assets nativos (Android/iOS/Web)
   flutter_launcher_icons: ^0.14.3
-  flutter_native_splash: ^2.4.6
 
 flutter_launcher_icons:
   android: true
@@ -78,7 +80,8 @@ flutter_native_splash:
   android_12:
     color: "#131313"
     image: assets/images/app-icon-large.png
-  web: true
+  # Web usa a SplashScreen Flutter interna (evita HTML splash sobreposto).
+  web: false
 
 flutter:
   uses-material-design: true

@@ -25,9 +25,17 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late final AnimationController _loaderController;
   late final Animation<double> _fadeLogo;
   late final Animation<double> _fadeCodename;
   late final Animation<double> _fadeStatus;
+  bool _completed = false;
+
+  void _completeInitialization() {
+    if (_completed || !mounted) return;
+    _completed = true;
+    widget.onInitializationComplete?.call();
+  }
 
   @override
   void initState() {
@@ -36,6 +44,10 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
+    _loaderController = AnimationController(
+      duration: const Duration(milliseconds: 1100),
+      vsync: this,
+    )..repeat();
 
     _fadeLogo = CurvedAnimation(
       parent: _controller,
@@ -55,13 +67,14 @@ class _SplashScreenState extends State<SplashScreen>
     // Simula boot de 2s depois chama callback
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) {
-        widget.onInitializationComplete?.call();
+        _completeInitialization();
       }
     });
   }
 
   @override
   void dispose() {
+    _loaderController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -97,12 +110,27 @@ class _SplashScreenState extends State<SplashScreen>
               opacity: _fadeStatus,
               child: Column(
                 children: [
+                  // Loader de marca: o logo LouvorJA gira continuamente
+                  // enquanto o boot carrega, em vez de um spinner genérico.
                   SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.colorScheme.primary,
+                    width: 42,
+                    height: 42,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 42,
+                          height: 42,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        RotationTransition(
+                          turns: _loaderController,
+                          child: const LouvorJaLogo(size: 24),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
