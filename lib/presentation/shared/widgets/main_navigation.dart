@@ -10,7 +10,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 /// + DockFooter.vue
 ///
 /// Tabs: Início, Hinos, Liturgia, Bíblia, Mais.
-/// Tab ativa: icone + label na cor primary, sem fundo/pílula.
+/// Tab ativa: icone + label na cor primary, sem fundo.
 /// Tabs inativas: icone + label em cinza (onSurfaceVariant).
 class MainNavigation extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -43,10 +43,9 @@ class MainNavigation extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SizedBox(
+            height: 60,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(tabs.length, (i) {
                 final tab = tabs[i];
                 final isSelected = i == currentIndex;
@@ -58,25 +57,27 @@ class MainNavigation extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _onTap(i),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isSelected ? tab.selectedIcon : tab.icon,
-                          size: 24,
-                          color: color,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          tab.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isSelected ? tab.selectedIcon : tab.icon,
+                            size: 24,
                             color: color,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            tab.label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
