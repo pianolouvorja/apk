@@ -11,6 +11,7 @@ class HymnListTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final bool isDownloaded;
+  final Widget? trailing;
   final VoidCallback? onTap;
 
   const HymnListTile({
@@ -19,6 +20,7 @@ class HymnListTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.isDownloaded = false,
+    this.trailing,
     this.onTap,
   });
 
@@ -61,7 +63,7 @@ class HymnListTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-      trailing: isDownloaded
+      trailing: trailing ?? (isDownloaded
           ? Icon(
               TablerIcons.download,
               size: 18,
@@ -70,7 +72,7 @@ class HymnListTile extends StatelessWidget {
           : Icon(
               TablerIcons.chevronRight,
               color: theme.colorScheme.onSurfaceVariant,
-            ),
+            )),
     );
   }
 }

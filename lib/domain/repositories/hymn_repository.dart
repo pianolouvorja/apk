@@ -16,8 +16,11 @@ abstract interface class HymnRepository {
   /// Busca global por número ou título.
   Future<List<Hymn>> searchHymns(String query);
 
-  /// Hino específico por ID.
+  /// Hino específico por ID no índice local, se disponível.
   Future<Hymn?> getHymn(int id);
+
+  /// Busca os metadados completos do hino na API, incluindo URLs de áudio.
+  Future<Hymn> getHymnDetails(int id);
 
   /// Lista todas as coletâneas (flat, sem categoria).
   List<Album> getAllAlbums();

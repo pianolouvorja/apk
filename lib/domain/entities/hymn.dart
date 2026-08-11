@@ -13,6 +13,7 @@ class Hymn {
   final int? number;
   final int? durationMs;
   final bool hasInstrumental;
+  final String? urlMusic;
   final String? urlInstrumental;
 
   const Hymn({
@@ -21,6 +22,7 @@ class Hymn {
     this.number,
     this.durationMs,
     this.hasInstrumental = false,
+    this.urlMusic,
     this.urlInstrumental,
   });
 
@@ -31,6 +33,7 @@ class Hymn {
       number: _parseNullableInt(json['track']),
       durationMs: parseDurationMs(json['duration']),
       hasInstrumental: _parseBool(json['has_instrumental_music']),
+      urlMusic: json['url_music'] as String?,
       urlInstrumental: json['url_instrumental_music'] as String?,
     );
   }
@@ -41,6 +44,7 @@ class Hymn {
         if (number != null) 'track': number,
         if (durationMs != null) 'duration': durationMs,
         'has_instrumental_music': hasInstrumental ? 1 : 0,
+        if (urlMusic != null) 'url_music': urlMusic,
         if (urlInstrumental != null) 'url_instrumental_music': urlInstrumental,
       };
 

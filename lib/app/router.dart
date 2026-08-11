@@ -8,9 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../presentation/bible/bible_page.dart';
 import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
+import '../presentation/hymns/album_detail_page.dart';
 import '../presentation/liturgy/liturgy_page.dart';
 import '../presentation/settings/settings_page.dart';
-import '../presentation/shared/widgets/detail_placeholder_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -38,23 +38,13 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/hymns',
-              builder: (context, state) => HymnsPage(),
+              builder: (context, state) => const HymnsPage(),
               routes: [
                 GoRoute(
                   path: ':albumId',
-                  builder: (context, state) => DetailPlaceholderPage(
-                    title: 'Álbum',
-                    identifier: state.pathParameters['albumId']!,
+                  builder: (context, state) => AlbumDetailPage(
+                    albumId: int.tryParse(state.pathParameters['albumId'] ?? '') ?? 0,
                   ),
-                  routes: [
-                    GoRoute(
-                      path: ':hymnId',
-                      builder: (context, state) => DetailPlaceholderPage(
-                        title: 'Hino',
-                        identifier: state.pathParameters['hymnId']!,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),

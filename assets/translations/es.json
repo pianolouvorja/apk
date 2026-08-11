@@ -73,5 +73,12 @@
     "pause": "Pausar",
     "reset": "Reiniciar",
     "finished": "¡Tiempo agotado!"
+  },
+  "errors": {
+    "authFailed": "Error de autenticación. Verifique su conexión e intente nuevamente.",
+    "notFound": "Contenido no disponible en este idioma.",
+    "serverBusy": "Servidor ocupado. Intente nuevamente en unos momentos.",
+    "connection": "Sin conexión al servidor. Verifique su internet.",
+    "unknown": "Ocurrió un error inesperado. Intente nuevamente."
   }
 }

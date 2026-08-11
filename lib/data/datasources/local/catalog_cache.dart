@@ -5,10 +5,9 @@ import 'dart:io';
 
 /// Cache de catálogo em disco com TTL e invalidação por hash.
 ///
-/// Estratégia online-first: se o cache e valido (TTL < 24h e hash bate),
-/// usa local. Senão, busca remoto e atualiza o cache.
+/// Em Web, usar [CatalogCache.noop] — todas operações são no-op.
 class CatalogCache {
-  final Directory _dir;
+  final Directory? _dir;
   final DateTime Function() _now;
 
   static const _ttl = Duration(hours: 24);
@@ -16,13 +15,20 @@ class CatalogCache {
   CatalogCache(this._dir, {DateTime Function()? now})
       : _now = now ?? DateTime.now;
 
-  File _file(String key) => File('${_dir.path}/catalog_$key.json');
+  /// Construtor para Web: sem sistema de arquivos.
+  /// Todas operações retornam null/no-op silenciosamente.
+  const CatalogCache.noop({DateTime Function()? now})
+      : _dir = null,
+        _now = DateTime.now;
 
-  /// Lê o JSON do cache se existir e for valido.
-  /// Retorna null se expirado ou inexistente.
+  File? _file(String key) =>
+      _dir == null ? null : File('${_dir.path}/catalog_$key.json');
+
+  /// Lê o JSON do cache se existir e for válido.
+  /// Retorna null se expirado, inexistente ou Web (noop).
   dynamic read(String key) {
     final f = _file(key);
-    if (!f.existsSync()) return null;
+    if (f == null || !f.existsSync()) return null;
 
     try {
       final stat = f.statSync();
@@ -37,23 +43,28 @@ class CatalogCache {
 
   /// Escreve JSON no cache.
   void write(String key, dynamic data) {
+    final f = _file(key);
+    if (f == null) return;
+
     try {
-      if (!_dir.existsSync()) _dir.createSync(recursive: true);
-      _file(key).writeAsStringSync(jsonEncode(data));
+      if (_dir != null && !_dir.existsSync()) _dir.createSync(recursive: true);
+      f.writeAsStringSync(jsonEncode(data));
     } catch (_) {
-      // Cache e best-effort; falha de escrita nao quebra o app.
+      // Cache é best-effort; falha de escrita não quebra o app.
     }
   }
 
   /// Remove entrada do cache.
   void evict(String key) {
+    final f = _file(key);
     try {
-      _file(key).deleteSync();
+      f?.deleteSync();
     } catch (_) {}
   }
 
   /// Limpa todo o cache.
   void clear() {
+    if (_dir == null) return;
     try {
       for (final f in _dir.listSync()) {
         if (f is File && f.path.contains('catalog_')) {

@@ -41,11 +41,31 @@ class HymnRepositoryImpl implements HymnRepository {
       }
     }
 
-    // Busca remoto
+    // Busca remoto: categorias primeiro, depois hinário (sequencial para respeitar rate limit)
     try {
       final categories = await _api.fetchCategories();
-      _categoriesCache = _filterExcluded(categories);
-      _flatAlbumsCache = null; // invalida cache flat
+      final hymnal = await _api.fetchHymnal();
+
+      // Hinário atual como categoria virtual, quando a API retornou dados.
+      final categoriesWithHymnals = <AlbumCategory>[
+        if (hymnal.isNotEmpty)
+          AlbumCategory(
+            id: 0,
+            name: 'Hinário Adventista',
+            albums: [
+              Album(
+                id: _hymnalCurrentId,
+                name: 'Hinário Adventista (Atual)',
+                subtitle: '${hymnal.length} hinos',
+                trackCount: hymnal.length,
+              ),
+            ],
+          ),
+        ..._filterExcluded(categories),
+      ];
+
+      _categoriesCache = categoriesWithHymnals;
+      _flatAlbumsCache = null;
       return _categoriesCache!;
     } catch (_) {
       // Fallback: cache expirado
@@ -57,8 +77,16 @@ class HymnRepositoryImpl implements HymnRepository {
     }
   }
 
+  /// ID especial para o hinário atual (não é um album real na API).
+  static const _hymnalCurrentId = -1;
+
   @override
   Future<List<Hymn>> getHymnsByAlbum(int albumId) async {
+    // Hinário atual usa endpoint dedicado
+    if (albumId == _hymnalCurrentId) {
+      return _api.fetchHymnal();
+    }
+
     final cacheKey = 'album_$albumId';
 
     final cached = _cache.read(cacheKey);
@@ -87,6 +115,9 @@ class HymnRepositoryImpl implements HymnRepository {
       return title.contains(q) || number.contains(q);
     }).toList();
   }
+
+  @override
+  Future<Hymn> getHymnDetails(int id) => _api.fetchMusic(id);
 
   @override
   Future<Hymn?> getHymn(int id) async {

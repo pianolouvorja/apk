@@ -56,7 +56,8 @@ dependencies:
 
   # Logging (substitui print)
   logger: ^2.5.0
-
+  path_provider: ^2.1.6
+  audioplayers: ^6.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

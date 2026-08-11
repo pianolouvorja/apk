@@ -11,6 +11,9 @@ import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/louvorja_api_client.dart';
 
 class _MockApi implements LouvorjaApiClient {
+  @override
+  String languagePrefix = 'pt';
+
   List<AlbumCategory> categoriesResult = const [];
   Map<int, List<Hymn>> albumHymns = {};
   List<Hymn> musicIndex = const [];
@@ -27,6 +30,9 @@ class _MockApi implements LouvorjaApiClient {
     if (shouldFail) throw Exception('network error');
     return albumHymns[albumId] ?? const [];
   }
+
+  @override
+  Future<Hymn> fetchMusic(int musicId) async => Hymn(id: musicId);
 
   @override
   Future<List<Hymn>> fetchHymnal() async => const [];

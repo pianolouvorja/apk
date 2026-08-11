@@ -73,5 +73,12 @@
     "pause": "Pause",
     "reset": "Reset",
     "finished": "Time's up!"
+  },
+  "errors": {
+    "authFailed": "Authentication failed. Check your connection and try again.",
+    "notFound": "Content not available in this language.",
+    "serverBusy": "Server is busy. Please try again in a moment.",
+    "connection": "No connection to the server. Check your internet.",
+    "unknown": "An unexpected error occurred. Please try again."
   }
 }

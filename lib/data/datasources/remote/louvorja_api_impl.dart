@@ -10,10 +10,21 @@ import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/louvorja_api_client.dart';
 
-/// Implementação de [LouvorjaApiClient] usando Dio com retry e cache-buster.
+/// Exceção user-friendly para erros de rede.
 ///
-/// Endpoints: JSON estáticos em {baseUrl}/json_db/{filename}?{YYYYMMDD}
-/// Header: Api-Token
+/// [code] mapeia para uma chave de tradução i18n.
+/// [detail] mantém o erro técnico original para log.
+class LouvorjaApiException implements Exception {
+  final String code;
+  final String detail;
+
+  const LouvorjaApiException(this.code, this.detail);
+
+  @override
+  String toString() => 'LouvorjaApiException($code): $detail';
+}
+
+/// Implementação de [LouvorjaApiClient] usando Dio com retry e cache-buster.
 class LouvorjaApiImpl implements LouvorjaApiClient {
   final Dio _dio;
   final String baseUrl;
@@ -21,12 +32,16 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
   final String apiToken;
   final DateTime Function() _now;
 
+  @override
+  String languagePrefix;
+
   static const _maxRetries = 5;
 
   LouvorjaApiImpl({
     required this.baseUrl,
     required this.filesUrl,
     required this.apiToken,
+    this.languagePrefix = 'pt',
     DateTime Function()? now,
   })  : _now = now ?? DateTime.now,
         _dio = Dio(BaseOptions(
@@ -37,6 +52,7 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
 
   @visibleForTesting
   Dio get dio => _dio;
+
   String get _cacheBuster {
     final d = _now();
     return '${d.year}${d.month.toString().padLeft(2, '0')}${d.day.toString().padLeft(2, '0')}';
@@ -57,25 +73,44 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
             ? jsonDecode(response.data as String)
             : response.data;
       } on DioException catch (e) {
-        final shouldRetry = e.type == DioExceptionType.badResponse &&
-            (e.response?.statusCode == 429 ||
-                (e.response?.statusCode != null &&
-                    e.response!.statusCode! >= 500));
-        if (!shouldRetry || attempt >= _maxRetries - 1) rethrow;
-      } on Exception catch (_) {
-        if (attempt >= _maxRetries - 1) rethrow;
+        final statusCode = e.response?.statusCode;
+        final shouldRetry = statusCode == 429 ||
+            (statusCode != null && statusCode >= 500);
+
+        if (!shouldRetry || attempt >= _maxRetries - 1) {
+          if (statusCode == 401 || statusCode == 403) {
+            throw const LouvorjaApiException('errors.authFailed', 'Token inválido ou ausente');
+          } else if (statusCode == 404) {
+            throw const LouvorjaApiException('errors.notFound', 'Recurso não encontrado');
+          } else if (shouldRetry) {
+            throw LouvorjaApiException('errors.serverBusy', 'Servidor ocupado após $_maxRetries tentativas');
+          }
+          throw LouvorjaApiException('errors.connection', 'Erro de conexão: $e');
+        }
+
+        // Respeita Retry-After se o servidor enviar
+        final retryAfter = e.response?.headers.value('retry-after');
+        if (retryAfter != null) {
+          final raSec = int.tryParse(retryAfter) ?? 2;
+          await Future.delayed(Duration(seconds: raSec));
+          continue;
+        }
+      } on Exception catch (e) {
+        if (attempt >= _maxRetries - 1) {
+          throw LouvorjaApiException('errors.connection', 'Falha de rede: $e');
+        }
       }
 
-      final delayMs = (1000 * pow(1.5, attempt)).toInt();
+      final delayMs = (1500 * pow(1.5, attempt)).toInt();
       await Future.delayed(Duration(milliseconds: delayMs));
     }
 
-    throw StateError('unreachable');
+    throw const LouvorjaApiException('errors.unknown', 'Estado inalcançável');
   }
 
   @override
   Future<List<AlbumCategory>> fetchCategories() async {
-    final data = await _fetchJson('pt_categories');
+    final data = await _fetchJson('${languagePrefix}_categories');
     final list = data as List<dynamic>;
     return list
         .map((e) => AlbumCategory.fromJson(e as Map<String, dynamic>))
@@ -94,15 +129,21 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
   }
 
   @override
+  Future<Hymn> fetchMusic(int musicId) async {
+    final data = await _fetchJson('music_$musicId');
+    return Hymn.fromJson(data as Map<String, dynamic>);
+  }
+
+  @override
   Future<List<Hymn>> fetchHymnal() async {
-    final data = await _fetchJson('pt_hymnal');
+    final data = await _fetchJson('${languagePrefix}_hymnal');
     final list = data as List<dynamic>;
     return list.map((e) => Hymn.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   @override
   Future<List<Hymn>> fetchMusicIndex() async {
-    final data = await _fetchJson('pt_musics');
+    final data = await _fetchJson('${languagePrefix}_musics');
     final list = data as List<dynamic>;
     return list.map((e) => Hymn.fromJson(e as Map<String, dynamic>)).toList();
   }
