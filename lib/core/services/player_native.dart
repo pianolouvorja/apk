@@ -1,4 +1,4 @@
-// coverage:ignore-file -- Platform channel, não testável em ambiente de teste.
+// coverage:ignore-file
 /// Player nativo (Android/iOS) usando audioplayers.
 library;
 

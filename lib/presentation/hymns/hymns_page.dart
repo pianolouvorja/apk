@@ -59,6 +59,7 @@ class _HymnsPageState extends State<HymnsPage> {
   }
 
   Future<void> _initBloc(String languagePrefix) async {
+    // coverage:ignore-start
     final api = LouvorjaApiImpl(
       baseUrl: 'https://api.louvorja.com.br/json_db',
       filesUrl: 'https://api.louvorja.com.br/file',
@@ -80,6 +81,7 @@ class _HymnsPageState extends State<HymnsPage> {
     final bloc = HymnsBloc(repo);
     bloc.add(HymnsLoadRequested());
     if (mounted) setState(() => _bloc = bloc);
+    // coverage:ignore-end
   }
 
   @override

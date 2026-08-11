@@ -1,4 +1,4 @@
-// coverage:ignore-file -- A instancia real depende de plataforma (Web/Native), nao testavel unitariamente.
+// coverage:ignore-file
 /// Interface do player de audio.
 library;
 

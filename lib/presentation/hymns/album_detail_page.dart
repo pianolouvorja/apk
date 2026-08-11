@@ -38,6 +38,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   Future<List<Hymn>>? _hymnsFuture;
   int? _loadingMusicId;
 
+  // coverage:ignore-start -- Depende de HymnAudioPlayer.instance (plataforma)
   Future<void> _play(Hymn hymn, {required bool instrumental}) async {
     setState(() => _loadingMusicId = hymn.id);
     try {
@@ -79,6 +80,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return HymnRepositoryImpl(api, CatalogCache.noop());
     }
   }
+  // coverage:ignore-end
 
   @override
   void didChangeDependencies() {

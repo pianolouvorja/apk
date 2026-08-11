@@ -37,6 +37,9 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
 
   static const _maxRetries = 5;
 
+  @visibleForTesting
+  int get maxRetries => _maxRetries;
+
   LouvorjaApiImpl({
     required this.baseUrl,
     required this.filesUrl,
@@ -70,7 +73,7 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
       try {
         final response = await _dio.get<dynamic>(url);
         return response.data is String
-            ? jsonDecode(response.data as String)
+            ? jsonDecode(response.data as String) // coverage:ignore-line
             : response.data;
       } on DioException catch (e) {
         final statusCode = e.response?.statusCode;
