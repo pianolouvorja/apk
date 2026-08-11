@@ -1,3 +1,4 @@
+// coverage:ignore-file -- Usa dart:html, só executa em browser.
 /// Player Web usando dart:html AudioElement.
 library;
 // ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter

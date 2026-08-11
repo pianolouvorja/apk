@@ -29,7 +29,9 @@ String _languageCode(BuildContext context) {
 }
 
 class HymnsPage extends StatefulWidget {
-  const HymnsPage({super.key});
+  final HymnsBloc? testBloc;
+
+  const HymnsPage({super.key, this.testBloc});
 
   @override
   State<HymnsPage> createState() => _HymnsPageState();
@@ -42,6 +44,11 @@ class _HymnsPageState extends State<HymnsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Se um bloc de teste foi injetado, pula inicializacao assincrona.
+    if (widget.testBloc != null) {
+      _bloc ??= widget.testBloc;
+      return;
+    }
     final language = _languageCode(context);
     if (_loadedLanguage != language) {
       _loadedLanguage = language;

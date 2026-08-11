@@ -1,3 +1,4 @@
+// coverage:ignore-file -- Stub de conditional import, nunca executa em runtime.
 /// Stub — resolve a implementação correta em runtime.
 library;
 

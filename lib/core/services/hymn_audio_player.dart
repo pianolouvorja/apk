@@ -1,4 +1,5 @@
-/// Interface do player de áudio.
+// coverage:ignore-file -- A instancia real depende de plataforma (Web/Native), nao testavel unitariamente.
+/// Interface do player de audio.
 library;
 
 import 'player_stub.dart'
