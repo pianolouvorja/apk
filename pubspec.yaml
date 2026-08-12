@@ -58,6 +58,17 @@ dependencies:
   logger: ^2.5.0
   path_provider: ^2.1.6
   audioplayers: ^6.8.1
+
+  # Seleção de mídia local para itens da liturgia (mobile/web)
+  file_picker: ^10.3.2
+
+  # Abrir URLs externas (site, video online) da liturgia
+  url_launcher: ^6.3.1
+
+  # Manter tela acesa durante o culto
+  wakelock_plus: ^1.2.8
+  flutter_local_notifications: ^22.3.0
+  timezone: ^0.11.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -106,3 +117,4 @@ flutter:
   assets:
     - assets/translations/
     - assets/images/
+    - assets/images/library/

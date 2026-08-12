@@ -1,5 +1,7 @@
 library;
 
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
 
 /// Álbum (coletânea) do catálogo LouvorJA.
@@ -12,6 +14,7 @@ class Album {
   final String? subtitle;
   final String? coverUrl;
   final int? trackCount;
+  final String? colorHex;
 
   const Album({
     required this.id,
@@ -19,6 +22,7 @@ class Album {
     this.subtitle,
     this.coverUrl,
     this.trackCount,
+    this.colorHex,
   });
 
   factory Album.fromJson(Map<String, dynamic> json) {
@@ -28,16 +32,29 @@ class Album {
       subtitle: json['subtitle'] as String?,
       coverUrl: json['url_image'] as String?,
       trackCount: json['track_count'] as int?,
+      colorHex: json['color'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id_album': id,
-        if (name != null) 'name': name,
-        if (subtitle != null) 'subtitle': subtitle,
-        if (coverUrl != null) 'url_image': coverUrl,
-        if (trackCount != null) 'track_count': trackCount,
-      };
+    'id_album': id,
+    if (name != null) 'name': name,
+    if (subtitle != null) 'subtitle': subtitle,
+    if (coverUrl != null) 'url_image': coverUrl,
+    if (trackCount != null) 'track_count': trackCount,
+    if (colorHex != null) 'color': colorHex,
+  };
+
+  /// Parses [colorHex] (#RRGGBB) to a [Color], or null if invalid.
+  Color? get color {
+    final hex = colorHex;
+    if (hex == null || hex.length < 7) return null;
+    try {
+      return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+    } catch (_) {
+      return null;
+    }
+  }
 
   static int _parseInt(dynamic v) {
     if (v is int) return v;
