@@ -1,3 +1,4 @@
+// ignore_for_file: unrelated_type_equality_checks, unnecessary_null_comparison
 library;
 
 import 'package:flutter_test/flutter_test.dart';

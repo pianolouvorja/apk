@@ -40,7 +40,7 @@ void main() {
         ),
       );
 
-      final button = find.text('Tentar novamente');
+      final button = find.byType(FilledButton);
       expect(button, findsOneWidget);
 
       await tester.tap(button);

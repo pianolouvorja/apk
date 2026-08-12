@@ -7,7 +7,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Louvorja Piano Mobile</string>
+		<string>LouvorJA PIANO</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -68,5 +68,18 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>LouvorJA PIANO precisa acessar sua galeria para selecionar imagens e videos para a liturgia do culto.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>LouvorJA PIANO precisa salvar imagens da liturgia na sua galeria.</string>
+		<key>NSDocumentsFolderUsageDescription</key>
+		<string>LouvorJA PIANO precisa acessar documentos (PDF, PPT) para a liturgia do culto.</string>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>LouvorJA PIANO precisa de acesso a rede para transmitir musicas e conteudo do culto.</string>
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsArbitraryLoads</key>
+			<true/>
+		</dict>
 	</dict>
 </plist>

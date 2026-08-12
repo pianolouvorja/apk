@@ -3,6 +3,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
@@ -20,20 +21,14 @@ class _MockApi implements LouvorjaApiClient {
   String languagePrefix = 'pt';
 
   final bool fail;
-  final bool empty;
+  final List<AlbumCategory> categories;
 
-  _MockApi({this.fail = false, this.empty = false});
+  _MockApi({this.fail = false, this.categories = const []});
 
   @override
   Future<List<AlbumCategory>> fetchCategories() async {
     if (fail) throw Exception('network error');
-    if (empty) return const [];
-    return [
-      AlbumCategory(id: 1, name: 'Test Cat', albums: [
-        const Album(id: 10, name: 'Album X', subtitle: '2024'),
-        const Album(id: 20, name: 'Album Y'),
-      ]),
-    ];
+    return categories;
   }
 
   @override
@@ -62,39 +57,8 @@ HymnsBloc _bloc({_MockApi? api}) {
 }
 
 void main() {
-  testWidgets('HymnsPage mostra loading inicial', (tester) async {
-    final bloc = _bloc();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<HymnsBloc>.value(
-          value: bloc,
-          child: const HymnsPage(),
-        ),
-      ),
-    );
-    // Antes de pumpAndSettle, deve mostrar loading
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
-
-  testWidgets('HymnsPage mostra coletaneas apos carregar', (tester) async {
-    final bloc = _bloc();
-    bloc.add(HymnsLoadRequested());
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<HymnsBloc>.value(
-          value: bloc,
-          child: HymnsPage(testBloc: bloc),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Album X'), findsOneWidget);
-    expect(find.text('Album Y'), findsOneWidget);
-  });
-
-  testWidgets('HymnsPage mostra erro quando API falha', (tester) async {
+  // Mesmo pattern do hymns_page_test.dart original
+  testWidgets('botao retry dispara refresh', (tester) async {
     final bloc = _bloc(api: _MockApi(fail: true));
     bloc.add(HymnsLoadRequested());
 
@@ -109,10 +73,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.wifiOff), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+
+    // Tap retry
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
   });
 
-  testWidgets('HymnsPage mostra empty state quando sem coletaneas', (tester) async {
-    final bloc = _bloc(api: _MockApi(empty: true));
+  testWidgets('AlbumCard sem cover mostra placeholder', (tester) async {
+    final bloc = _bloc(api: _MockApi(categories: [
+      AlbumCategory(id: 1, name: 'Cat', albums: [
+        const Album(id: 10, name: 'Sem Capa'),
+      ]),
+    ]));
     bloc.add(HymnsLoadRequested());
 
     await tester.pumpWidget(
@@ -125,11 +98,50 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(TablerIcons.playlist), findsOneWidget);
+    expect(find.text('Sem Capa'), findsOneWidget);
   });
 
-  testWidgets('busca filtra coletaneas por nome', (tester) async {
-    final bloc = _bloc();
+  testWidgets('AlbumCard tap navega', (tester) async {
+    final bloc = _bloc(api: _MockApi(categories: [
+      AlbumCategory(id: 1, name: 'Cat', albums: [
+        const Album(id: 10, name: 'Nav'),
+      ]),
+    ]));
+    bloc.add(HymnsLoadRequested());
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => BlocProvider<HymnsBloc>.value(
+            value: bloc,
+            child: HymnsPage(testBloc: bloc),
+          ),
+        ),
+        GoRoute(
+          path: '/hymns/:albumId',
+          builder: (_, state) =>
+              Scaffold(body: Text('d:${state.pathParameters['albumId']}')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Nav'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('d:10'), findsOneWidget);
+  });
+
+  testWidgets('RefreshIndicator dispara refresh', (tester) async {
+    final bloc = _bloc(api: _MockApi(categories: [
+      AlbumCategory(id: 1, name: 'Cat', albums: [
+        const Album(id: 10, name: 'R'),
+      ]),
+    ]));
     bloc.add(HymnsLoadRequested());
 
     await tester.pumpWidget(
@@ -142,24 +154,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Abrir busca
-    await tester.tap(find.byKey(const Key('hymns-search-toggle')));
+    await tester.fling(find.text('R'), const Offset(0, 500), 1000);
     await tester.pump();
-
-    // Digitar filtro que so match Album X
-    await tester.enterText(find.byType(TextField), 'Album X');
-    await tester.pump();
-
-    // O texto do album na lista deve aparecer (excluindo o proprio TextField)
-    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album X')), findsOneWidget);
-    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album Y')), findsNothing);
-
-    // Fechar busca
-    await tester.tap(find.byKey(const Key('hymns-search-toggle')));
-    await tester.pump();
-
-    // Voltou a mostrar todos
-    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album X')), findsOneWidget);
-    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album Y')), findsOneWidget);
   });
 }

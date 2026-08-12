@@ -37,24 +37,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SettingsPage), findsOneWidget);
-    expect(find.byType(Slider), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2));
     expect(find.byKey(const Key('theme-dark')), findsOneWidget);
   });
 
-  testWidgets('chips de tema acionam callbacks reais', (tester) async {
+  testWidgets('controles de tema acionam callbacks reais', (tester) async {
     final controller = SettingsController();
     await tester.pumpWidget(_subject(controller));
     await tester.pumpAndSettle();
 
+    // IconButton dark
     await tester.tap(find.byKey(const Key('theme-dark')));
     await tester.pump();
     expect(controller.themeMode, ThemeMode.dark);
 
+    // IconButton light
     await tester.tap(find.byKey(const Key('theme-light')));
     await tester.pump();
     expect(controller.themeMode, ThemeMode.light);
 
-    await tester.tap(find.byKey(const Key('theme-system')));
+    // Slider orbital -> arrastar para o centro (system = 50)
+    final slider = find.byKey(const Key('theme-orbital-slider'));
+    await tester.drag(slider, const Offset(50, 0));
     await tester.pump();
     expect(controller.themeMode, ThemeMode.system);
   });
@@ -72,6 +76,23 @@ void main() {
       if (label.contains('Portugues') || label.contains('Espanol')) {
         chip.onSelected?.call(true);
         await tester.pump();
+      }
+    }
+  });
+
+  testWidgets('tap em Espanhol aciona setLocale', (tester) async {
+    final controller = SettingsController();
+    await tester.pumpWidget(_subject(controller));
+    await tester.pumpAndSettle();
+
+    // Procurar o _ChoiceChip com texto que contem 'Espanol' e dar tap
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)).toList();
+    for (final chip in chips) {
+      final label = (chip.label as Text).data ?? '';
+      if (label.contains('Espanol')) {
+        await tester.tap(find.byWidget(chip));
+        await tester.pump();
+        break;
       }
     }
   });
