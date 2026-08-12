@@ -3,11 +3,15 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../../app/theme/app_spacing.dart';
+import '../../core/services/update_service.dart';
 import '../shared/widgets/gradient_background.dart';
+import '../shared/widgets/update_banner.dart';
 
 /// HomePage — tela inicial identica ao app desktop.
 ///
@@ -33,6 +37,12 @@ class _HomePageState extends State<HomePage> {
   bool _editingDistrict = true;
   bool _editingChurch = false;
 
+  // Auto-update
+  UpdateCheckResult? _update;
+  bool _checkingUpdate = false;
+  bool _downloading = false;
+  int? _downloadProgress;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +50,56 @@ class _HomePageState extends State<HomePage> {
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
+    _checkForUpdates();
+  }
+
+  // coverage:ignore-start
+  Future<void> _checkForUpdates() async {
+    if (!kReleaseMode || _checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    try {
+      final service = UpdateService();
+      final result = await service.checkForUpdates();
+      if (mounted) setState(() => _update = result);
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+    // coverage:ignore-end
+  }
+
+  Future<void> _performUpdate() async {
+    // coverage:ignore-start
+    final update = _update;
+    if (update == null || update.downloadUrl == null) return;
+
+    setState(() {
+      _downloading = true;
+      _downloadProgress = null;
+    });
+
+    try {
+      final service = UpdateService();
+      final path = await service.downloadApk(
+        update.downloadUrl!,
+        onProgress: (received, total) {
+          if (mounted && total > 0) {
+            setState(() => _downloadProgress = (received * 100 ~/ total));
+          }
+        },
+      );
+      await OpenFilex.open(path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível baixar a atualização.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+    // coverage:ignore-end
   }
 
   @override
@@ -62,71 +122,94 @@ class _HomePageState extends State<HomePage> {
 
     return GradientBackground(
       child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.pageMargin),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo LouvorJA 128px centralizado
-                SvgPicture.asset(
-                  'assets/images/logo-louvor-ja.svg',
-                  width: 128,
-                  height: 128,
-                ),
-                const SizedBox(height: 40),
+        child: Column(
+          children: [
+            // Banner de atualizacao (APK apenas)
+            if (_update != null && _update!.hasUpdate && !kIsWeb)
+              UpdateBanner(
+                version: _update!.latestVersion ?? '',
+                apkSizeBytes: _update!.apkSize,
+                onUpdate: _performUpdate,
+                onDismiss: () =>
+                    setState(() => _update = UpdateCheckResult.none),
+              ),
+            if (_downloading)
+              LinearProgressIndicator(
+                value: _downloadProgress != null
+                    ? _downloadProgress! / 100
+                    : null,
+              ),
+            // Conteudo principal
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.pageMargin),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo LouvorJA 128px centralizado
+                      SvgPicture.asset(
+                        'assets/images/logo-louvor-ja.svg',
+                        width: 128,
+                        height: 128,
+                      ),
+                      const SizedBox(height: 40),
 
-                // Distrito (editavel, size lg)
-                _LocationField(
-                  label: 'home.districtLabel'.tr(),
-                  fontSize: 24,
-                  controller: _districtController,
-                  editing: _editingDistrict,
-                  onEdit: () => setState(() => _editingDistrict = true),
-                  onSubmit: (value) => setState(() {
-                    _districtController.text = value;
-                    _editingDistrict = false;
-                    _editingChurch = _churchController.text.isEmpty;
-                  }),
-                ),
-                const SizedBox(height: 12),
+                      // Distrito (editavel, size lg)
+                      _LocationField(
+                        label: 'home.districtLabel'.tr(),
+                        fontSize: 24,
+                        controller: _districtController,
+                        editing: _editingDistrict,
+                        onEdit: () => setState(() => _editingDistrict = true),
+                        onSubmit: (value) => setState(() {
+                          _districtController.text = value;
+                          _editingDistrict = false;
+                          _editingChurch = _churchController.text.isEmpty;
+                        }),
+                      ),
+                      const SizedBox(height: 12),
 
-                // Igreja (editavel, size md)
-                _LocationField(
-                  label: 'home.churchLabel'.tr(),
-                  fontSize: 18,
-                  controller: _churchController,
-                  editing: _editingChurch,
-                  onEdit: () => setState(() => _editingChurch = true),
-                  onSubmit: (value) => setState(() {
-                    _churchController.text = value;
-                    _editingChurch = false;
-                  }),
-                ),
-                const SizedBox(height: 24),
+                      // Igreja (editavel, size md)
+                      _LocationField(
+                        label: 'home.churchLabel'.tr(),
+                        fontSize: 18,
+                        controller: _churchController,
+                        editing: _editingChurch,
+                        onEdit: () => setState(() => _editingChurch = true),
+                        onSubmit: (value) => setState(() {
+                          _churchController.text = value;
+                          _editingChurch = false;
+                        }),
+                      ),
+                      const SizedBox(height: 24),
 
-                // Relogio digital em tempo real
-                Text(
-                  _formattedTime,
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    color: theme.colorScheme.primary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    shadows: [
-                      Shadow(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.5),
-                        blurRadius: 8,
+                      // Relogio digital em tempo real
+                      Text(
+                        _formattedTime,
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                          color: theme.colorScheme.primary,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          shadows: [
+                            Shadow(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.5,
+                              ),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
+            ), // Expanded
+          ], // Column children
+        ), // Column
       ),
     );
   }
