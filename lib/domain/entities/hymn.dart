@@ -15,6 +15,7 @@ class Hymn {
   final bool hasInstrumental;
   final String? urlMusic;
   final String? urlInstrumental;
+  final String? lyric;
 
   const Hymn({
     required this.id,
@@ -24,6 +25,7 @@ class Hymn {
     this.hasInstrumental = false,
     this.urlMusic,
     this.urlInstrumental,
+    this.lyric,
   });
 
   factory Hymn.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Hymn {
       hasInstrumental: _parseBool(json['has_instrumental_music']),
       urlMusic: json['url_music'] as String?,
       urlInstrumental: json['url_instrumental_music'] as String?,
+      lyric: _parseLyric(json['lyric']),
     );
   }
 
@@ -46,6 +49,7 @@ class Hymn {
         'has_instrumental_music': hasInstrumental ? 1 : 0,
         if (urlMusic != null) 'url_music': urlMusic,
         if (urlInstrumental != null) 'url_instrumental_music': urlInstrumental,
+        if (lyric != null) 'lyric': lyric,
       };
 
   /// Formata duração em "M:SS" ou "H:MM:SS".
@@ -119,6 +123,27 @@ class Hymn {
     if (v is num) return v != 0;
     if (v is String) return v == '1' || v.toLowerCase() == 'true';
     return false;
+  }
+
+  /// A API pode retornar a letra como texto unico (catalogo) ou uma lista
+  /// ordenada de estrofes (endpoint music_{id}). Normaliza ambos para texto.
+  static String? _parseLyric(dynamic raw) {
+    if (raw is String) return raw.isEmpty ? null : raw;
+    if (raw is! List) return null;
+
+    final verses = raw
+        .whereType<Map>()
+        .map((entry) => {
+              'order': _parseInt(entry['order']),
+              'show': _parseBool(entry['show_slide']),
+              'text': (entry['lyric'] ?? '').toString().trim(),
+            })
+        .where((entry) => entry['show'] == true && (entry['text'] as String).isNotEmpty)
+        .toList()
+      ..sort((a, b) => (a['order'] as int).compareTo(b['order'] as int));
+
+    if (verses.isEmpty) return null;
+    return verses.map((entry) => entry['text'] as String).join('\n\n');
   }
 
   @override

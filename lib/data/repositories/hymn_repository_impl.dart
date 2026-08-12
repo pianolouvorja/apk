@@ -41,12 +41,13 @@ class HymnRepositoryImpl implements HymnRepository {
       }
     }
 
-    // Busca remoto: categorias primeiro, depois hinário (sequencial para respeitar rate limit)
+    // Busca remoto: categorias primeiro, depois hinários (sequencial para respeitar rate limit)
     try {
       final categories = await _api.fetchCategories();
       final hymnal = await _api.fetchHymnal();
+      final hymnal1996 = await _api.fetchHymnal1996();
 
-      // Hinário atual como categoria virtual, quando a API retornou dados.
+      // Hinários como categorias virtuais, quando a API retornou dados.
       final categoriesWithHymnals = <AlbumCategory>[
         if (hymnal.isNotEmpty)
           AlbumCategory(
@@ -58,6 +59,21 @@ class HymnRepositoryImpl implements HymnRepository {
                 name: 'Hinário Adventista (Atual)',
                 subtitle: '${hymnal.length} hinos',
                 trackCount: hymnal.length,
+                coverUrl: 'asset:hymnal.jpeg',
+              ),
+            ],
+          ),
+        if (hymnal1996.isNotEmpty)
+          AlbumCategory(
+            id: 0,
+            name: 'Hinário Adventista',
+            albums: [
+              Album(
+                id: _hymnal1996Id,
+                name: 'Hinário Adventista (1996)',
+                subtitle: '${hymnal1996.length} hinos',
+                trackCount: hymnal1996.length,
+                coverUrl: 'asset:hymnal_1996.jpeg',
               ),
             ],
           ),
@@ -79,12 +95,17 @@ class HymnRepositoryImpl implements HymnRepository {
 
   /// ID especial para o hinário atual (não é um album real na API).
   static const _hymnalCurrentId = -1;
+  static const _hymnal1996Id = -2;
 
   @override
   Future<List<Hymn>> getHymnsByAlbum(int albumId) async {
     // Hinário atual usa endpoint dedicado
     if (albumId == _hymnalCurrentId) {
       return _api.fetchHymnal();
+    }
+    // Hinário 1996 usa endpoint dedicado
+    if (albumId == _hymnal1996Id) {
+      return _api.fetchHymnal1996();
     }
 
     final cacheKey = 'album_$albumId';

@@ -1,6 +1,8 @@
 library;
 
 import '../../domain/entities/album_category.dart';
+import '../../domain/entities/bible_book.dart';
+import '../../domain/entities/bible_version.dart';
 import '../../domain/entities/hymn.dart';
 
 /// Contrato abstrato para acesso à API do LouvorJA.
@@ -28,9 +30,22 @@ abstract interface class LouvorjaApiClient {
   /// GET json_db/{prefix}_hymnal → hinário adventista.
   Future<List<Hymn>> fetchHymnal();
 
+  /// GET json_db/{prefix}_hymnal_1996 → hinário adventista 1996.
+  Future<List<Hymn>> fetchHymnal1996();
+
   /// GET json_db/{prefix}_musics → índice global de músicas.
   Future<List<Hymn>> fetchMusicIndex();
 
   /// Constrói URL completa para mídia (capa, áudio).
   String resolveMediaUrl(String relativePath);
+
+  /// GET json_db/{prefix}_bible_book → 66 livros bíblicos.
+  Future<List<BibleBook>> fetchBibleBooks();
+
+  /// GET json_db/{prefix}_bible_version → versões disponíveis.
+  Future<List<BibleVersion>> fetchBibleVersions();
+
+  /// GET json_db/bible_{versionId}_{bookId}_{chapter} → versículos.
+  Future<Map<String, String>> fetchBibleChapter(
+      int versionId, int bookId, int chapter);
 }

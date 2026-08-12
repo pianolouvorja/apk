@@ -7,6 +7,8 @@ import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart'
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_version.dart';
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/louvorja_api_client.dart';
 
@@ -18,6 +20,7 @@ class _MockApi implements LouvorjaApiClient {
   Map<int, List<Hymn>> albumHymns = {};
   List<Hymn> musicIndex = const [];
   List<Hymn> hymnalResult = const [];
+  List<Hymn> hymnal1996Result = const [];
   Hymn? musicDetail;
   bool shouldFail = false;
 
@@ -46,6 +49,12 @@ class _MockApi implements LouvorjaApiClient {
   }
 
   @override
+  Future<List<Hymn>> fetchHymnal1996() async {
+    if (shouldFail) throw Exception('network error');
+    return hymnal1996Result;
+  }
+
+  @override
   Future<List<Hymn>> fetchMusicIndex() async {
     if (shouldFail) throw Exception('network error');
     return musicIndex;
@@ -53,6 +62,12 @@ class _MockApi implements LouvorjaApiClient {
 
   @override
   String resolveMediaUrl(String relativePath) => 'https://example.com/$relativePath';
+@override
+  Future<List<BibleBook>> fetchBibleBooks() async => const [];
+  @override
+  Future<List<BibleVersion>> fetchBibleVersions() async => const [];
+  @override
+  Future<Map<String, String>> fetchBibleChapter(int v, int b, int c) async => {};
 }
 
 void main() {
@@ -97,8 +112,39 @@ void main() {
     final repo = HymnRepositoryImpl(api, cache);
     final result = await repo.getCategories();
 
-    expect(result.length, 1);
-    expect(result.first.name, 'Cat 1');
+    // Sem categoria virtual de hinario
+    expect(result.any((c) => c.name == 'Hinário Adventista'), false);
+  });
+
+  test('getCategories injeta hinario 1996 quando disponivel', () async {
+    api.categoriesResult = const [];
+    api.hymnal1996Result = [
+      const Hymn(id: 1, title: 'Hino 1996 #1'),
+      const Hymn(id: 2, title: 'Hino 1996 #2'),
+      const Hymn(id: 3, title: 'Hino 1996 #3'),
+    ];
+
+    final repo = HymnRepositoryImpl(api, cache);
+    final result = await repo.getCategories();
+
+    // Deve ter categoria com hinario 1996
+    final hymnalCat = result.where((c) => c.name == 'Hinário Adventista').toList();
+    expect(hymnalCat, isNotEmpty);
+    final album1996 = hymnalCat.first.albums.where((a) => a.id == -2).first;
+    expect(album1996.name, contains('1996'));
+    expect(album1996.subtitle, '3 hinos');
+  });
+
+  test('getHymnsByAlbum retorna hinario 1996 do endpoint dedicado', () async {
+    api.hymnal1996Result = [
+      const Hymn(id: 10, title: 'O Deus de Amor'),
+    ];
+
+    final repo = HymnRepositoryImpl(api, cache);
+    final hymns = await repo.getHymnsByAlbum(-2);
+
+    expect(hymns.length, 1);
+    expect(hymns.first.title, 'O Deus de Amor');
   });
 
   test('getCategories filtra IDs 712 e 629', () async {

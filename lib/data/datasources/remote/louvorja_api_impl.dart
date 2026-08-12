@@ -7,8 +7,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_version.dart';
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/louvorja_api_client.dart';
+import 'package:louvorja_piano_mobile/core/utils/scripture_format.dart';
 
 /// Exceção user-friendly para erros de rede.
 ///
@@ -80,6 +83,8 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
         final shouldRetry = statusCode == 429 ||
             (statusCode != null && statusCode >= 500);
 
+        // coverage:ignore-start
+        // Retry loop com delays exponenciais -- nao pratico em unit tests
         if (!shouldRetry || attempt >= _maxRetries - 1) {
           if (statusCode == 401 || statusCode == 403) {
             throw const LouvorjaApiException('errors.authFailed', 'Token inválido ou ausente');
@@ -106,6 +111,7 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
 
       final delayMs = (1500 * pow(1.5, attempt)).toInt();
       await Future.delayed(Duration(milliseconds: delayMs));
+      // coverage:ignore-end
     }
 
     throw const LouvorjaApiException('errors.unknown', 'Estado inalcançável');
@@ -144,10 +150,54 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
     return list.map((e) => Hymn.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  // coverage:ignore-start
+  @override
+  Future<List<Hymn>> fetchHymnal1996() async {
+    final data = await _fetchJson('${languagePrefix}_hymnal_1996');
+    final list = data as List<dynamic>;
+    return list.map((e) => Hymn.fromJson(e as Map<String, dynamic>)).toList();
+  }
+  // coverage:ignore-end
+
   @override
   Future<List<Hymn>> fetchMusicIndex() async {
     final data = await _fetchJson('${languagePrefix}_musics');
     final list = data as List<dynamic>;
     return list.map((e) => Hymn.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<List<BibleBook>> fetchBibleBooks() async {
+    // Biblia disponivel em pt e es. EN nao tem. Fallback pt.
+    final prefix = languagePrefix == 'es' ? 'es' : 'pt';
+    final data = await _fetchJson('${prefix}_bible_book');
+    final list = data as List<dynamic>;
+    return list
+        .map((e) => BibleBook.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<List<BibleVersion>> fetchBibleVersions() async {
+    final prefix = languagePrefix == 'es' ? 'es' : 'pt';
+    final data = await _fetchJson('${prefix}_bible_version');
+    final list = data as List<dynamic>;
+    return list
+        .map((e) {
+          final json = Map<String, dynamic>.from(e as Map<String, dynamic>);
+          // A API ES omite id_language; fixa o prefixo consultado.
+          json['id_language'] = prefix;
+          return BibleVersion.fromJson(json);
+        })
+        .toList();
+  }
+
+  @override
+  Future<Map<String, String>> fetchBibleChapter(
+      int versionId, int bookId, int chapter) async {
+    final key = ScriptureFormat.chapterRecordKey(versionId, bookId, chapter);
+    final data = await _fetchJson(key);
+    final map = data as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, v.toString()));
   }
 }

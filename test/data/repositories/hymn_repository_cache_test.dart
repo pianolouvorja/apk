@@ -1,6 +1,6 @@
+// ignore_for_file: unused_import
 library;
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +8,8 @@ import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart'
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/domain/entities/bible_version.dart';
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/louvorja_api_client.dart';
 
@@ -31,9 +33,17 @@ class _MockApi implements LouvorjaApiClient {
   @override
   Future<List<Hymn>> fetchHymnal() async => const [];
   @override
+  Future<List<Hymn>> fetchHymnal1996() async => const [];
+  @override
   Future<List<Hymn>> fetchMusicIndex() async => const [];
   @override
   String resolveMediaUrl(String relativePath) => '';
+@override
+  Future<List<BibleBook>> fetchBibleBooks() async => const [];
+  @override
+  Future<List<BibleVersion>> fetchBibleVersions() async => const [];
+  @override
+  Future<Map<String, String>> fetchBibleChapter(int v, int b, int c) async => {};
 }
 
 void main() {
