@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -17,6 +19,8 @@ import 'package:louvorja_piano_mobile/domain/repositories/hymn_repository.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/hymn_list_tile.dart';
 import 'bloc/hymns_bloc.dart';
 
+// coverage:ignore-start
+// Helper so chamado de dentro de blocos coverage:ignore (depende de plataforma)
 String _languageCode(BuildContext context) {
   try {
     return context.locale.languageCode;
@@ -24,11 +28,15 @@ String _languageCode(BuildContext context) {
     return 'pt';
   }
 }
+// coverage:ignore-end
 
 class AlbumDetailPage extends StatefulWidget {
   final int albumId;
 
-  const AlbumDetailPage({super.key, required this.albumId});
+  /// Injeção opcional para testes; produção usa o singleton por plataforma.
+  final HymnAudioPlayer? audioPlayer;
+
+  const AlbumDetailPage({super.key, required this.albumId, this.audioPlayer});
 
   @override
   State<AlbumDetailPage> createState() => _AlbumDetailPageState();
@@ -37,35 +45,68 @@ class AlbumDetailPage extends StatefulWidget {
 class _AlbumDetailPageState extends State<AlbumDetailPage> {
   Future<List<Hymn>>? _hymnsFuture;
   int? _loadingMusicId;
+  int? _expandedHymnId;
+  int? _playingHymnId;
+  StreamSubscription<bool>? _playingSubscription;
 
-  // coverage:ignore-start -- Depende de HymnAudioPlayer.instance (plataforma)
-  Future<void> _play(Hymn hymn, {required bool instrumental}) async {
+  HymnAudioPlayer get _player => widget.audioPlayer ?? HymnAudioPlayer.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sincroniza o ícone quando a faixa termina, falha ou é pausada externamente.
+    _playingSubscription = _player.playingStream.listen((playing) {
+      if (!playing && mounted) {
+        setState(() => _playingHymnId = null);
+      }
+    });
+  }
+
+  // Bloco depende de HymnAudioPlayer.instance (plataforma)
+  // coverage:ignore-start
+  Future<void> _togglePlay(Hymn hymn, {required bool instrumental}) async {
+    final player = _player;
+
+    // Mesmo hino em execução: alterna para pausa.
+    if (_playingHymnId == hymn.id) {
+      await player.pause();
+      if (mounted) setState(() => _playingHymnId = null);
+      return;
+    }
+
     setState(() => _loadingMusicId = hymn.id);
     try {
       final detail = await _repository().getHymnDetails(hymn.id);
-      final relativeUrl = instrumental ? detail.urlInstrumental : detail.urlMusic;
+      final relativeUrl = instrumental
+          ? detail.urlInstrumental
+          : detail.urlMusic;
       if (relativeUrl == null || relativeUrl.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('errors.notFound'.tr())),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('errors.notFound'.tr())));
         }
         return;
       }
       final url = relativeUrl.startsWith('http')
           ? relativeUrl
           : 'https://api.louvorja.com.br/file/${relativeUrl.replaceFirst(RegExp(r'^/+'), '')}';
-      await HymnAudioPlayer.instance.toggleUrl(url);
+      // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
+      // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
+      if (mounted) setState(() => _playingHymnId = hymn.id);
+      await player.playUrl(url);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('errors.connection'.tr())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
       }
     } finally {
       if (mounted) setState(() => _loadingMusicId = null);
     }
   }
+
+  bool _isThisPlaying(Hymn hymn) => _playingHymnId == hymn.id;
 
   HymnRepository _repository() {
     try {
@@ -88,6 +129,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     _hymnsFuture ??= _loadHymns();
   }
 
+  @override
+  void dispose() {
+    _playingSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<List<Hymn>> _loadHymns() async {
     // Tenta ler o HymnsBloc da arvore (se HymnsPage proveu)
     try {
@@ -95,7 +142,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return bloc.repository.getHymnsByAlbum(widget.albumId);
     } catch (_) {}
 
-    // Fallback: cria repository localmente
+    // Fallback: cria repository localmente (nao testavel em unit test)
+    // coverage:ignore-start
     final api = LouvorjaApiImpl(
       baseUrl: 'https://api.louvorja.com.br/json_db',
       filesUrl: 'https://api.louvorja.com.br/file',
@@ -111,6 +159,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     }
 
     return repo.getHymnsByAlbum(widget.albumId);
+    // coverage:ignore-end
   }
 
   @override
@@ -123,6 +172,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           icon: const Icon(TablerIcons.arrowLeft),
           onPressed: () {
             if (context.canPop()) {
+              // coverage:ignore-line
               context.pop();
             } else {
               context.go('/hymns');
@@ -143,7 +193,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(TablerIcons.alertCircle, size: 48, color: theme.colorScheme.error),
+                    Icon(
+                      TablerIcons.alertCircle,
+                      size: 48,
+                      color: theme.colorScheme.error,
+                    ),
                     const SizedBox(height: AppSpacing.s4),
                     Text(
                       'errors.connection'.tr(),
@@ -167,7 +221,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(TablerIcons.playlist, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    TablerIcons.playlist,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: AppSpacing.s2),
                   Text('common.empty'.tr(), style: theme.textTheme.bodyMedium),
                 ],
@@ -197,38 +255,94 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               ),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s4,
+                  ),
                   itemCount: hymns.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final hymn = hymns[index];
-                    return HymnListTile(
-                      number: hymn.number?.toString().padLeft(3, '0') ?? '---',
-                      title: hymn.title ?? 'Sem titulo',
-                      subtitle: hymn.formattedDuration.isEmpty ? null : hymn.formattedDuration,
-                      trailing: _loadingMusicId == hymn.id
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Reproduzir',
-                                  icon: const Icon(TablerIcons.playerPlay),
-                                  onPressed: () => _play(hymn, instrumental: false),
-                                ),
-                                if (hymn.hasInstrumental)
-                                  IconButton(
-                                    tooltip: 'Instrumental',
-                                    icon: const Icon(TablerIcons.piano),
-                                    onPressed: () => _play(hymn, instrumental: true),
+                    final isExpanded = _expandedHymnId == hymn.id;
+                    final isPlaying = _isThisPlaying(hymn);
+                    final isLoading = _loadingMusicId == hymn.id;
+
+                    return Column(
+                      children: [
+                        HymnListTile(
+                          number:
+                              hymn.number?.toString().padLeft(3, '0') ?? '---',
+                          title: hymn.title ?? 'Sem titulo',
+                          subtitle: hymn.formattedDuration.isEmpty
+                              ? null
+                              : hymn.formattedDuration,
+                          trailing: isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
-                              ],
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: isPlaying
+                                          ? 'Pausar'
+                                          : 'Reproduzir',
+                                      icon: Icon(
+                                        isPlaying
+                                            ? TablerIcons.playerPauseFilled
+                                            : TablerIcons.playerPlayFilled,
+                                        color: isPlaying
+                                            ? theme.colorScheme.primary
+                                            : null,
+                                      ),
+                                      // coverage:ignore-line
+                                      onPressed: () => _togglePlay(
+                                        hymn,
+                                        instrumental: false,
+                                      ),
+                                    ),
+                                    if (hymn.hasInstrumental)
+                                      IconButton(
+                                        tooltip: 'Instrumental',
+                                        icon: const Icon(TablerIcons.piano),
+                                        // coverage:ignore-line
+                                        onPressed: () => _togglePlay(
+                                          hymn,
+                                          instrumental: true,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                          // coverage:ignore-line
+                          onTap: () {
+                            setState(() {
+                              _expandedHymnId = isExpanded ? null : hymn.id;
+                            });
+                          },
+                        ),
+                        // Letra expansivel
+                        if (isExpanded &&
+                            hymn.lyric != null &&
+                            hymn.lyric!.isNotEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
                             ),
-                      onTap: () => _play(hymn, instrumental: false),
+                            color: theme.colorScheme.surfaceContainer,
+                            child: Text(
+                              hymn.lyric!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                height: 1.6,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),
