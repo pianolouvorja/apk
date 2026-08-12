@@ -7,7 +7,9 @@
     "hymns": "Hymns",
     "liturgy": "Liturgy",
     "bible": "Bible",
-    "more": "More"
+    "more": "More",
+    "tools": "Tools",
+    "timer": "Timer"
   },
   "home": {
     "districtLabel": "District",
@@ -29,28 +31,130 @@
     "edit": "Edit",
     "close": "Close",
     "offline": "Offline",
-    "online": "Online"
+    "online": "Online",
+    "id": "ID",
+    "start": "Start",
+    "pause": "Pause",
+    "stop": "Stop",
+    "reset": "Reset"
   },
   "hymns": {
     "title": "Hymns",
     "searchPlaceholder": "Search by number, title or lyric",
     "availableOffline": "Available offline",
-    "noResults": "No hymns found"
+    "noResults": "No hymns found",
+    "searchHint": "Search collections..."
   },
   "liturgy": {
     "title": "Liturgy",
+    "subtitle": "Service Liturgy",
+    "addItem": "Add Category/Section",
+    "emptyList": "Empty liturgy",
+    "notes": "Notes",
+    "notesPlaceholder": "Service notes...",
     "cloneFrom": "Clone from another day",
-    "addItem": "Add item",
-    "notes": "Notes"
+    "days": {
+      "sunday": "Sun",
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    },
+    "categoryPlaceholder": "Ex: Opening, Sabbath School, Divine Service...",
+    "types": {
+      "category": "Category",
+      "music": "Music",
+      "annotation": "Notes",
+      "prayer": "Prayer",
+      "verse": "Verse",
+      "notice": "Notice",
+      "scheduled": "Scheduled",
+      "video": "Videos",
+      "images": "Images",
+      "pdf": "PDFs",
+      "presentation": "Presentations PPT",
+      "other_files": "Others",
+      "online_video": "Youtube/Vimeo/Others",
+      "site": "Sites/Social Media"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Remove",
+      "addSubItem": "Add sub-item",
+      "addToService": "Add to service",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "dialog": {
+      "itemType": "Item Type",
+      "momentName": "Moment name",
+      "complementaryTitle": "Complementary title",
+      "duration": "Duration (min)",
+      "default": "Default",
+      "internal": "Internal Files",
+      "external": "External Media",
+      "categoryMomentName": "Category name",
+      "groups": {
+        "default": "Default",
+        "internal": "Internal Files",
+        "external": "External Media"
+      }
+    },
+    "durationMin": "min",
+    "fields": {
+      "url": "URL",
+      "selectMusic": "Selected music",
+      "searchMusic": "Select music",
+      "selectFileButton": "Select file",
+      "changeFileButton": "Change file",
+      "selectVideoButton": "Select video",
+      "selectPdfButton": "Select PDF",
+      "selectSchedule": "Select date and time",
+      "scheduledFor": "Scheduled for"
+    },
+    "totalDuration": "Total duration",
+    "setStartTime": "Set start time"
   },
   "bible": {
     "title": "Bible",
+    "version": "Version",
+    "selectVersion": "Select version",
+    "location": "Location",
+    "locationEmpty": "—",
+    "browseVerses": "Verses",
+    "browseBooksAndChapters": "Books and Chapters",
+    "books": "Books",
+    "chapters": "Ch.",
+    "testamentOld": "OT",
+    "testamentNew": "NT",
+    "searchBible": "Search the Bible",
+    "searchBook": "Search book...",
+    "searchChapter": "Ch...",
+    "searchVerse": "Search verse",
+    "copy": "Copy",
+    "previousVerse": "Previous verse",
+    "nextVerse": "Next verse",
+    "clearSelection": "Clear selection",
+    "emptyCatalog": "No Bible content available.",
+    "emptyChapter": "No verses found in this chapter.",
+    "loading": "Loading Bible...",
+    "retry": "Try again",
+    "dismiss": "Dismiss",
     "oldTestament": "Old Testament",
     "newTestament": "New Testament",
-    "selectVersion": "Version",
     "selectBook": "Book",
     "selectChapter": "Chapter",
-    "searchPlaceholder": "Search verse"
+    "searchPlaceholder": "Search verse",
+    "errors": {
+      "loadCatalogFailed": "Could not load Bible books and versions.",
+      "loadChapterFailed": "Could not load the selected chapter."
+    },
+    "previousChapter": "Previous chapter",
+    "nextChapter": "Next chapter"
   },
   "settings": {
     "title": "Settings",
@@ -63,7 +167,16 @@
     "language": "Language",
     "glassIntensity": "Glass intensity",
     "animationProfile": "Animation profile",
-    "fontSize": "Font size"
+    "fontSize": "Font size",
+    "termsOfUse": "Terms of Use and Privacy",
+    "interactionDynamic": "Dynamic",
+    "interactionSoft": "Soft",
+    "interactionMist": "Mist",
+    "sectionGeneral": "General",
+    "languagePortuguese": "Portuguese (BR)",
+    "languageEnglish": "English",
+    "languageSpanish": "Espanol",
+    "version": "Version"
   },
   "timer": {
     "title": "Timer",
@@ -72,7 +185,9 @@
     "start": "Start",
     "pause": "Pause",
     "reset": "Reset",
-    "finished": "Time's up!"
+    "finished": "Time's up!",
+    "minutes": "Min",
+    "seconds": "Sec"
   },
   "errors": {
     "authFailed": "Authentication failed. Check your connection and try again.",
@@ -80,5 +195,14 @@
     "serverBusy": "Server is busy. Please try again in a moment.",
     "connection": "No connection to the server. Check your internet.",
     "unknown": "An unexpected error occurred. Please try again."
+  },
+  "tools": {
+    "title": "Tools",
+    "liturgy": "Liturgy",
+    "liturgySubtitle": "Organize the service",
+    "bible": "Bible",
+    "bibleSubtitle": "Books, chapters and verses",
+    "timer": "Timer",
+    "timerSubtitle": "Stopwatch and countdown"
   }
 }

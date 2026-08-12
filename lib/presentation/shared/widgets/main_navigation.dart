@@ -29,8 +29,7 @@ class MainNavigation extends StatelessWidget {
     final tabs = [
       _NavTab(icon: TablerIcons.home, label: 'nav.home'.tr()),
       _NavTab(icon: TablerIcons.playlist, label: 'nav.hymns'.tr()),
-      _NavTab(icon: TablerIcons.clipboardText, label: 'nav.liturgy'.tr()),
-      _NavTab(icon: TablerIcons.book, label: 'nav.bible'.tr()),
+      _NavTab(icon: TablerIcons.tools, label: 'nav.tools'.tr()),
       _NavTab(icon: TablerIcons.settings, label: 'nav.more'.tr()),
     ];
 

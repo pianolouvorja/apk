@@ -43,32 +43,13 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Tema
+          // Tema — controle orbital: claro ↔ sistema ↔ escuro.
           _SettingsCard(
-            icon: TablerIcons.moon,
+            icon: TablerIcons.sunMoon,
             title: 'settings.theme'.tr(),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                _ChoiceChip<ThemeMode>(
-                  key: const Key('theme-dark'),
-                  label: 'settings.themeDark'.tr(),
-                  selected: settings.themeMode == ThemeMode.dark,
-                  onTap: () => settings.setThemeMode(ThemeMode.dark),
-                ),
-                _ChoiceChip<ThemeMode>(
-                  key: const Key('theme-light'),
-                  label: 'settings.themeLight'.tr(),
-                  selected: settings.themeMode == ThemeMode.light,
-                  onTap: () => settings.setThemeMode(ThemeMode.light),
-                ),
-                _ChoiceChip<ThemeMode>(
-                  key: const Key('theme-system'),
-                  label: 'settings.themeSystem'.tr(),
-                  selected: settings.themeMode == ThemeMode.system,
-                  onTap: () => settings.setThemeMode(ThemeMode.system),
-                ),
-              ],
+            child: _ThemeOrbitalControl(
+              mode: settings.themeMode,
+              onChanged: settings.setThemeMode,
             ),
           ),
           const SizedBox(height: 12),
@@ -111,9 +92,9 @@ class SettingsPage extends StatelessWidget {
               spacing: 8,
               children: InteractionKey.values.map((key) {
                 final labels = {
-                  InteractionKey.dynamic_: 'Dynamic',
-                  InteractionKey.soft: 'Soft',
-                  InteractionKey.mist: 'Mist',
+                  InteractionKey.dynamic_: 'settings.interactionDynamic'.tr(),
+                  InteractionKey.soft: 'settings.interactionSoft'.tr(),
+                  InteractionKey.mist: 'settings.interactionMist'.tr(),
                 };
                 return _ChoiceChip<InteractionKey>(
                   key: Key('interaction-${key.name}'),
@@ -152,7 +133,7 @@ class SettingsPage extends StatelessWidget {
           // --- Geral ---
           _SectionHeader(
             icon: TablerIcons.adjustments,
-            title: 'Geral',
+            title: 'settings.sectionGeneral'.tr(),
           ),
           const SizedBox(height: 12),
 
@@ -164,19 +145,20 @@ class SettingsPage extends StatelessWidget {
               spacing: 8,
               children: [
                 _ChoiceChip(
-                  label: 'Portugues (BR)',
+                  label: 'settings.languagePortuguese'.tr(),
                   selected: locale == const Locale('pt', 'BR'),
                   onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('pt', 'BR')),
                 ),
                 _ChoiceChip(
-                  label: 'English — em breve',
+                  label: 'settings.languageEnglish'.tr(),
                   selected: locale == const Locale('en'),
                   enabled: false,
                   onTap: null,
                 ),
                 _ChoiceChip(
-                  label: 'Espanol',
+                  label: 'settings.languageSpanish'.tr(),
                   selected: locale == const Locale('es'),
+                  // coverage:ignore-line
                   onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('es')),
                 ),
               ],
@@ -190,7 +172,7 @@ class SettingsPage extends StatelessWidget {
             builder: (context, snapshot) {
               return _SettingsCard(
                 icon: TablerIcons.infoCircle,
-                title: 'Versao',
+                title: 'settings.version'.tr(),
                 child: Text(
                   snapshot.data ?? '',
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -205,11 +187,139 @@ class SettingsPage extends StatelessWidget {
           // Termos e Privacidade (link)
           ListTile(
             leading: Icon(TablerIcons.shieldCheck, color: theme.colorScheme.primary),
-            title: const Text('Termos de Uso e Privacidade'),
+            title: Text('settings.termsOfUse'.tr()),
             trailing: const Icon(TablerIcons.chevronRight),
             // Destino será ligado na Fase 6; sem interação enganosa por ora.
           ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Equivalente Flutter do `theme-orbital__control` do web.
+///
+/// O trilho tem três pontos discretos: 0=claro, 50=sistema e 100=escuro.
+class _ThemeOrbitalControl extends StatelessWidget {
+  final ThemeMode mode;
+  final ValueChanged<ThemeMode> onChanged;
+
+  const _ThemeOrbitalControl({
+    required this.mode,
+    required this.onChanged,
+  });
+
+  double get _value => switch (mode) {
+        ThemeMode.light => 0,
+        ThemeMode.system => 50,
+        ThemeMode.dark => 100,
+      };
+
+  String get _ariaText => switch (mode) {
+        ThemeMode.light => 'settings.themeLight'.tr(),
+        ThemeMode.system => 'settings.themeSystem'.tr(),
+        ThemeMode.dark => 'settings.themeDark'.tr(),
+      };
+
+  ThemeMode _modeFromValue(double value) {
+    if (value < 25) return ThemeMode.light;
+    if (value > 75) return ThemeMode.dark;
+    return ThemeMode.system;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = mode == ThemeMode.light;
+    final isDark = mode == ThemeMode.dark;
+
+    return Semantics(
+      label: 'settings.theme'.tr(),
+      value: _ariaText,
+      child: Row(
+        children: [
+          _ThemeModeButton(
+            key: const Key('theme-light'),
+            icon: TablerIcons.sun,
+            tooltip: 'settings.themeLight'.tr(),
+            active: isLight,
+            onPressed: () => onChanged(ThemeMode.light),
+          ),
+          Expanded(
+            child: Semantics(
+              label: 'settings.themeSystem'.tr(),
+              value: _ariaText,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 4,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+                  activeTrackColor: theme.colorScheme.primary,
+                  inactiveTrackColor:
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.24),
+                  thumbColor: theme.colorScheme.primary,
+                ),
+                child: Slider(
+                  key: const Key('theme-orbital-slider'),
+                  value: _value,
+                  min: 0,
+                  max: 100,
+                  divisions: 2,
+                  label: _ariaText,
+                  onChanged: (value) => onChanged(_modeFromValue(value)),
+                ),
+              ),
+            ),
+          ),
+          _ThemeModeButton(
+            key: const Key('theme-dark'),
+            icon: TablerIcons.moon,
+            tooltip: 'settings.themeDark'.tr(),
+            active: isDark,
+            onPressed: () => onChanged(ThemeMode.dark),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeModeButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final bool active;
+  final VoidCallback onPressed;
+
+  const _ThemeModeButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.active,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 21),
+        color: active
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+        style: IconButton.styleFrom(
+          backgroundColor: active
+              ? theme.colorScheme.primary.withValues(alpha: 0.14)
+              : Colors.transparent,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(10),
+              bottomRight: Radius.circular(10),
+            ),
+          ),
         ),
       ),
     );

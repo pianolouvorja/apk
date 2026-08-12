@@ -7,7 +7,9 @@
     "hymns": "Hinos",
     "liturgy": "Liturgia",
     "bible": "Bíblia",
-    "more": "Mais"
+    "more": "Mais",
+    "tools": "Ferramentas",
+    "timer": "Cronometro"
   },
   "home": {
     "districtLabel": "Distrito",
@@ -29,28 +31,135 @@
     "edit": "Editar",
     "close": "Fechar",
     "offline": "Offline",
-    "online": "Online"
+    "online": "Online",
+    "id": "ID",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "stop": "Parar",
+    "reset": "Zerar"
   },
   "hymns": {
     "title": "Hinos",
     "searchPlaceholder": "Buscar por número, título ou trecho",
     "availableOffline": "Disponível offline",
-    "noResults": "Nenhum hino encontrado"
+    "noResults": "Nenhum hino encontrado",
+    "searchHint": "Buscar coletâneas..."
   },
   "liturgy": {
-    "title": "Liturgia",
-    "cloneFrom": "Clonar de outro dia",
-    "addItem": "Adicionar item",
-    "notes": "Notas"
+    "title": "Liturgia do Culto",
+    "subtitle": "Organizacao do culto",
+    "addItem": "Adicionar Categoria/Separador",
+    "emptyList": "Liturgia vazia",
+    "notes": "Anotacoes",
+    "notesPlaceholder": "Notas do culto, avisos a equipe...",
+    "clone": {
+      "action": "Clonar Liturgia"
+    },
+    "types": {
+      "category": "Categoria/Separador",
+      "music": "Musica",
+      "annotation": "Anotacoes",
+      "prayer": "Oracao",
+      "verse": "Versiculo",
+      "notice": "Aviso",
+      "scheduled": "Itens Agendados",
+      "video": "Videos",
+      "images": "Imagens",
+      "pdf": "PDFs",
+      "presentation": "Apresentacoes PPT",
+      "other_files": "Outros",
+      "online_video": "Youtube/Vimeo/Outros",
+      "site": "Sites/Redes Sociais"
+    },
+    "days": {
+      "sunday": "Dom",
+      "monday": "Seg",
+      "tuesday": "Ter",
+      "wednesday": "Qua",
+      "thursday": "Qui",
+      "friday": "Sex",
+      "saturday": "Sab"
+    },
+    "categoryPlaceholder": "Ex: Abertura, Escola Sabatina, Culto Divino...",
+    "actions": {
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Remover",
+      "addSubItem": "Adicionar sub item",
+      "addToService": "Adicionar ao culto",
+      "expand": "Expandir",
+      "collapse": "Recolher"
+    },
+    "messages": {
+      "confirmDelete": "Deseja remover este item?"
+    },
+    "dialog": {
+      "itemType": "Tipo de Item",
+      "momentName": "Nome do momento",
+      "complementaryTitle": "Titulo complementar",
+      "duration": "Duracao (min)",
+      "default": "Padrao",
+      "internal": "Arquivos Internos",
+      "external": "Midias Externas",
+      "categoryMomentName": "Nome da categoria",
+      "groups": {
+        "default": "Padrao",
+        "internal": "Arquivos Internos",
+        "external": "Midias Externas"
+      }
+    },
+    "durationMin": "min",
+    "fields": {
+      "url": "URL",
+      "selectMusic": "Musica selecionada",
+      "searchMusic": "Selecionar musica",
+      "selectFileButton": "Selecionar arquivo",
+      "changeFileButton": "Trocar arquivo",
+      "selectVideoButton": "Selecionar video",
+      "selectPdfButton": "Selecionar PDF",
+      "selectSchedule": "Selecionar data e hora",
+      "scheduledFor": "Agendado para"
+    },
+    "totalDuration": "Duracao total",
+    "setStartTime": "Definir inicio"
   },
   "bible": {
     "title": "Bíblia",
+    "version": "Versão",
+    "selectVersion": "Selecionar versão",
+    "location": "Localização",
+    "locationEmpty": "—",
+    "browseVerses": "Versículos",
+    "browseBooksAndChapters": "Livros e Capítulos",
+    "books": "Livros",
+    "chapters": "Cap.",
+    "testamentOld": "AT",
+    "testamentNew": "NT",
+    "searchBible": "Pesquisar na Bíblia",
+    "searchBook": "Buscar livro...",
+    "searchChapter": "Cap...",
+    "searchVerse": "Pesquisar versículo",
+    "copy": "Copiar",
+    "previousVerse": "Versículo anterior",
+    "nextVerse": "Próximo versículo",
+    "clearSelection": "Limpar seleção",
+    "emptyCatalog": "Nenhum conteúdo bíblico disponível.",
+    "emptyChapter": "Nenhum versículo encontrado neste capítulo.",
+    "loading": "Carregando Bíblia...",
+    "retry": "Tentar novamente",
+    "dismiss": "Dispensar",
     "oldTestament": "Antigo Testamento",
     "newTestament": "Novo Testamento",
-    "selectVersion": "Versão",
     "selectBook": "Livro",
     "selectChapter": "Capítulo",
-    "searchPlaceholder": "Buscar versículo"
+    "searchPlaceholder": "Buscar versículo",
+    "errors": {
+      "loadCatalogFailed": "Não foi possível carregar livros e versões da Bíblia.",
+      "loadChapterFailed": "Não foi possível carregar o capítulo selecionado."
+    },
+    "previousChapter": "Capítulo anterior",
+    "nextChapter": "Próximo capítulo"
   },
   "settings": {
     "title": "Configurações",
@@ -63,7 +172,16 @@
     "language": "Idioma",
     "glassIntensity": "Intensidade do vidro",
     "animationProfile": "Perfil de animação",
-    "fontSize": "Tamanho da fonte"
+    "fontSize": "Tamanho da fonte",
+    "termsOfUse": "Termos de Uso e Privacidade",
+    "interactionDynamic": "Dinamico",
+    "interactionSoft": "Suave",
+    "interactionMist": "Nevoa",
+    "sectionGeneral": "Geral",
+    "languagePortuguese": "Portugues (BR)",
+    "languageEnglish": "English",
+    "languageSpanish": "Espanol",
+    "version": "Versao"
   },
   "timer": {
     "title": "Cronômetro",
@@ -72,7 +190,9 @@
     "start": "Iniciar",
     "pause": "Pausar",
     "reset": "Resetar",
-    "finished": "Tempo esgotado!"
+    "finished": "Tempo esgotado!",
+    "minutes": "Min",
+    "seconds": "Seg"
   },
   "errors": {
     "authFailed": "Falha na autenticação. Verifique sua conexão e tente novamente.",
@@ -80,5 +200,14 @@
     "serverBusy": "Servidor ocupado. Tente novamente em alguns instantes.",
     "connection": "Sem conexão com o servidor. Verifique sua internet.",
     "unknown": "Ocorreu um erro inesperado. Tente novamente."
+  },
+  "tools": {
+    "title": "Ferramentas",
+    "liturgy": "Liturgia",
+    "liturgySubtitle": "Organize o culto do dia",
+    "bible": "Biblia",
+    "bibleSubtitle": "Livros, capitulos e versiculos",
+    "timer": "Cronometro",
+    "timerSubtitle": "Stopwatch e contagem regressiva"
   }
 }

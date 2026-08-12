@@ -1,17 +1,16 @@
-/// Configuração de rotas com go_router.
+/// Configuracao de rotas com go_router.
 ///
-/// 5 tabs: Início, Hinos, Liturgia, Bíblia, Mais.
+/// 4 tabs: Inicio, Hinos, Ferramentas, Mais.
 /// Usa StatefulShellRoute.indexedStack para preservar estado de cada tab.
 library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../presentation/bible/bible_page.dart';
 import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
 import '../presentation/hymns/album_detail_page.dart';
-import '../presentation/liturgy/liturgy_page.dart';
 import '../presentation/settings/settings_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
+import '../presentation/tools/tools_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -24,7 +23,7 @@ final appRouter = GoRouter(
         return MainNavigation(navigationShell: navigationShell);
       },
       branches: [
-        // Tab 0: Início
+        // Tab 0: Inicio
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -50,25 +49,16 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // Tab 2: Liturgia
+        // Tab 2: Ferramentas (Liturgia + Biblia)
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/liturgy',
-              builder: (context, state) => LiturgyPage(),
+              path: '/tools',
+              builder: (context, state) => const ToolsPage(),
             ),
           ],
         ),
-        // Tab 3: Bíblia
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/bible',
-              builder: (context, state) => BiblePage(),
-            ),
-          ],
-        ),
-        // Tab 4: Mais (Settings)
+        // Tab 3: Mais (Settings)
         StatefulShellBranch(
           routes: [
             GoRoute(

@@ -1,5 +1,6 @@
 /// ErrorView — tela de erro padronizada com retry.
 library;
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -49,7 +50,7 @@ class ErrorView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(TablerIcons.refresh, size: 18),
-                label: const Text('Tentar novamente'),
+                label: Text('common.retry'.tr()),
               ),
             ],
           ],

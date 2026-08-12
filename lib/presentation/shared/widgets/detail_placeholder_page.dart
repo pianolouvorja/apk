@@ -1,5 +1,6 @@
 library;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 /// Destino temporário para deep-links cuja implementação de dados chega na Fase 2.
@@ -19,7 +20,7 @@ class DetailPlaceholderPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: Center(
-        child: Text('ID: $identifier'),
+        child: Text('${'common.id'.tr()}: $identifier'),
       ),
     );
   }
