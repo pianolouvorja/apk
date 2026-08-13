@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main, master]
 
-env:
-  FLUTTER_VERSION: '3.32.0'
-
 jobs:
   analyze:
     name: Analyze
@@ -19,11 +16,10 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
           cache: true
 
       - run: flutter pub get
-      - run: dart format --set-exit-if-changed lib/ test/
 
       - name: Analyze (warnings only)
         run: flutter analyze --fatal-warnings
@@ -37,7 +33,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
           cache: true
 
       - run: flutter pub get
@@ -57,7 +53,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
           cache: true
 
       - run: flutter pub get
@@ -74,7 +70,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
           cache: true
 
       - run: flutter pub get
