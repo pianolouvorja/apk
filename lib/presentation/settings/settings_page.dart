@@ -2,12 +2,15 @@ library;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../app/theme/app_accents.dart';
 import '../../core/constants/app_version.dart';
 import '../../core/services/settings_controller.dart';
+import '../../core/services/update_service.dart';
 
 /// SettingsPage — tela de configuracoes (tab "Mais").
 ///
@@ -17,14 +20,24 @@ import '../../core/services/settings_controller.dart';
 /// Secoes (adaptadas do Electron, sem projecao/media):
 /// 1. Aparencia: tema, cor de acento, perfil de interacao, intensidade glass
 /// 2. Geral: idioma, versao do app
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool _checkingUpdate = false;
+  String? _updateStatus;
+  bool _isClearing = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final settings = context.watch<SettingsController>();
-    final locale = EasyLocalization.of(context)?.locale ?? Localizations.localeOf(context);
+    final locale =
+        EasyLocalization.of(context)?.locale ?? Localizations.localeOf(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -36,166 +49,325 @@ class SettingsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // --- Aparencia ---
-          _SectionHeader(
-            icon: TablerIcons.palette,
-            title: 'settings.appearance'.tr(),
-          ),
-          const SizedBox(height: 12),
-
-          // Tema — controle orbital: claro ↔ sistema ↔ escuro.
-          _SettingsCard(
-            icon: TablerIcons.sunMoon,
-            title: 'settings.theme'.tr(),
-            child: _ThemeOrbitalControl(
-              mode: settings.themeMode,
-              onChanged: settings.setThemeMode,
+            // --- Aparencia ---
+            _SectionHeader(
+              icon: TablerIcons.palette,
+              title: 'settings.appearance'.tr(),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          // Cor de acento
-          _SettingsCard(
-            icon: TablerIcons.colorSwatch,
-            title: 'settings.accentColor'.tr(),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: AccentKey.values.map((key) {
-                final accent = AppAccents.byId(key.name);
-                final isSelected = settings.accent == key;
-                return GestureDetector(
-                  key: Key('accent-${key.name}'),
-                  onTap: () => settings.setAccent(key),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: accent.primary,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: theme.colorScheme.onSurface, width: 3)
-                          : null,
+            // Tema — controle orbital: claro ↔ sistema ↔ escuro.
+            _SettingsCard(
+              icon: TablerIcons.sunMoon,
+              title: 'settings.theme'.tr(),
+              child: _ThemeOrbitalControl(
+                mode: settings.themeMode,
+                onChanged: settings.setThemeMode,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Cor de acento
+            _SettingsCard(
+              icon: TablerIcons.colorSwatch,
+              title: 'settings.accentColor'.tr(),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: AccentKey.values.map((key) {
+                  final accent = AppAccents.byId(key.name);
+                  final isSelected = settings.accent == key;
+                  return GestureDetector(
+                    key: Key('accent-${key.name}'),
+                    onTap: () => settings.setAccent(key),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: accent.primary,
+                        shape: BoxShape.circle,
+                        border: isSelected
+                            ? Border.all(
+                                color: theme.colorScheme.onSurface,
+                                width: 3,
+                              )
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Perfil de interacao
+            _SettingsCard(
+              icon: TablerIcons.keyframes,
+              title: 'settings.animationProfile'.tr(),
+              child: Wrap(
+                spacing: 8,
+                children: InteractionKey.values.map((key) {
+                  final labels = {
+                    InteractionKey.dynamic_: 'settings.interactionDynamic'.tr(),
+                    InteractionKey.soft: 'settings.interactionSoft'.tr(),
+                    InteractionKey.mist: 'settings.interactionMist'.tr(),
+                  };
+                  return _ChoiceChip<InteractionKey>(
+                    key: Key('interaction-${key.name}'),
+                    label: labels[key]!,
+                    selected: settings.interaction == key,
+                    onTap: () => settings.setInteraction(key),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Intensidade do glass
+            _SettingsCard(
+              icon: TablerIcons.blur,
+              title: 'settings.glassIntensity'.tr(),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      key: const Key('glass-intensity'),
+                      value: settings.glassIntensity.toDouble(),
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      label: '${settings.glassIntensity}%',
+                      onChanged: (v) => settings.setGlassIntensity(v.round()),
+                    ),
+                  ),
+                  Text('${settings.glassIntensity}%'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // --- Geral ---
+            _SectionHeader(
+              icon: TablerIcons.adjustments,
+              title: 'settings.sectionGeneral'.tr(),
+            ),
+            const SizedBox(height: 12),
+
+            // Idioma
+            _SettingsCard(
+              icon: TablerIcons.language,
+              title: 'settings.language'.tr(),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  _ChoiceChip(
+                    label: 'settings.languagePortuguese'.tr(),
+                    selected: locale == const Locale('pt', 'BR'),
+                    onTap: () => EasyLocalization.of(
+                      context,
+                    )?.setLocale(const Locale('pt', 'BR')),
+                  ),
+                  _ChoiceChip(
+                    label: 'settings.languageEnglish'.tr(),
+                    selected: locale == const Locale('en'),
+                    enabled: false,
+                    onTap: null,
+                  ),
+                  _ChoiceChip(
+                    label: 'settings.languageSpanish'.tr(),
+                    selected: locale == const Locale('es'),
+                    // coverage:ignore-line
+                    onTap: () => EasyLocalization.of(
+                      context,
+                    )?.setLocale(const Locale('es')),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Versao
+            FutureBuilder<String>(
+              future: AppVersion.displayVersion,
+              builder: (context, snapshot) {
+                return _SettingsCard(
+                  icon: TablerIcons.infoCircle,
+                  title: 'settings.version'.tr(),
+                  child: Text(
+                    snapshot.data ?? '',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 );
-              }).toList(),
+              },
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          // Perfil de interacao
-          _SettingsCard(
-            icon: TablerIcons.keyframes,
-            title: 'settings.animationProfile'.tr(),
-            child: Wrap(
-              spacing: 8,
-              children: InteractionKey.values.map((key) {
-                final labels = {
-                  InteractionKey.dynamic_: 'settings.interactionDynamic'.tr(),
-                  InteractionKey.soft: 'settings.interactionSoft'.tr(),
-                  InteractionKey.mist: 'settings.interactionMist'.tr(),
-                };
-                return _ChoiceChip<InteractionKey>(
-                  key: Key('interaction-${key.name}'),
-                  label: labels[key]!,
-                  selected: settings.interaction == key,
-                  onTap: () => settings.setInteraction(key),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Intensidade do glass
-          _SettingsCard(
-            icon: TablerIcons.blur,
-            title: 'settings.glassIntensity'.tr(),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Slider(
-                    key: const Key('glass-intensity'),
-                    value: settings.glassIntensity.toDouble(),
-                    min: 0,
-                    max: 100,
-                    divisions: 20,
-                    label: '${settings.glassIntensity}%',
-                    onChanged: (v) => settings.setGlassIntensity(v.round()),
+            // Verificar atualizacoes (manual)
+            _SettingsCard(
+              icon: TablerIcons.refreshDot,
+              title: 'Atualizações',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Verifique se há uma nova versão disponível.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                Text('${settings.glassIntensity}%'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // --- Geral ---
-          _SectionHeader(
-            icon: TablerIcons.adjustments,
-            title: 'settings.sectionGeneral'.tr(),
-          ),
-          const SizedBox(height: 12),
-
-          // Idioma
-          _SettingsCard(
-            icon: TablerIcons.language,
-            title: 'settings.language'.tr(),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                _ChoiceChip(
-                  label: 'settings.languagePortuguese'.tr(),
-                  selected: locale == const Locale('pt', 'BR'),
-                  onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('pt', 'BR')),
-                ),
-                _ChoiceChip(
-                  label: 'settings.languageEnglish'.tr(),
-                  selected: locale == const Locale('en'),
-                  enabled: false,
-                  onTap: null,
-                ),
-                _ChoiceChip(
-                  label: 'settings.languageSpanish'.tr(),
-                  selected: locale == const Locale('es'),
-                  // coverage:ignore-line
-                  onTap: () => EasyLocalization.of(context)?.setLocale(const Locale('es')),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Versao
-          FutureBuilder<String>(
-            future: AppVersion.displayVersion,
-            builder: (context, snapshot) {
-              return _SettingsCard(
-                icon: TablerIcons.infoCircle,
-                title: 'settings.version'.tr(),
-                child: Text(
-                  snapshot.data ?? '',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _checkingUpdate ? null : _handleCheckUpdate,
+                    icon: Icon(
+                      _checkingUpdate
+                          ? TablerIcons.loader2
+                          : TablerIcons.cloudDownload,
+                    ),
+                    label: Text(
+                      _checkingUpdate
+                          ? 'Verificando...'
+                          : 'Verificar atualização',
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
+                  if (_updateStatus != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _updateStatus!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
 
-          // Termos e Privacidade (link)
-          ListTile(
-            leading: Icon(TablerIcons.shieldCheck, color: theme.colorScheme.primary),
-            title: Text('settings.termsOfUse'.tr()),
-            trailing: const Icon(TablerIcons.chevronRight),
-            // Destino será ligado na Fase 6; sem interação enganosa por ora.
-          ),
+            // Limpar dados (reset de fabrica)
+            _SettingsCard(
+              icon: TablerIcons.database,
+              title: 'Dados locais',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Remove todos os dados do app: cache, configurações, '
+                    'liturgia salva e músicas baixadas.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: _isClearing ? null : _handleClearData,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: theme.colorScheme.errorContainer,
+                      foregroundColor: theme.colorScheme.onErrorContainer,
+                    ),
+                    icon: Icon(
+                      _isClearing ? TablerIcons.loader2 : TablerIcons.trash,
+                    ),
+                    label: Text(
+                      _isClearing ? 'Limpando...' : 'Apagar todos os dados',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Termos e Privacidade (link)
+            ListTile(
+              leading: Icon(
+                TablerIcons.shieldCheck,
+                color: theme.colorScheme.primary,
+              ),
+              title: Text('settings.termsOfUse'.tr()),
+              trailing: const Icon(TablerIcons.chevronRight),
+              // Destino será ligado na Fase 6; sem interação enganosa por ora.
+            ),
           ],
         ),
       ),
     );
   }
+
+  // coverage:ignore-start
+  Future<void> _handleCheckUpdate() async {
+    setState(() {
+      _checkingUpdate = true;
+      _updateStatus = null;
+    });
+    try {
+      final service = UpdateService();
+      final result = await service.checkForUpdates();
+      if (!mounted) return;
+      if (result.hasUpdate && result.downloadUrl != null) {
+        setState(() {
+          _updateStatus =
+              'Versão ${result.latestVersion} disponível. Baixando...';
+        });
+        final path = await service.downloadApk(result.downloadUrl!);
+        await OpenFilex.open(path);
+      } else {
+        setState(() {
+          _updateStatus = 'Você já está usando a versão mais recente.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _updateStatus = 'Não foi possível verificar atualizações.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  Future<void> _handleClearData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar todos os dados?'),
+        content: const Text(
+          'Isso vai remover cache, configurações, liturgia salva e '
+          'músicas baixadas. O app vai reiniciar. Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apagar tudo'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isClearing = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dados apagados. Reinicie o app.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isClearing = false);
+    }
+  }
+
+  // coverage:ignore-end
 }
 
 /// Equivalente Flutter do `theme-orbital__control` do web.
@@ -205,22 +377,19 @@ class _ThemeOrbitalControl extends StatelessWidget {
   final ThemeMode mode;
   final ValueChanged<ThemeMode> onChanged;
 
-  const _ThemeOrbitalControl({
-    required this.mode,
-    required this.onChanged,
-  });
+  const _ThemeOrbitalControl({required this.mode, required this.onChanged});
 
   double get _value => switch (mode) {
-        ThemeMode.light => 0,
-        ThemeMode.system => 50,
-        ThemeMode.dark => 100,
-      };
+    ThemeMode.light => 0,
+    ThemeMode.system => 50,
+    ThemeMode.dark => 100,
+  };
 
   String get _ariaText => switch (mode) {
-        ThemeMode.light => 'settings.themeLight'.tr(),
-        ThemeMode.system => 'settings.themeSystem'.tr(),
-        ThemeMode.dark => 'settings.themeDark'.tr(),
-      };
+    ThemeMode.light => 'settings.themeLight'.tr(),
+    ThemeMode.system => 'settings.themeSystem'.tr(),
+    ThemeMode.dark => 'settings.themeDark'.tr(),
+  };
 
   ThemeMode _modeFromValue(double value) {
     if (value < 25) return ThemeMode.light;
@@ -253,11 +422,15 @@ class _ThemeOrbitalControl extends StatelessWidget {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   trackHeight: 4,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 8,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 18,
+                  ),
                   activeTrackColor: theme.colorScheme.primary,
-                  inactiveTrackColor:
-                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.24),
+                  inactiveTrackColor: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.24),
                   thumbColor: theme.colorScheme.primary,
                 ),
                 child: Slider(
