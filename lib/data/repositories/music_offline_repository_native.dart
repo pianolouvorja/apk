@@ -1,3 +1,4 @@
+// coverage:ignore-file Necessita filesystem nativo (path_provider/dio).
 library;
 
 import 'dart:convert';

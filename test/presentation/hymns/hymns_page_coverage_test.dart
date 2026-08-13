@@ -154,7 +154,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.fling(find.text('R'), const Offset(0, 500), 1000);
+    await tester.fling(find.byType(RefreshIndicator), const Offset(0, 500), 1000);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }

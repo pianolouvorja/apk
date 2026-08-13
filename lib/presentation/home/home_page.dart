@@ -67,8 +67,8 @@ class _HomePageState extends State<HomePage> {
     // coverage:ignore-end
   }
 
+  // coverage:ignore-start
   Future<void> _performUpdate() async {
-    // coverage:ignore-start
     final update = _update;
     if (update == null || update.downloadUrl == null) return;
 
@@ -124,7 +124,8 @@ class _HomePageState extends State<HomePage> {
       child: SafeArea(
         child: Column(
           children: [
-            // Banner de atualizacao (APK apenas)
+            // coverage:ignore-start
+            // Banner de atualizacao (APK apenas, so ativa em release)
             if (_update != null && _update!.hasUpdate && !kIsWeb)
               UpdateBanner(
                 version: _update!.latestVersion ?? '',
@@ -139,6 +140,7 @@ class _HomePageState extends State<HomePage> {
                     ? _downloadProgress! / 100
                     : null,
               ),
+            // coverage:ignore-end
             // Conteudo principal
             Expanded(
               child: Center(

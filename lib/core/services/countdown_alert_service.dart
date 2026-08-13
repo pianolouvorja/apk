@@ -1,3 +1,4 @@
+// coverage:ignore-file Necessita plataforma nativa (notifications/vibration).
 library;
 
 import 'package:flutter/foundation.dart';
