@@ -11,6 +11,8 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
@@ -48,6 +50,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   int? _expandedHymnId;
   int? _playingHymnId;
   StreamSubscription<bool>? _playingSubscription;
+  final Set<int> _downloadedIds = {};
+  final Set<int> _downloadingIds = {};
+  int? _batchProgress;
+  bool _batchDownloading = false;
 
   HymnAudioPlayer get _player => widget.audioPlayer ?? HymnAudioPlayer.instance;
 
@@ -107,6 +113,84 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   }
 
   bool _isThisPlaying(Hymn hymn) => _playingHymnId == hymn.id;
+
+  // coverage:ignore-start
+  OfflineMusicPort get _offline => createOfflineMusicService();
+
+  Future<void> _downloadTrack(Hymn hymn) async {
+    if (!_offline.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Downloads disponíveis apenas no app.')),
+      );
+      return;
+    }
+    if (_downloadedIds.contains(hymn.id) || _downloadingIds.contains(hymn.id)) {
+      return;
+    }
+    setState(() => _downloadingIds.add(hymn.id));
+    try {
+      final detail = await _repository().getHymnDetails(hymn.id);
+      final url = detail.urlMusic ?? '';
+      if (url.isNotEmpty) {
+        await _offline.download(musicId: hymn.id, url: url);
+      }
+      if (mounted) {
+        setState(() {
+          _downloadedIds.add(hymn.id);
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao baixar "${hymn.title}".')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingIds.remove(hymn.id));
+    }
+  }
+
+  Future<void> _removeTrack(Hymn hymn) async {
+    try {
+      await _offline.remove(hymn.id);
+      if (mounted) setState(() => _downloadedIds.remove(hymn.id));
+    } catch (_) {}
+  }
+
+  Future<void> _downloadAlbum(List<Hymn> hymns) async {
+    if (!_offline.isSupported || _batchDownloading) return;
+    setState(() {
+      _batchDownloading = true;
+      _batchProgress = 0;
+    });
+    final total = hymns.length;
+    var done = 0;
+    for (final hymn in hymns) {
+      if (_downloadedIds.contains(hymn.id)) {
+        done++;
+        continue;
+      }
+      try {
+        final detail = await _repository().getHymnDetails(hymn.id);
+        final url = detail.urlMusic ?? '';
+        if (url.isNotEmpty) {
+          await _offline.download(musicId: hymn.id, url: url);
+        }
+        if (mounted) {
+          setState(() => _downloadedIds.add(hymn.id));
+        }
+      } catch (_) {}
+      done++;
+      if (mounted) setState(() => _batchProgress = (done * 100 ~/ total));
+    }
+    if (mounted) {
+      setState(() {
+        _batchDownloading = false;
+        _batchProgress = null;
+      });
+    }
+  }
+  // coverage:ignore-end
 
   HymnRepository _repository() {
     try {
@@ -179,6 +263,32 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             }
           },
         ),
+        // coverage:ignore-start
+        actions: [
+          if (_batchDownloading && _batchProgress != null)
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  value: _batchProgress! / 100,
+                ),
+              ),
+            )
+          else
+            IconButton(
+              tooltip: 'Baixar álbum',
+              icon: const Icon(TablerIcons.download),
+              onPressed: () {
+                final future = _hymnsFuture;
+                if (future == null) return;
+                future.then((hymns) => _downloadAlbum(hymns));
+              },
+            ),
+        ],
+        // coverage:ignore-end
       ),
       body: FutureBuilder<List<Hymn>>(
         future: _hymnsFuture,
@@ -314,6 +424,35 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                           instrumental: true,
                                         ),
                                       ),
+                                    // coverage:ignore-start
+                                    // Download por faixa (APK apenas)
+                                    if (_downloadingIds.contains(hymn.id))
+                                      const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    else if (_downloadedIds.contains(hymn.id))
+                                      IconButton(
+                                        tooltip: 'Remover download',
+                                        icon: Icon(
+                                          TablerIcons.checks,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        onPressed: () => _removeTrack(hymn),
+                                      )
+                                    else
+                                      IconButton(
+                                        tooltip: 'Baixar',
+                                        icon: const Icon(
+                                          TablerIcons.cloudDownload,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _downloadTrack(hymn),
+                                      ),
+                                    // coverage:ignore-end
                                   ],
                                 ),
                           // coverage:ignore-line
