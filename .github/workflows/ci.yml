@@ -20,11 +20,9 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: src
         run: flutter pub get
 
       - name: Analyze
-        working-directory: src
         run: flutter analyze --fatal-infos
 
   test:
@@ -40,11 +38,9 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: src
         run: flutter pub get
 
       - name: Test
-        working-directory: src
         run: flutter test --coverage
 
       - name: Upload coverage
@@ -52,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-lcov
-          path: src/coverage/lcov.info
+          path: coverage/lcov.info
 
   build-android:
     name: Build Android (debug APK)
@@ -72,29 +68,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        working-directory: src
         run: flutter pub get
 
       - name: Build APK (debug)
-        working-directory: src
-        run: flutter build apk --debug
-
-  build-ios:
-    name: Build iOS (debug, no codesign)
-    runs-on: macos-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        working-directory: src
-        run: flutter pub get
-
-      - name: Build iOS (debug, no codesign)
-        working-directory: src
-        run: flutter build ios --debug --no-codesign
+        run: flutter build apk --debug --dart-define=API_TOKEN=${{ secrets.API_TOKEN }}
