@@ -16,6 +16,7 @@ dependencies:
 
   # Networking
   dio: ^5.7.0
+  crypto: ^3.0.6
 
   # Routing
   go_router: ^16.0.0

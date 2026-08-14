@@ -3,6 +3,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -13,6 +14,7 @@ class UpdateCheckResult {
   final String? downloadUrl;
   final String? releaseNotes;
   final int? apkSize;
+  final String? apkSha256;
 
   const UpdateCheckResult({
     required this.hasUpdate,
@@ -20,6 +22,7 @@ class UpdateCheckResult {
     this.downloadUrl,
     this.releaseNotes,
     this.apkSize,
+    this.apkSha256,
   });
 
   static const none = UpdateCheckResult(hasUpdate: false);
@@ -33,6 +36,7 @@ class UpdateService {
   final Dio _dio;
   final String _repo;
   final Future<PackageInfo> Function() _packageInfoProvider;
+  final CancelToken _cancelToken = CancelToken();
 
   /// Token PAT para acessar releases de repositorios privados.
   /// Fornecido via --dart-define=GH_TOKEN=xxx no build.
@@ -56,6 +60,7 @@ class UpdateService {
     try {
       final response = await _dio.get<dynamic>(
         'https://api.github.com/repos/$_repo/releases/latest',
+        cancelToken: _cancelToken,
         options: Options(
           headers: {
             'Accept': 'application/vnd.github+json',
@@ -90,11 +95,16 @@ class UpdateService {
       final assets = data['assets'] as List? ?? const [];
       String? apkUrl;
       int? apkSize;
+      String? apkSha256;
       for (final asset in assets.whereType<Map>()) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
         if (name.endsWith('.apk')) {
           apkUrl = asset['browser_download_url']?.toString();
           apkSize = asset['size'] as int?;
+          final digest = asset['digest']?.toString();
+          if (digest?.startsWith('sha256:') ?? false) {
+            apkSha256 = digest!.substring('sha256:'.length).toLowerCase();
+          }
           break;
         }
       }
@@ -107,17 +117,19 @@ class UpdateService {
         downloadUrl: apkUrl,
         releaseNotes: data['body']?.toString(),
         apkSize: apkSize,
+        apkSha256: apkSha256,
       );
     } catch (_) {
       return UpdateCheckResult.none;
     }
   }
 
-  /// Baixa o APK para o cache externo do app.
-  /// Retorna o caminho do arquivo baixado.
+  /// Baixa o APK e, quando GitHub publicar o digest do asset, valida SHA-256.
+  /// Retorna o caminho do arquivo somente se a integridade for confirmada.
   // coverage:ignore-line
   Future<String> downloadApk(
     String url, {
+    String? expectedSha256,
     void Function(int received, int total)? onProgress,
   }) async {
     // coverage:ignore-line
@@ -125,8 +137,30 @@ class UpdateService {
     // coverage:ignore-line
     final filePath = '${dir.path}/piano-louvorja-update.apk';
     // coverage:ignore-line
-    await _dio.download(url, filePath, onReceiveProgress: onProgress);
+    await _dio.download(
+      url,
+      filePath,
+      cancelToken: _cancelToken,
+      onReceiveProgress: onProgress,
+    );
+
+    if (expectedSha256 != null && expectedSha256.isNotEmpty) {
+      final file = File(filePath);
+      final digest = await sha256.bind(file.openRead()).first;
+      if (digest.toString().toLowerCase() != expectedSha256.toLowerCase()) {
+        await file.delete();
+        throw StateError('Integridade do APK invalida (SHA-256 divergente).');
+      }
+    }
+
     return filePath;
+  }
+
+  /// Cancela requisicoes/downloads pendentes ao descartar a tela chamadora.
+  void dispose() {
+    if (!_cancelToken.isCancelled) {
+      _cancelToken.cancel('UpdateService descartado');
+    }
   }
 
   /// Compara se [remote] e mais recente que [local].

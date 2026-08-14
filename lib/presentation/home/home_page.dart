@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_filex/open_filex.dart';
@@ -37,6 +38,7 @@ class _HomePageState extends State<HomePage> {
   bool _editingChurch = false;
 
   // Auto-update
+  late final UpdateService _updateService;
   UpdateCheckResult? _update;
   bool _checkingUpdate = false;
   bool _downloading = false;
@@ -46,6 +48,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _now = DateTime.now();
+    _updateService = UpdateService();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
@@ -54,11 +57,12 @@ class _HomePageState extends State<HomePage> {
 
   // coverage:ignore-start
   Future<void> _checkForUpdates() async {
-    if (_checkingUpdate) return;
+    // Widget tests/debug nao devem abrir requisicao real nem timer Dio.
+    // O auto-update permanece ativo em APK/Web release.
+    if (!kReleaseMode || _checkingUpdate) return;
     setState(() => _checkingUpdate = true);
     try {
-      final service = UpdateService();
-      final result = await service.checkForUpdates();
+      final result = await _updateService.checkForUpdates();
       if (mounted) setState(() => _update = result);
     } finally {
       if (mounted) setState(() => _checkingUpdate = false);
@@ -77,9 +81,9 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final service = UpdateService();
-      final path = await service.downloadApk(
+      final path = await _updateService.downloadApk(
         update.downloadUrl!,
+        expectedSha256: update.apkSha256,
         onProgress: (received, total) {
           if (mounted && total > 0) {
             setState(() => _downloadProgress = (received * 100 ~/ total));
@@ -104,6 +108,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _clockTimer?.cancel();
+    _updateService.dispose();
     _districtController.dispose();
     _churchController.dispose();
     super.dispose();

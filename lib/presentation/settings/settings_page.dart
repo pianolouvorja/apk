@@ -328,7 +328,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _updateStatus =
                 'Versão ${result.latestVersion} disponível. Baixando...';
           });
-          final path = await service.downloadApk(result.downloadUrl!);
+          final path = await service.downloadApk(
+            result.downloadUrl!,
+            expectedSha256: result.apkSha256,
+          );
           await OpenFilex.open(path);
         }
       } else {

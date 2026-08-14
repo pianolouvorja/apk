@@ -45,6 +45,16 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+
+            // OWASP MASVS resilience: reduz codigo/resources expostos no APK.
+            // Dart obfuscation e split debug-info sao aplicados pelo comando
+            // flutter build apk --obfuscate --split-debug-info=<dir>.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
