@@ -223,7 +223,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Tenta ler o HymnsBloc da arvore (se HymnsPage proveu)
     try {
       final bloc = context.read<HymnsBloc>();
-      return bloc.repository.getHymnsByAlbum(widget.albumId);
+      return await bloc.repository.getHymnsByAlbum(widget.albumId);
     } catch (_) {}
 
     // Fallback: cria repository localmente (nao testavel em unit test)

@@ -30,7 +30,11 @@ void main() {
   test('retorna none quando GitHub nao tem release', () async {
     final dio = _MockDio();
     when(
-      () => dio.get<dynamic>(any(), options: any(named: 'options')),
+      () => dio.get<dynamic>(
+        any(),
+        options: any(named: 'options'),
+        cancelToken: any(named: 'cancelToken'),
+      ),
     ).thenThrow(DioException(requestOptions: RequestOptions(path: '')));
 
     final service = UpdateService(
@@ -45,7 +49,11 @@ void main() {
   test('detecta versao mais recente com asset APK', () async {
     final dio = _MockDio();
     when(
-      () => dio.get<dynamic>(any(), options: any(named: 'options')),
+      () => dio.get<dynamic>(
+        any(),
+        options: any(named: 'options'),
+        cancelToken: any(named: 'cancelToken'),
+      ),
     ).thenAnswer(
       (_) async => Response<dynamic>(
         data: {
@@ -57,6 +65,8 @@ void main() {
               'browser_download_url':
                   'https://github.com/pianolouvorja/apk/releases/download/v0.2.0/app-release.apk',
               'size': 60000000,
+              'digest':
+                  'sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
             },
           ],
         },
@@ -76,6 +86,10 @@ void main() {
     expect(result.latestVersion, '0.2.0');
     expect(result.downloadUrl, contains('app-release.apk'));
     expect(result.apkSize, 60000000);
+    expect(
+      result.apkSha256,
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    );
     expect(result.releaseNotes, 'Bug fixes');
   });
 
@@ -84,7 +98,11 @@ void main() {
     () async {
       final dio = _MockDio();
       when(
-        () => dio.get<dynamic>(any(), options: any(named: 'options')),
+        () => dio.get<dynamic>(
+          any(),
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
       ).thenAnswer(
         (_) async => Response<dynamic>(
           data: {
@@ -110,7 +128,11 @@ void main() {
   test('retorna none quando release nao tem APK', () async {
     final dio = _MockDio();
     when(
-      () => dio.get<dynamic>(any(), options: any(named: 'options')),
+      () => dio.get<dynamic>(
+        any(),
+        options: any(named: 'options'),
+        cancelToken: any(named: 'cancelToken'),
+      ),
     ).thenAnswer(
       (_) async => Response<dynamic>(
         data: {
