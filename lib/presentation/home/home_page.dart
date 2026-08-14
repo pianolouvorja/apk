@@ -3,7 +3,6 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_filex/open_filex.dart';
@@ -55,7 +54,7 @@ class _HomePageState extends State<HomePage> {
 
   // coverage:ignore-start
   Future<void> _checkForUpdates() async {
-    if (!kReleaseMode || _checkingUpdate) return;
+    if (_checkingUpdate) return;
     setState(() => _checkingUpdate = true);
     try {
       final service = UpdateService();
@@ -125,11 +124,13 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             // coverage:ignore-start
-            // Banner de atualizacao (APK apenas, so ativa em release)
-            if (_update != null && _update!.hasUpdate && !kIsWeb)
+            // Banner de atualizacao
+            if (_update != null && _update!.hasUpdate)
               UpdateBanner(
                 version: _update!.latestVersion ?? '',
                 apkSizeBytes: _update!.apkSize,
+                releaseNotes: _update!.releaseNotes,
+                downloadUrl: _update!.downloadUrl,
                 onUpdate: _performUpdate,
                 onDismiss: () =>
                     setState(() => _update = UpdateCheckResult.none),

@@ -34,6 +34,14 @@ class UpdateService {
   final String _repo;
   final Future<PackageInfo> Function() _packageInfoProvider;
 
+  /// Token PAT para acessar releases de repositorios privados.
+  /// Fornecido via --dart-define=GH_TOKEN=xxx no build.
+  /// Fallback vazio (repo publico nao precisa).
+  static const _ghToken = String.fromEnvironment(
+    'GH_TOKEN',
+    defaultValue: '',
+  );
+
   UpdateService({
     Dio? dio,
     String repo = 'pianolouvorja/apk',
@@ -49,7 +57,10 @@ class UpdateService {
       final response = await _dio.get<dynamic>(
         'https://api.github.com/repos/$_repo/releases/latest',
         options: Options(
-          headers: {'Accept': 'application/vnd.github+json'},
+          headers: {
+            'Accept': 'application/vnd.github+json',
+            if (_ghToken.isNotEmpty) 'Authorization': 'token $_ghToken',
+          },
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
         ),

@@ -1,7 +1,7 @@
 name: louvorja_piano_mobile
 description: "LouvorJA PIANO Mobile — App Flutter para gerenciamento de cultos adventistas"
 publish_to: "none"
-version: 0.1.0
+version: 0.1.0+1
 
 environment:
   sdk: ^3.8.0
@@ -39,7 +39,8 @@ dependencies:
   tabler_icons_plus: ^3.44.0
 
   # SVG rendering (logos e brand assets)
-  flutter_svg: ^2.0.16
+  flutter_markdown: ^0.7.6
+  flutter_svg: ^2.2.0
 
   # Native splash runtime removal
   flutter_native_splash: ^2.4.6

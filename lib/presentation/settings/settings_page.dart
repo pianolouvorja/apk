@@ -1,11 +1,13 @@
 library;
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/app_accents.dart';
 import '../../core/constants/app_version.dart';
@@ -311,12 +313,24 @@ class _SettingsPageState extends State<SettingsPage> {
       final result = await service.checkForUpdates();
       if (!mounted) return;
       if (result.hasUpdate && result.downloadUrl != null) {
-        setState(() {
-          _updateStatus =
-              'Versão ${result.latestVersion} disponível. Baixando...';
-        });
-        final path = await service.downloadApk(result.downloadUrl!);
-        await OpenFilex.open(path);
+        if (kIsWeb) {
+          // coverage:ignore-line
+          setState(() {
+            _updateStatus =
+                'Versão ${result.latestVersion} disponível!';
+          });
+          await launchUrl(
+            Uri.parse(result.downloadUrl!),
+            webOnlyWindowName: '_blank',
+          );
+        } else {
+          setState(() {
+            _updateStatus =
+                'Versão ${result.latestVersion} disponível. Baixando...';
+          });
+          final path = await service.downloadApk(result.downloadUrl!);
+          await OpenFilex.open(path);
+        }
       } else {
         setState(() {
           _updateStatus = 'Você já está usando a versão mais recente.';
