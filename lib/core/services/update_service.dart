@@ -7,6 +7,19 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+/// Motivo pelo qual a verificacao ficou indisponivel (distinto de
+/// "esta atualizado").
+enum UpdateCheckFailure {
+  /// 401/404: repo privado sem token valido (ou token expirado).
+  unauthorized,
+
+  /// Sem rede / timeout / DNS.
+  network,
+
+  /// Qualquer outro erro.
+  unknown,
+}
+
 /// Resultado da verificacao de atualizacao.
 class UpdateCheckResult {
   final bool hasUpdate;
@@ -15,6 +28,7 @@ class UpdateCheckResult {
   final String? releaseNotes;
   final int? apkSize;
   final String? apkSha256;
+  final UpdateCheckFailure? failure;
 
   const UpdateCheckResult({
     required this.hasUpdate,
@@ -23,9 +37,22 @@ class UpdateCheckResult {
     this.releaseNotes,
     this.apkSize,
     this.apkSha256,
+    this.failure,
   });
 
   static const none = UpdateCheckResult(hasUpdate: false);
+
+  /// A verificacao FALHOU (nao confundir com "sem atualizacao").
+  const UpdateCheckResult.unavailable({required UpdateCheckFailure reason})
+      : hasUpdate = false,
+        latestVersion = null,
+        downloadUrl = null,
+        releaseNotes = null,
+        apkSize = null,
+        apkSha256 = null,
+        failure = reason;
+
+  bool get isUnavailable => failure != null;
 }
 
 /// Servico de auto-update via GitHub Releases.
@@ -119,8 +146,22 @@ class UpdateService {
         apkSize: apkSize,
         apkSha256: apkSha256,
       );
+    } on DioException catch (e) {
+      // 404/401 em repo privado sem token: a consulta FALHOU — nao
+      // tratar como "atualizado" (o app mentia "sem novidades").
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403 || status == 404) {
+        return const UpdateCheckResult.unavailable(
+          reason: UpdateCheckFailure.unauthorized,
+        );
+      }
+      return const UpdateCheckResult.unavailable(
+        reason: UpdateCheckFailure.network,
+      );
     } catch (_) {
-      return UpdateCheckResult.none;
+      return const UpdateCheckResult.unavailable(
+        reason: UpdateCheckFailure.unknown,
+      );
     }
   }
 
