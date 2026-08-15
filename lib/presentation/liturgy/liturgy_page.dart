@@ -14,6 +14,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/repositories/liturgy_repository.dart';
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
+import 'package:louvorja_piano_mobile/presentation/liturgy/weekday_math.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/bloc/liturgy_bloc.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/services/liturgy_item_executor.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/widgets/liturgy_item_dialog.dart';
@@ -61,10 +62,7 @@ class LiturgyPage extends StatelessWidget {
     );
   }
 
-  LiturgyWeekday _todayWeekday() {
-    final wd = DateTime.now().weekday;
-    return liturgyDayTabOrder[(wd - 1).clamp(0, 6)];
-  }
+  LiturgyWeekday _todayWeekday() => weekdayFromDart(DateTime.now().weekday);
 }
 
 class _LiturgyView extends StatelessWidget {
