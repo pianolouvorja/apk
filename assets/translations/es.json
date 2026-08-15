@@ -210,5 +210,11 @@
     "bibleSubtitle": "Libros, capitulos y versiculos",
     "timer": "Cronometro",
     "timerSubtitle": "Cronometro y cuenta regresiva"
+  },
+  "search": {
+    "title": "Búsqueda",
+    "placeholder": "Buscar himnos y versículos...",
+    "hymnsGroup": "Himnos",
+    "bibleGroup": "Biblia"
   }
 }

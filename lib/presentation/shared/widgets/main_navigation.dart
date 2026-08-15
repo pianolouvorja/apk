@@ -35,6 +35,11 @@ class MainNavigation extends StatelessWidget {
 
     return Scaffold(
       body: navigationShell,
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () => context.push('/search'),
+        tooltip: 'search.title'.tr(),
+        child: const Icon(TablerIcons.search, size: 20),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainer,
