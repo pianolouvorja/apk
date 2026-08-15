@@ -335,6 +335,18 @@ class _SettingsPageState extends State<SettingsPage> {
           );
           await OpenFilex.open(path);
         }
+      } else if (result.isUnavailable) {
+        // A consulta FALHOU (404 repo privado sem token, rede etc.) —
+        // dizer "voce esta atualizado" aqui seria mentira.
+        setState(() {
+          _updateStatus = switch (result.failure) {
+            UpdateCheckFailure.unauthorized =>
+              'Não foi possível verificar: repositório privado. Aguarde '
+                  'uma decisão de acesso (repo público ou proxy).',
+            _ => 'Não foi possível verificar atualizações. Verifique sua '
+                'conexão e tente novamente.',
+          };
+        });
       } else {
         setState(() {
           _updateStatus = 'Você já está usando a versão mais recente.';
