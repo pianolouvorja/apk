@@ -1,5 +1,6 @@
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'dart:convert';
 
 import 'package:dio/dio.dart' show ProgressCallback;
@@ -71,6 +72,31 @@ DownloadQueueItem _item(int id) => DownloadQueueItem(
       title: 'Hino $id',
       url: 'https://x/$id.mp3',
     );
+
+/// Simula API em rate limit: todo download falha com serverBusy (429).
+class _RateLimitedOffline implements OfflineMusicPort {
+  int calls = 0;
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Future<String?> localPathFor(int musicId, {bool instrumental = false}) async => null;
+
+  @override
+  Future<String> download({
+    required int musicId,
+    required String url,
+    bool instrumental = false,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    calls++;
+    throw const LouvorjaApiException('errors.serverBusy', '429');
+  }
+
+  @override
+  Future<void> remove(int musicId, {bool instrumental = false}) async {}
+}
 
 void main() {
   test('fila processa serialmente (nunca 2 simultaneos)', () async {
@@ -193,5 +219,21 @@ void main() {
     await queue.done;
     expect(queue.failedCount, 0, reason: 'novo drain zera o contador');
     expect(offline.downloaded, {1, 2, 3, 9});
+  });
+
+  test('circuit breaker: 429 seguidos param o drain (nao martela a API)', () async {
+    final offline = _RateLimitedOffline();
+    final queue = DownloadQueue(
+      offline: offline,
+      storage: _MemStorage(),
+      interItemDelay: Duration.zero,
+    );
+    queue.enqueue(List.generate(50, _item));
+    await queue.done;
+
+    expect(offline.calls, lessThanOrEqualTo(4),
+        reason: 'drain deve PARAR apos poucos 429 seguidos, nao tentar 50');
+    expect(queue.failedCount, 50,
+        reason: 'todas as 50 contam como falha (feedback ao usuario)');
   });
 }

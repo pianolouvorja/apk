@@ -1,7 +1,7 @@
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/hymn_repository.dart';

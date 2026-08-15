@@ -1,9 +1,9 @@
 // ignore_for_file: unused_element
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
-import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
