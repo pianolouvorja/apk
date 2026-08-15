@@ -14,6 +14,7 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
+import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
@@ -156,8 +157,15 @@ class _HymnsViewState extends State<_HymnsView> {
           final detail = await repo.getHymnDetails(hymn.id);
           final url = detail.urlMusic ?? '';
           if (url.isNotEmpty) {
-            await offline.download(musicId: hymn.id, url: url);
+            // URL encodada: paths da API tem espacos/acento e o request
+            // quebra sem encoding (bug dos downloads 100% falhando).
+            await offline.download(
+              musicId: hymn.id,
+              url: DownloadUrlBuilder.build(url),
+            );
           }
+          // Pausa entre faixas: respeita rate limiting da API.
+          await Future<void>.delayed(const Duration(milliseconds: 400));
         }
       } catch (_) {
         failed++;
