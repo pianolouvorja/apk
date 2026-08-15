@@ -121,7 +121,13 @@ class HymnRepositoryImpl implements HymnRepository {
       _cache.write(cacheKey, hymns.map((h) => h.toJson()).toList());
       return hymns;
     } catch (_) {
-      if (cached != null) return _parseHymns(cached);
+      // API fora: cache fresco primeiro, depois STALE (expirado) — melhor
+      // catálogo velho do que tela de erro (incidente API 429 2026-08-16).
+      final fresh = cached ?? _cache.readStale(cacheKey);
+      if (fresh != null) {
+        final parsed = _parseHymns(fresh);
+        if (parsed.isNotEmpty) return parsed;
+      }
       rethrow;
     }
   }

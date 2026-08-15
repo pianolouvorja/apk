@@ -1,5 +1,6 @@
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';

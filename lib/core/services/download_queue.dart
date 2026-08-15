@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../errors/louvorja_api_exception.dart';
 import 'offline_music_port.dart';
 
 /// Item da fila de downloads, persistivel em disco.
@@ -73,6 +74,13 @@ class DownloadQueue {
   /// Itens que falharam neste drain — ficam no disco p/ proximo boot.
   final List<DownloadQueueItem> _failedThisRun = [];
   final Set<int> _enqueuedIds = {};
+
+  /// Circuit breaker: falhas de RATE LIMIT seguidas param o drain.
+  /// Incidente 2026-08-16: 'baixar todas' martelou a API em 429 e a
+  /// derrubou para todos. Apos [_rateLimitTripThreshold] 429 seguidos,
+  /// o drain aborta (itens restantes ficam como falha persistida).
+  static const _rateLimitTripThreshold = 3;
+  int _consecutiveRateLimits = 0;
   Completer<void>? _completer;
   bool _started = false;
   bool _restoring = false;
@@ -155,6 +163,12 @@ class DownloadQueue {
 
   Future<void> _drain() async {
     while (_pending.isNotEmpty) {
+      // Circuit breaker aberto: API em rate limit — parar de martelar.
+      if (_consecutiveRateLimits >= _rateLimitTripThreshold) {
+        _failedThisRun.addAll(_pending);
+        _pending.clear();
+        break;
+      }
       final item = _pending.removeAt(0);
       await _persist();
       try {
@@ -174,9 +188,18 @@ class DownloadQueue {
           );
         }
         _failedThisRun.removeWhere((e) => e.musicId == item.musicId);
+        _consecutiveRateLimits = 0;
+      } on LouvorjaApiException catch (e) {
+        if (e.code == 'errors.serverBusy') {
+          _consecutiveRateLimits++;
+        } else {
+          _consecutiveRateLimits = 0;
+        }
+        _failedThisRun.add(item);
       } catch (_) {
-        // Falha: sem loop infinito no mesmo drain. O item permanece
+        // Falha comum: sem loop infinito no mesmo drain. O item permanece
         // persistido (via _failedThisRun) para o proximo boot/enqueue.
+        _consecutiveRateLimits = 0;
         _failedThisRun.add(item);
       }
       if (_pending.isNotEmpty && interItemDelay > Duration.zero) {
@@ -185,6 +208,7 @@ class DownloadQueue {
     }
     notifier.value = null;
     _started = false;
+    _consecutiveRateLimits = 0;
     await _persist();
     final c = _completer;
     _completer = null;

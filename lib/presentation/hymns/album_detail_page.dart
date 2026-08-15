@@ -148,7 +148,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
   bool _isThisPlaying(Hymn hymn) => _playingHymnId == hymn.id;
 
-    // coverage:ignore-start
     OfflineMusicPort get _offline =>
         widget.offlineService ?? createOfflineMusicService();
 
@@ -272,7 +271,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       _batchTrackTotal = p.total;
     });
   }
-  // coverage:ignore-end
 
   HymnRepository _repository() {
     try {
