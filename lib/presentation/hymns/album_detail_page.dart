@@ -12,6 +12,8 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
+import 'package:louvorja_piano_mobile/core/services/download_queue.dart';
+import 'package:louvorja_piano_mobile/core/services/download_queue_storage_factory.dart';
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
@@ -55,8 +57,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   StreamSubscription<bool>? _playingSubscription;
   final Set<int> _downloadedIds = {};
   final Set<int> _downloadingIds = {};
-  int? _batchProgress;
   bool _batchDownloading = false;
+  String? _batchTrackTitle;
+  int _batchTrackReceived = 0;
+  int _batchTrackTotal = 0;
 
   HymnAudioPlayer get _player => widget.audioPlayer ?? HymnAudioPlayer.instance;
 
@@ -168,53 +172,82 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     } catch (_) {}
   }
 
+  DownloadQueue? _queue;
+
+  /// Fila serial persistida: sobrevive ao fechamento do app (pendencias
+  /// em disco) e mostra progresso por faixa (bytes recebidos/total).
   Future<void> _downloadAlbum(List<Hymn> hymns) async {
     if (!_offline.isSupported || _batchDownloading) return;
+    final repo = _repository();
+    final messenger = ScaffoldMessenger.of(context);
+    final queue = _queue ??= DownloadQueue(
+      offline: _offline,
+      storage: createDownloadQueueStorage(),
+    );
+
     setState(() {
       _batchDownloading = true;
-      _batchProgress = 0;
     });
-    final total = hymns.length;
-    var done = 0;
-    var failed = 0;
+
+    // Resolve URLs primeiro (rate limit da API separado do download).
+    final items = <DownloadQueueItem>[];
     for (final hymn in hymns) {
-      if (_downloadedIds.contains(hymn.id)) {
-        done++;
-        continue;
-      }
+      if (_downloadedIds.contains(hymn.id)) continue;
       try {
-        final detail = await _repository().getHymnDetails(hymn.id);
+        final detail = await repo.getHymnDetails(hymn.id);
         final url = detail.urlMusic ?? '';
         if (url.isNotEmpty) {
-          await _offline.download(
+          items.add(DownloadQueueItem(
             musicId: hymn.id,
+            title: hymn.title ?? '${hymn.id}',
             url: DownloadUrlBuilder.build(url),
-          );
-        }
-        if (mounted) {
-          setState(() => _downloadedIds.add(hymn.id));
+          ));
         }
       } catch (_) {
-        failed++;
+        // detalhe falhou: item nao entra na fila agora (proximo lote)
       }
-      done++;
-      // Pausa entre faixas: respeita rate limiting da API.
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      if (mounted) setState(() => _batchProgress = (done * 100 ~/ total));
     }
-    if (mounted) {
-      setState(() {
-        _batchDownloading = false;
-        _batchProgress = null;
-      });
-      if (failed > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('downloads.albumErrors'.tr(
+
+    final total = items.length;
+    queue.notifier.addListener(_onQueueProgress);
+    queue.enqueue(items);
+    await queue.done;
+    final failed = queue.failedCount;
+    queue.notifier.removeListener(_onQueueProgress);
+
+    if (!mounted) return;
+    // Reflete no UI o que a fila concluiu (consulta o indice offline real,
+    // nao o estado em memoria da fila).
+    final doneIds = <int>{};
+    for (final item in items) {
+      if (await _offline.localPathFor(item.musicId) != null) {
+        doneIds.add(item.musicId);
+      }
+    }
+    setState(() {
+      _batchDownloading = false;
+      _downloadedIds.addAll(doneIds);
+      _batchTrackTitle = null;
+      _batchTrackReceived = 0;
+      _batchTrackTotal = 0;
+    });
+    if (failed > 0) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('downloads.albumErrors'.tr(
               namedArgs: {'count': '$failed', 'total': '$total'}))),
-        );
-      }
+      );
     }
+  }
+
+  void _onQueueProgress() {
+    final p = _queue?.notifier.value;
+    if (p == null || !mounted) return;
+    setState(() {
+      _batchTrackTitle = p.title;
+      _batchTrackReceived = p.received;
+      _batchTrackTotal = p.total;
+    });
   }
   // coverage:ignore-end
 
@@ -292,15 +325,32 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         ),
         // coverage:ignore-start
         actions: [
-          if (_batchDownloading && _batchProgress != null)
+          if (_batchDownloading)
             Padding(
-              padding: const EdgeInsets.all(14),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: _batchProgress! / 100,
+              padding: const EdgeInsets.only(right: 14),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (_batchTrackTitle != null)
+                      Text(
+                        _batchTrackTitle!,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    Text(
+                      _batchTrackTotal > 0
+                          ? '${(_batchTrackReceived / 1024 / 1024).toStringAsFixed(1)} / ${(_batchTrackTotal / 1024 / 1024).toStringAsFixed(1)} MB'
+                          : 'downloads.downloading'.tr(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )

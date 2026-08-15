@@ -47,16 +47,16 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Carrega versão com timeout de 1.5s. Se falhar, usa fallback.
-    (widget.versionFuture ?? AppVersion.displayVersion)
-        .timeout(const Duration(milliseconds: 1500), onTimeout: () => 'v0.1.0')
-        .then((v) {
+    // Versao real do PackageInfo; sem fallback hardcoded (bug: timeout
+    // de 1.5s no cold start release travava a splash em 'v0.1.0' para
+    // sempre). Boot comeca apos 400ms; quando a versao chegar, o texto
+    // atualiza via setState — nunca exibir versao falsa.
+    (widget.versionFuture ?? AppVersion.displayVersion).then((v) {
       if (!mounted) return;
       setState(() => _version = v);
-      _startBootSequence();
-    }).catchError((_) {
+    }).catchError((_) {});
+    Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
-      setState(() => _version = 'v0.1.0');
       _startBootSequence();
     });
   }

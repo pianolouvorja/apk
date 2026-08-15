@@ -226,6 +226,7 @@
     "trackError": "Failed to download \"{title}\". Check your connection.",
     "albumErrors": "{count} of {total} hymns failed to download.",
     "downloadAll": "Download all collections",
-    "downloadAllProgress": "Downloading collections: {current}/{total}"
+    "downloadAllProgress": "Downloading collections: {current}/{total}",
+    "downloading": "Downloading..."
   }
 }

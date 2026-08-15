@@ -225,6 +225,7 @@
     "trackError": "Erro ao baixar \"{title}\". Verifique sua conexão.",
     "albumErrors": "{count} de {total} hinos falharam ao baixar.",
     "downloadAll": "Baixar todas as coletâneas",
-    "downloadAllProgress": "Baixando coletâneas: {current}/{total}"
+    "downloadAllProgress": "Baixando coletâneas: {current}/{total}",
+    "downloading": "Baixando..."
   }
 }
