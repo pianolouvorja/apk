@@ -221,5 +221,11 @@
     "placeholder": "Buscar himnos y versículos...",
     "hymnsGroup": "Himnos",
     "bibleGroup": "Biblia"
+  },
+  "downloads": {
+    "trackError": "Error al descargar \"{title}\". Verifica tu conexión.",
+    "albumErrors": "{count} de {total} himnos fallaron al descargar.",
+    "downloadAll": "Descargar todas las colecciones",
+    "downloadAllProgress": "Descargando colecciones: {current}/{total}"
   }
 }

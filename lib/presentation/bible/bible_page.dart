@@ -11,6 +11,8 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
+import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
+import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 
@@ -613,20 +615,41 @@ class _ChapterGridSection extends StatelessWidget {
 
 // --- Verse List ---
 
-class _VerseList extends StatelessWidget {
+class _VerseList extends StatefulWidget {
   final BibleLoaded state;
   final ThemeData theme;
 
   const _VerseList({required this.state, required this.theme});
 
   @override
+  State<_VerseList> createState() => _VerseListState();
+}
+
+class _VerseListState extends State<_VerseList> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final theme = widget.theme;
     final book = state.selectedBook;
     final title = book != null
         ? '${book.name} ${state.selectedChapter}'
         : 'bible.title'.tr();
 
-    final entries = state.verses.entries
+    // Busca local com normalizacao de acentos (mesma logica da global).
+    final visibleVerses = _searchQuery.isEmpty
+        ? state.verses
+        : GlobalSearchService.filterVerses(state.verses, _searchQuery);
+
+    final entries = visibleVerses.entries
         .map((e) => MapEntry(int.tryParse(e.key) ?? 0, e.value))
         .where((e) => e.key > 0)
         .toList()
@@ -670,6 +693,25 @@ class _VerseList extends StatelessWidget {
             ],
           ),
         ),
+        // Busca no capitulo (numero ou texto, com normalizacao)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'search.placeholder'.tr(),
+              prefixIcon: const Icon(TablerIcons.search, size: 18),
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(
+                borderRadius: AppRadius.sm,
+              ),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s2),
         // Versiculos
         Expanded(
           child: entries.isEmpty
