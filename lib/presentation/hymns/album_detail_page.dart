@@ -11,6 +11,8 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
+import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
@@ -76,6 +78,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Mesmo hino em execução: alterna para pausa.
     if (_playingHymnId == hymn.id) {
       await player.pause();
+      nowPlaying.pause();
       if (mounted) setState(() => _playingHymnId = null);
       return;
     }
@@ -100,6 +103,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
       if (mounted) setState(() => _playingHymnId = hymn.id);
+      nowPlaying.start(
+        hymnId: hymn.id,
+        title: hymn.title ?? '',
+        album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
+        albumId: widget.albumId,
+      );
       await player.playUrl(url);
     } catch (_) {
       if (mounted) {

@@ -173,10 +173,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   _ChoiceChip(
                     label: 'settings.languageEnglish'.tr(),
                     selected: locale == const Locale('en'),
-                    onTap: () => EasyLocalization.of(
-                      context,
-                    // coverage:ignore-line
-                    )?.setLocale(const Locale('en')),
+                    // API nao possui catalogo em ingles (apenas PT e ES).
+                    enabled: false,
+                    onTap: null,
                   ),
                   _ChoiceChip(
                     label: 'settings.languageSpanish'.tr(),
