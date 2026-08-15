@@ -227,6 +227,8 @@
     "albumErrors": "{count} of {total} hymns failed to download.",
     "downloadAll": "Download all collections",
     "downloadAllProgress": "Downloading collections: {current}/{total}",
-    "downloading": "Downloading..."
+    "downloading": "Downloading...",
+    "offlineEmpty": "No connection and no downloaded songs in this collection.",
+    "noneDownloaded": "No downloaded songs in this collection."
   }
 }

@@ -227,6 +227,8 @@
     "albumErrors": "{count} de {total} himnos fallaron al descargar.",
     "downloadAll": "Descargar todas las colecciones",
     "downloadAllProgress": "Descargando colecciones: {current}/{total}",
-    "downloading": "Descargando..."
+    "downloading": "Descargando...",
+    "offlineEmpty": "Sin conexión y ninguna canción descargada en esta colección.",
+    "noneDownloaded": "Ninguna canción descargada en esta colección."
   }
 }

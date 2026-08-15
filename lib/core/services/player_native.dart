@@ -44,7 +44,13 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   @override
   Future<void> playUrl(String url) async {
     _currentUrl = url;
-    await _player.play(UrlSource(url));
+    // Offline-first: caminho local (arquivo baixado) usa DeviceFileSource;
+    // URL http(s) mantem streaming.
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      await _player.play(UrlSource(url));
+    } else {
+      await _player.play(DeviceFileSource(url));
+    }
   }
 
   @override
