@@ -34,6 +34,11 @@ void main() {
       // Antes da versao carregar: apenas o logo estatico
       // Apos carregar: logo + codename (2 SVGs)
       expect(find.byType(SvgPicture), findsWidgets);
+
+      // Consome o timer de boot (400ms) e a animacao (1800ms) para nao
+      // deixar timers pendentes no fim do teste.
+      await tester.pump(const Duration(milliseconds: 450));
+      await tester.pump(const Duration(seconds: 2));
     });
 
     testWidgets('usa fundo claro quando o tema é light', (tester) async {
@@ -47,6 +52,9 @@ void main() {
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
       expect(scaffold.backgroundColor, ThemeData.light().colorScheme.surface);
+
+      await tester.pump(const Duration(milliseconds: 450));
+      await tester.pump(const Duration(seconds: 2));
     });
 
     testWidgets('chama callback de boot uma unica vez apos versao+timer',
