@@ -5,9 +5,12 @@
 library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/services/global_search_service.dart';
+import '../domain/entities/hymn.dart';
 import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
 import '../presentation/hymns/album_detail_page.dart';
+import '../presentation/search/global_search_page.dart';
 import '../presentation/settings/settings_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
 import '../presentation/tools/tools_page.dart';
@@ -68,6 +71,17 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    // Busca global (RF-08): fora do shell para abrir em tela cheia.
+    GoRoute(
+      path: '/search',
+      builder: (context, state) {
+        return GlobalSearchPage(
+          service: GlobalSearchService(),
+          hymnsProvider: () async => <Hymn>[],
+          versesProvider: () async => <BibleVerseRef>[],
+        );
+      },
     ),
   ],
 );

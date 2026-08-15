@@ -210,5 +210,11 @@
     "bibleSubtitle": "Books, chapters and verses",
     "timer": "Timer",
     "timerSubtitle": "Stopwatch and countdown"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search hymns and verses...",
+    "hymnsGroup": "Hymns",
+    "bibleGroup": "Bible"
   }
 }
