@@ -220,5 +220,11 @@
     "placeholder": "Buscar hinos e versículos...",
     "hymnsGroup": "Hinos",
     "bibleGroup": "Bíblia"
+  },
+  "downloads": {
+    "trackError": "Erro ao baixar \"{title}\". Verifique sua conexão.",
+    "albumErrors": "{count} de {total} hinos falharam ao baixar.",
+    "downloadAll": "Baixar todas as coletâneas",
+    "downloadAllProgress": "Baixando coletâneas: {current}/{total}"
   }
 }

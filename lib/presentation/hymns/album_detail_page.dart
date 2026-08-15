@@ -174,6 +174,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     });
     final total = hymns.length;
     var done = 0;
+    var failed = 0;
     for (final hymn in hymns) {
       if (_downloadedIds.contains(hymn.id)) {
         done++;
@@ -188,7 +189,9 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         if (mounted) {
           setState(() => _downloadedIds.add(hymn.id));
         }
-      } catch (_) {}
+      } catch (_) {
+        failed++;
+      }
       done++;
       if (mounted) setState(() => _batchProgress = (done * 100 ~/ total));
     }
@@ -197,6 +200,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         _batchDownloading = false;
         _batchProgress = null;
       });
+      if (failed > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('downloads.albumErrors'.tr(
+              namedArgs: {'count': '$failed', 'total': '$total'}))),
+        );
+      }
     }
   }
   // coverage:ignore-end

@@ -1,5 +1,6 @@
 library;
 
+import '../../domain/entities/album_category.dart';
 import '../../domain/entities/hymn.dart';
 
 /// Referencia leve de um versiculo para busca global (sem acoplar a BibleChapter).
@@ -173,5 +174,49 @@ class GlobalSearchService {
     final prefix = start > 0 ? '…' : '';
     final suffix = end < text.length ? '…' : '';
     return '$prefix${text.substring(start, end)}$suffix';
+  }
+
+  /// Filtra categorias/albuns pelo input de busca da aba Hinos.
+  ///
+  /// Usa a mesma normalizacao da busca global (acentos/caixa) sobre
+  /// nome e subtitulo do album; categorias sem match somem.
+  static List<AlbumCategory> filterAlbums(
+    List<AlbumCategory> categories,
+    String query,
+  ) {
+    final q = normalize(query);
+    if (q.isEmpty) return categories;
+    return categories
+        .map((cat) {
+          final filteredAlbums = cat.albums.where((album) {
+            final name = normalize(album.name ?? '');
+            final subtitle = normalize(album.subtitle ?? '');
+            return name.contains(q) || subtitle.contains(q);
+          }).toList();
+          return AlbumCategory(
+            id: cat.id,
+            name: cat.name,
+            albums: filteredAlbums,
+          );
+        })
+        .where((cat) => cat.albums.isNotEmpty)
+        .toList();
+  }
+
+  /// Filtra versiculos de um capitulo pelo input de busca da Biblia.
+  ///
+  /// Match por texto (normalizado) ou numero exato do versiculo.
+  static Map<String, String> filterVerses(
+    Map<String, String> verses,
+    String query,
+  ) {
+    final q = normalize(query);
+    if (q.isEmpty) return verses;
+    return Map.fromEntries(
+      verses.entries.where((e) {
+        if (e.key == q) return true; // numero exato
+        return normalize(e.value).contains(q);
+      }),
+    );
   }
 }

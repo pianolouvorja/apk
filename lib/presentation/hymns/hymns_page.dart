@@ -14,7 +14,9 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
+import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
 import 'bloc/hymns_bloc.dart';
@@ -120,6 +122,70 @@ class _HymnsView extends StatefulWidget {
 class _HymnsViewState extends State<_HymnsView> {
   String _searchQuery = '';
   bool _isSearching = false;
+  bool _downloadingAll = false;
+  int? _downloadAllProgress; // 0..100
+  int? _downloadAllCurrent;
+  int? _downloadAllTotal;
+
+  /// Baixa todas as coletaneas disponiveis (feature herdada do desktop:
+  /// download sob demanda de toda a biblioteca).
+  // coverage:ignore-start
+  Future<void> _downloadEverything(List<AlbumCategory> categories) async {
+    final offline = createOfflineMusicService();
+    if (!offline.isSupported || _downloadingAll) return;
+
+    final albums = <Album>[];
+    for (final cat in categories) {
+      albums.addAll(cat.albums);
+    }
+
+    final repo = context.read<HymnsBloc>().repository;
+    setState(() {
+      _downloadingAll = true;
+      _downloadAllProgress = 0;
+      _downloadAllCurrent = 0;
+      _downloadAllTotal = albums.length;
+    });
+
+    var done = 0;
+    var failed = 0;
+    for (final album in albums) {
+      try {
+        final hymns = await repo.getHymnsByAlbum(album.id);
+        for (final hymn in hymns) {
+          final detail = await repo.getHymnDetails(hymn.id);
+          final url = detail.urlMusic ?? '';
+          if (url.isNotEmpty) {
+            await offline.download(musicId: hymn.id, url: url);
+          }
+        }
+      } catch (_) {
+        failed++;
+      }
+      done++;
+      if (mounted) {
+        setState(() {
+          _downloadAllCurrent = done;
+          _downloadAllProgress = (done * 100 ~/ albums.length);
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _downloadingAll = false;
+        _downloadAllProgress = null;
+      });
+      if (failed > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('downloads.albumErrors'.tr(
+              namedArgs: {'count': '$failed', 'total': '${albums.length}'}))),
+        );
+      }
+    }
+  }
+  // coverage:ignore-end
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +209,18 @@ class _HymnsViewState extends State<_HymnsView> {
               )
             : Text('hymns.title'.tr()),
         actions: [
+          BlocBuilder<HymnsBloc, HymnsState>(
+            builder: (context, state) {
+              if (state is! HymnsLoaded) return const SizedBox.shrink();
+              return _DownloadAllButton(
+                downloading: _downloadingAll,
+                progress: _downloadAllProgress,
+                current: _downloadAllCurrent,
+                total: _downloadAllTotal,
+                onPressed: () => _downloadEverything(state.categories),
+              );
+            },
+          ),
           IconButton(
             key: const Key('hymns-search-toggle'),
             icon: Icon(_isSearching ? TablerIcons.x : TablerIcons.search),
@@ -192,24 +270,11 @@ class _HymnsViewState extends State<_HymnsView> {
             );
           }
           if (state is HymnsLoaded) {
-            final filteredCategories = _searchQuery.isEmpty
-                ? state.categories
-                : state.categories
-                      .map((cat) {
-                        final filteredAlbums = cat.albums.where((album) {
-                          final name = (album.name ?? '').toLowerCase();
-                          final subtitle = (album.subtitle ?? '').toLowerCase();
-                          final q = _searchQuery.toLowerCase();
-                          return name.contains(q) || subtitle.contains(q);
-                        }).toList();
-                        return AlbumCategory(
-                          id: cat.id,
-                          name: cat.name,
-                          albums: filteredAlbums,
-                        );
-                      })
-                      .where((cat) => cat.albums.isNotEmpty)
-                      .toList();
+            // Busca com normalizacao de acentos (mesma logica da busca global).
+            final filteredCategories = GlobalSearchService.filterAlbums(
+              state.categories,
+              _searchQuery,
+            );
 
             final allAlbums = <Album>[];
             for (final cat in filteredCategories) {
@@ -414,6 +479,46 @@ class _CoverPlaceholder extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.9),
         ),
       ),
+    );
+  }
+}
+
+
+/// Botao "Baixar todas as coletaneas" na AppBar da aba Hinos.
+/// Mostra progresso durante o download em lote.
+class _DownloadAllButton extends StatelessWidget {
+  final bool downloading;
+  final int? progress;
+  final int? current;
+  final int? total;
+  final VoidCallback onPressed;
+
+  const _DownloadAllButton({
+    required this.downloading,
+    required this.progress,
+    required this.current,
+    required this.total,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (downloading) {
+      return Center(
+        child: Text(
+          '$current/$total',
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+    return IconButton(
+      tooltip: 'downloads.downloadAll'.tr(),
+      icon: const Icon(TablerIcons.download),
+      onPressed: onPressed,
     );
   }
 }

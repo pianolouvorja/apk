@@ -221,5 +221,11 @@
     "placeholder": "Search hymns and verses...",
     "hymnsGroup": "Hymns",
     "bibleGroup": "Bible"
+  },
+  "downloads": {
+    "trackError": "Failed to download \"{title}\". Check your connection.",
+    "albumErrors": "{count} of {total} hymns failed to download.",
+    "downloadAll": "Download all collections",
+    "downloadAllProgress": "Downloading collections: {current}/{total}"
   }
 }
