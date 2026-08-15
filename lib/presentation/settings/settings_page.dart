@@ -173,8 +173,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   _ChoiceChip(
                     label: 'settings.languageEnglish'.tr(),
                     selected: locale == const Locale('en'),
-                    enabled: false,
-                    onTap: null,
+                    onTap: () => EasyLocalization.of(
+                      context,
+                    // coverage:ignore-line
+                    )?.setLocale(const Locale('en')),
                   ),
                   _ChoiceChip(
                     label: 'settings.languageSpanish'.tr(),

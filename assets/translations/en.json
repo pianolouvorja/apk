@@ -117,7 +117,13 @@
       "scheduledFor": "Scheduled for"
     },
     "totalDuration": "Total duration",
-    "setStartTime": "Set start time"
+    "setStartTime": "Set start time",
+    "clone": {
+      "action": "Clone Liturgy"
+    },
+    "messages": {
+      "confirmDelete": "Remove this item?"
+    }
   },
   "bible": {
     "title": "Bible",
