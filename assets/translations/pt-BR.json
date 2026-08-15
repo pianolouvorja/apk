@@ -226,6 +226,8 @@
     "albumErrors": "{count} de {total} hinos falharam ao baixar.",
     "downloadAll": "Baixar todas as coletâneas",
     "downloadAllProgress": "Baixando coletâneas: {current}/{total}",
-    "downloading": "Baixando..."
+    "downloading": "Baixando...",
+    "offlineEmpty": "Sem conexão e nenhuma música baixada nesta coletânea.",
+    "noneDownloaded": "Nenhuma música baixada nesta coletânea."
   }
 }

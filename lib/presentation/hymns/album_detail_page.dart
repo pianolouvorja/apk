@@ -15,8 +15,10 @@ import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
 import 'package:louvorja_piano_mobile/core/services/download_queue.dart';
 import 'package:louvorja_piano_mobile/core/services/download_queue_storage_factory.dart';
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
+import 'package:louvorja_piano_mobile/core/services/connectivity_service.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
+import 'package:louvorja_piano_mobile/core/services/playback_resolver.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
@@ -43,7 +45,15 @@ class AlbumDetailPage extends StatefulWidget {
   /// Injeção opcional para testes; produção usa o singleton por plataforma.
   final HymnAudioPlayer? audioPlayer;
 
-  const AlbumDetailPage({super.key, required this.albumId, this.audioPlayer});
+  /// Porta offline injetável para testes; produção usa a factory nativa.
+  final OfflineMusicPort? offlineService;
+
+  const AlbumDetailPage({
+    super.key,
+    required this.albumId,
+    this.audioPlayer,
+    this.offlineService,
+  });
 
   @override
   State<AlbumDetailPage> createState() => _AlbumDetailPageState();
@@ -90,19 +100,31 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
     setState(() => _loadingMusicId = hymn.id);
     try {
-      final detail = await _repository().getHymnDetails(hymn.id);
-      final relativeUrl = instrumental
-          ? detail.urlInstrumental
-          : detail.urlMusic;
-      if (relativeUrl == null || relativeUrl.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('errors.notFound'.tr())));
+      // Offline-first: faixa baixada toca do disco sem consultar a API
+      // (funciona sem internet e economiza requests).
+      final local = await PlaybackResolver.localFor(
+        musicId: hymn.id,
+        instrumental: instrumental,
+        offline: _offline,
+      );
+      String source;
+      if (local != null) {
+        source = local;
+      } else {
+        final detail = await _repository().getHymnDetails(hymn.id);
+        final relativeUrl = instrumental
+            ? detail.urlInstrumental
+            : detail.urlMusic;
+        if (relativeUrl == null || relativeUrl.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('errors.notFound'.tr())));
+          }
+          return;
         }
-        return;
+        source = DownloadUrlBuilder.build(relativeUrl);
       }
-      final url = DownloadUrlBuilder.build(relativeUrl);
       // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
       if (mounted) setState(() => _playingHymnId = hymn.id);
@@ -112,7 +134,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
       );
-      await player.playUrl(url);
+      await player.playUrl(source);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -126,10 +148,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
   bool _isThisPlaying(Hymn hymn) => _playingHymnId == hymn.id;
 
-  // coverage:ignore-start
-  OfflineMusicPort get _offline => createOfflineMusicService();
+    // coverage:ignore-start
+    OfflineMusicPort get _offline =>
+        widget.offlineService ?? createOfflineMusicService();
 
-  Future<void> _downloadTrack(Hymn hymn) async {
+    Future<void> _downloadTrack(Hymn hymn) async {
     if (!_offline.isSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Downloads disponíveis apenas no app.')),
@@ -270,13 +293,48 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _hymnsFuture ??= _loadHymns();
+    _restoreDownloadedFlags();
   }
+
+  /// Carrega do indice offline quais faixas deste album ja estao no disco.
+  /// Nao confiar no estado em memoria: o usuario pode ter baixado em
+  /// outra visita a pagina (ou noutra sessao do app).
+  // coverage:ignore-start
+  Future<void> _restoreDownloadedFlags() async {
+    if (!_offline.isSupported) return;
+    final future = _hymnsFuture;
+    if (future == null) return;
+    try {
+      final hymns = await future;
+      final downloaded = <int>{};
+      for (final h in hymns) {
+        if (await _offline.localPathFor(h.id) != null) {
+          downloaded.add(h.id);
+        }
+      }
+      if (mounted) setState(() => _downloadedIds.addAll(downloaded));
+    } catch (_) {
+      // indice offline inacessivel: mantem estado atual
+    }
+  }
+  // coverage:ignore-end
 
   @override
   void dispose() {
     _playingSubscription?.cancel();
     super.dispose();
   }
+
+  /// Conectividade real consultada apenas para feedback do empty-state.
+  // coverage:ignore-start
+  Future<bool> _isOffline() async {
+    try {
+      return !(await ConnectivityService().isConnected);
+    } catch (_) {
+      return false; // sem veredito: assume online (nao mente offline)
+    }
+  }
+  // coverage:ignore-end
 
   Future<List<Hymn>> _loadHymns() async {
     // Tenta ler o HymnsBloc da arvore (se HymnsPage proveu)
@@ -404,19 +462,39 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
           final hymns = snapshot.data ?? const [];
           if (hymns.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    TablerIcons.playlist,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant,
+            return FutureBuilder<bool>(
+              future: _isOffline(),
+              builder: (context, netSnap) {
+                final offline = netSnap.data ?? false;
+                // Feedback honesto: distingue coletanea vazia de problema
+                // de rede/cache. Nunca renderiza 'vazio' silenciosamente.
+                final message = offline
+                    ? 'downloads.offlineEmpty'.tr()
+                    : 'common.empty'.tr();
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        offline ? TablerIcons.wifiOff : TablerIcons.playlist,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: AppSpacing.s2),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s4,
+                        ),
+                        child: Text(
+                          message,
+                          style: theme.textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.s2),
-                  Text('common.empty'.tr(), style: theme.textTheme.bodyMedium),
-                ],
-              ),
+                );
+              },
             );
           }
 
