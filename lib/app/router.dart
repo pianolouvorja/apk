@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/services/global_search_service.dart';
+import '../core/services/hymn_catalog_provider.dart';
 import '../core/services/search_sources.dart';
 import '../data/datasources/remote/louvorja_api_impl.dart';
 import '../data/repositories/bible_repository_impl.dart';
@@ -78,13 +79,20 @@ final appRouter = GoRouter(
       ],
     ),
     // Busca global (RF-08): fora do shell para abrir em tela cheia.
+    // Hinos: catalogo em memoria populado pelo HymnsBloc (instantaneo);
+    // fallback para fonte propria se o catalogo ainda nao carregou.
     GoRoute(
       path: '/search',
       builder: (context, state) {
         return GlobalSearchPage(
           service: GlobalSearchService(),
-          hymnsProvider: () => _searchHymns(),
-          versesProvider: () => _searchVerses(),
+          hymnsProvider: () async {
+            if (hymnCatalogProvider.isLoaded) {
+              return hymnCatalogProvider.hymns;
+            }
+            return _searchHymns();
+          },
+          versesProvider: _searchVerses,
         );
       },
     ),

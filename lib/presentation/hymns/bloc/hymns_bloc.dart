@@ -3,6 +3,7 @@ library;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/hymn_repository.dart';
 
 // --- Events ---
@@ -43,7 +44,11 @@ class HymnsError extends HymnsState {
 class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
   final HymnRepository _repository;
 
-  HymnsBloc(this._repository) : super(HymnsInitial()) {
+  /// Provider do catalogo em memoria para a busca global.
+  /// Opcional: quando nulo, a busca usa fonte propria (fallback).
+  final HymnCatalogProvider? catalogProvider;
+
+  HymnsBloc(this._repository, {this.catalogProvider}) : super(HymnsInitial()) {
     on<HymnsLoadRequested>(_onLoad);
     on<HymnsRefreshRequested>(_onRefresh);
   }
@@ -55,6 +60,7 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
     emit(HymnsLoading());
     try {
       final categories = await _repository.getCategories();
+      await _syncCatalog(categories);
       emit(HymnsLoaded(categories));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
@@ -66,11 +72,27 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
   Future<void> _onRefresh(HymnsRefreshRequested event, Emitter<HymnsState> emit) async {
     try {
       final categories = await _repository.getCategories();
+      await _syncCatalog(categories);
       emit(HymnsLoaded(categories));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
     } catch (_) {
       emit(const HymnsError('errors.unknown'));
+    }
+  }
+
+  /// Popula o provider de catalogo (busca global) sem bloquear o emit
+  /// do estado: usa o mesmo repository para carregar hinos por album.
+  Future<void> _syncCatalog(List<dynamic> categories) async {
+    final provider = catalogProvider;
+    if (provider == null) return;
+    try {
+      await provider.setCatalog(
+        categories.cast(),
+        hymnLoader: (albumId) => _repository.getHymnsByAlbum(albumId),
+      );
+    } catch (_) {
+      // Falha no catalogo de busca nao derruba a UI de hinos.
     }
   }
 }

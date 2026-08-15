@@ -14,6 +14,7 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
 import 'bloc/hymns_bloc.dart';
@@ -82,7 +83,7 @@ class _HymnsPageState extends State<HymnsPage> {
     }
 
     final repo = HymnRepositoryImpl(api, cache);
-    final bloc = HymnsBloc(repo);
+    final bloc = HymnsBloc(repo, catalogProvider: hymnCatalogProvider);
     bloc.add(HymnsLoadRequested());
     if (mounted) setState(() => _bloc = bloc);
     // coverage:ignore-end
