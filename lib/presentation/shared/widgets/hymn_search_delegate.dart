@@ -2,6 +2,8 @@
 // SearchDelegate depende de platform theme + MaterialLocalization; nao testavel em unit test.
 library;
 
+import 'package:easy_localization/easy_localization.dart';
+
 import 'package:flutter/material.dart';
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 
@@ -82,6 +84,7 @@ class HymnSearchDelegate extends SearchDelegate<Hymn?> {
   List<Widget>? buildActions(BuildContext context) {
     return [
       IconButton(
+        tooltip: 'common.clearSearch'.tr(),
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
@@ -94,6 +97,7 @@ class HymnSearchDelegate extends SearchDelegate<Hymn?> {
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
+      tooltip: 'common.back'.tr(),
       icon: const Icon(Icons.arrow_back),
       onPressed: () => close(context, null),
     );

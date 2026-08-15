@@ -262,6 +262,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
+          tooltip: 'common.back'.tr(),
           icon: const Icon(TablerIcons.arrowLeft),
           onPressed: () {
             if (context.canPop()) {

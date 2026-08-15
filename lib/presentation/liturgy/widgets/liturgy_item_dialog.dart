@@ -166,6 +166,7 @@ void showLiturgyItemDialog(
                       ),
                     ),
                     IconButton(
+                      tooltip: 'common.close'.tr(),
                       icon: const Icon(TablerIcons.x, size: 20),
                       onPressed: () => Navigator.pop(ctx),
                     ),
@@ -334,6 +335,7 @@ void showLiturgyItemDialog(
                         style: Theme.of(ctx).textTheme.labelSmall),
                     const Spacer(),
                     IconButton(
+                      tooltip: 'common.decrease'.tr(),
                       icon: const Icon(TablerIcons.minus, size: 18),
                       onPressed: durationMinutes.value > 0
                           ? () => setModalState(() => durationMinutes.value--)
@@ -342,6 +344,7 @@ void showLiturgyItemDialog(
                     Text('${durationMinutes.value} ${'liturgy.durationMin'.tr()}',
                         style: Theme.of(ctx).textTheme.bodyMedium),
                     IconButton(
+                      tooltip: 'common.increase'.tr(),
                       icon: const Icon(TablerIcons.plus, size: 18),
                       onPressed: durationMinutes.value < 99
                           ? () => setModalState(() => durationMinutes.value++)

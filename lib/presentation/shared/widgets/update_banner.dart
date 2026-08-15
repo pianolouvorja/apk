@@ -1,5 +1,7 @@
 library;
 
+import 'package:easy_localization/easy_localization.dart';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -100,6 +102,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
                 ),
                 const SizedBox(width: 4),
                 IconButton(
+                  tooltip: 'common.close'.tr(),
                   icon: const Icon(TablerIcons.x, size: 18),
                   onPressed: widget.onDismiss,
                   visualDensity: VisualDensity.compact,

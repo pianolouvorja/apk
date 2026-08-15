@@ -36,7 +36,11 @@
     "start": "Iniciar",
     "pause": "Pausar",
     "stop": "Parar",
-    "reset": "Zerar"
+    "reset": "Zerar",
+    "decrease": "Diminuir",
+    "increase": "Aumentar",
+    "clearSearch": "Limpar busca",
+    "back": "Voltar"
   },
   "hymns": {
     "title": "Hinos",
@@ -92,7 +96,8 @@
       "collapse": "Recolher"
     },
     "messages": {
-      "confirmDelete": "Deseja remover este item?"
+      "confirmDelete": "Deseja remover este item?",
+      "toggleCollapse": "Expandir ou recolher"
     },
     "dialog": {
       "itemType": "Tipo de Item",

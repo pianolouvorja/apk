@@ -36,7 +36,11 @@
     "start": "Start",
     "pause": "Pause",
     "stop": "Stop",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "clearSearch": "Clear search",
+    "back": "Back"
   },
   "hymns": {
     "title": "Hymns",
@@ -122,7 +126,8 @@
       "action": "Clone Liturgy"
     },
     "messages": {
-      "confirmDelete": "Remove this item?"
+      "confirmDelete": "Remove this item?",
+      "toggleCollapse": "Expand or collapse"
     }
   },
   "bible": {
