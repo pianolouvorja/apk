@@ -36,7 +36,11 @@
     "start": "Iniciar",
     "pause": "Pausar",
     "stop": "Detener",
-    "reset": "Reiniciar"
+    "reset": "Reiniciar",
+    "decrease": "Diminuir",
+    "increase": "Aumentar",
+    "clearSearch": "Borrar búsqueda",
+    "back": "Volver"
   },
   "hymns": {
     "title": "Himnos",
@@ -122,7 +126,8 @@
       "action": "Clonar Liturgia"
     },
     "messages": {
-      "confirmDelete": "¿Eliminar este elemento?"
+      "confirmDelete": "¿Eliminar este elemento?",
+      "toggleCollapse": "Expandir o contraer"
     }
   },
   "bible": {
@@ -143,7 +148,7 @@
     "searchVerse": "Buscar versículo",
     "copy": "Copiar",
     "previousVerse": "Versículo anterior",
-    "nextVerse": "Próximo versículo",
+    "nextVerse": "Siguiente versículo",
     "clearSelection": "Limpiar selección",
     "emptyCatalog": "No hay contenido bíblico disponible.",
     "emptyChapter": "No se encontraron versículos en este capítulo.",
