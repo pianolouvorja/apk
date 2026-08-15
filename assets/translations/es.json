@@ -117,7 +117,13 @@
       "scheduledFor": "Programado para"
     },
     "totalDuration": "Duracion total",
-    "setStartTime": "Definir inicio"
+    "setStartTime": "Definir inicio",
+    "clone": {
+      "action": "Clonar Liturgia"
+    },
+    "messages": {
+      "confirmDelete": "¿Eliminar este elemento?"
+    }
   },
   "bible": {
     "title": "Biblia",
