@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.os.Build
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -27,8 +28,7 @@ class MainActivity : FlutterActivity() {
                         if (path == null) {
                             result.error("NO_PATH", "caminho ausente", null)
                         } else {
-                            installApk(File(path))
-                            result.success(true)
+                            Thread { installApk(File(path), result) }.start()
                         }
                     }
                     // Android filtra multicast Wi-Fi para economizar bateria.
@@ -52,10 +52,29 @@ class MainActivity : FlutterActivity() {
     }
 
     /// Instala via PackageInstaller.Session: os bytes entram direto na
-    /// sessão do SISTEMA — sem FileProvider, sem URI content://, imune ao
-    /// processo do app ser congelado pelo OneUI (bug OpenFilex 2026-08-16:
-    /// instalador abria, "Atualizando...", e abortava silenciosamente).
-    private fun installApk(file: File) {
+    /// sessão do SISTEMA — sem FileProvider, sem URI content://.
+    ///
+    /// Fluxo correto (bug 0.1.16→0.1.17 não instalava, 2026-08-16):
+    /// 1. Sem permissão de fonte desconhecida → abre Settings e devolve
+    ///    'needs_permission' (antes: falhava em silêncio).
+    /// 2. commit() com STATUS_PENDING_USER_ACTION → o RECEIVER dá
+    ///    startActivity no EXTRA_INTENT (diálogo "Instalar?"). Antes o
+    ///    receiver não existia no manifest e ignorava esse status — o
+    ///    diálogo nunca abria e a sessão morria.
+    private fun installApk(file: File, result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !packageManager.canRequestPackageInstalls()
+        ) {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    android.net.Uri.parse("package:$packageName")
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            mainHandler().post { result.success("needs_permission") }
+            return
+        }
+
         val installer = packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(
             PackageInstaller.SessionParams.MODE_FULL_INSTALL
@@ -72,11 +91,13 @@ class MainActivity : FlutterActivity() {
             }
         } catch (e: Exception) {
             session.abandon()
+            mainHandler().post { result.error("WRITE_FAIL", e.message, null) }
             return
         }
 
-        // Intent de commit: o SISTEMA mostra a confirmação e instala.
-        // Receiver ouvindo o resultado para limpar a sessão em falha.
+        // Intent de commit: receiver REGISTRADO NO MANIFEST recebe o
+        // resultado — inclusive PENDING_USER_ACTION, que exige
+        // startActivity(EXTRA_INTENT) para o diálogo do sistema abrir.
         val intent = Intent(this, InstallResultReceiver::class.java)
         intent.action = "app.louvorja.INSTALL_RESULT"
         val pi = PendingIntent.getBroadcast(
@@ -85,23 +106,40 @@ class MainActivity : FlutterActivity() {
         )
         session.commit(pi.intentSender)
         session.close()
+        mainHandler().post { result.success("delivered") }
     }
+
+    private fun mainHandler() = android.os.Handler(android.os.Looper.getMainLooper())
 }
 
-/// Recebe o resultado da sessão: em falha, abandona resíduo da sessão.
+/// Recebe o resultado da sessão PackageInstaller.
+///
+/// STATUS_PENDING_USER_ACTION: o sistema empacotou o diálogo de
+/// confirmação em EXTRA_INTENT — SOMOS nós que devemos iniciá-lo.
+/// STATUS_SUCCESS: instalou (a activity será recriada com a nova versão).
+/// STATUS_FAILURE*: loga o motivo real (EXTRA_STATUS_MESSAGE).
 class InstallResultReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val status = intent.getIntExtra(
             PackageInstaller.EXTRA_STATUS,
             PackageInstaller.STATUS_FAILURE
         )
-        if (status == PackageInstaller.STATUS_FAILURE) {
-            // Sessão já encerrada pelo sistema; nada a limpar além de log.
-            android.util.Log.w(
-                "LouvorJaUpdater",
-                "install falhou: " +
-                    intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-            )
+        when (status) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                val dialog = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                if (dialog != null) {
+                    dialog.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(dialog)
+                }
+            }
+            PackageInstaller.STATUS_SUCCESS ->
+                android.util.Log.i("LouvorJaUpdater", "install OK")
+            else ->
+                android.util.Log.w(
+                    "LouvorJaUpdater",
+                    "install falhou: " +
+                        intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+                )
         }
     }
 }

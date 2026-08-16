@@ -114,10 +114,22 @@ class _HomePageState extends State<HomePage> {
         },
       );
       // PackageInstaller.Session (nativo): imune ao congelamento do app
-      // no OneUI. Fallback OpenFilex só se o channel não existir.
-      final delivered = await ApkInstaller.install(path);
-      if (!delivered) {
+      // no OneUI. needs_permission abre Settings p/ fonte desconhecida;
+      // failed cai no fallback legado (OpenFilex).
+      final outcome = await ApkInstaller.install(path);
+      if (outcome == ApkInstallOutcome.failed) {
         await OpenFilex.open(path);
+      } else if (outcome == ApkInstallOutcome.needsPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Permita instalar apps desconhecidos para o Piano LouvorJA '
+                'e toque em Atualizar novamente.',
+              ),
+            ),
+          );
+        }
       }
     } catch (_) {
       if (mounted) {

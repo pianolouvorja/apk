@@ -65,6 +65,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Resultado da sessão PackageInstaller (auto-update). Registrado
+             no manifest (não registrado dinamicamente) para receber o
+             commit mesmo se a activity for destruída. STATUS_PENDING_USER_ACTION
+             exige startActivity(EXTRA_INTENT) — sem isso o diálogo de
+             instalação nunca abre (bug 0.1.16→0.1.17). -->
+        <receiver
+            android:name=".InstallResultReceiver"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
