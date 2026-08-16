@@ -78,6 +78,7 @@ void main() {
     appRouter.go('/hymns/123');
     await tester.pumpWidget(_wrapRouter());
     await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 3)); // consome timeout do indice offline
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 
@@ -86,6 +87,7 @@ void main() {
     appRouter.go('/hymns/123/456');
     await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter));
     await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 3)); // consome timeout do indice offline
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

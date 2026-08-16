@@ -87,7 +87,12 @@ class _HymnsPageState extends State<HymnsPage> {
     }
 
     final repo = HymnRepositoryImpl(api, cache);
-    final bloc = HymnsBloc(repo, catalogProvider: hymnCatalogProvider);
+    final bloc = HymnsBloc(
+      repo,
+      catalogProvider: hymnCatalogProvider,
+      // Offline-first: sem rede a home mostra a BIBLIOTECA BAIXADA.
+      offlinePort: kIsWeb ? null : createOfflineMusicService(),
+    );
     bloc.add(HymnsLoadRequested());
     if (mounted) setState(() => _bloc = bloc);
     // coverage:ignore-end

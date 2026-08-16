@@ -17,6 +17,7 @@ import 'package:louvorja_piano_mobile/core/services/download_queue_storage_facto
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/connectivity_service.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_library_filter.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/core/services/playback_resolver.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
@@ -345,8 +346,23 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   // coverage:ignore-end
 
   Future<List<Hymn>> _loadHymns() async {
+    // Offline-first: com o álbum tendo downloads, a lista é a BIBLIOTECA
+    // BAIXADA (tocável do disco) — não depende de rede nem do catálogo.
+    // Timeout curto: em ambiente sem path_provider (test harness) o
+    // índice pode pendurar; catálogo segue como fonte.
+    try {
+      final localHymns = await OfflineLibraryFilter.hymnsForAlbum(
+        albumId: widget.albumId,
+        offline: _offline,
+      ).timeout(const Duration(seconds: 2));
+      if (localHymns != null && localHymns.isNotEmpty) return localHymns;
+    } catch (_) {
+      // Índice offline inacessível: segue para as fontes de catálogo.
+    }
+
     // Tenta ler o HymnsBloc da arvore (se HymnsPage proveu)
     try {
+      if (!mounted) return const [];
       final bloc = context.read<HymnsBloc>();
       return await bloc.repository.getHymnsByAlbum(widget.albumId);
     } catch (_) {}

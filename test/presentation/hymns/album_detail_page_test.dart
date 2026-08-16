@@ -120,7 +120,10 @@ void main() {
     );
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(
+      bloc,
+      AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+    ));
     // Antes do pumpAndSettle, deve ter loading
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
@@ -135,7 +138,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.text('Hino A'), findsOneWidget);
@@ -148,7 +151,7 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(hymns: []), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playlist), findsOneWidget);
@@ -158,7 +161,7 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(fail: true), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.alertCircle), findsOneWidget);
@@ -169,7 +172,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.search), findsOneWidget);
@@ -187,7 +190,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     // Botao play
@@ -207,7 +210,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
@@ -260,7 +263,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.text('Primeira linha\nSegunda linha'), findsNothing);

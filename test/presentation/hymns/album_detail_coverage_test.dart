@@ -1,6 +1,8 @@
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -81,7 +83,7 @@ void main() {
     );
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(wrapWithRouter(const AlbumDetailPage(albumId: 100), bloc));
+    await tester.pumpWidget(wrapWithRouter(AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()), bloc));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'filter');
@@ -95,7 +97,7 @@ void main() {
     );
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(wrapWithRouter(const AlbumDetailPage(albumId: 100), bloc));
+    await tester.pumpWidget(wrapWithRouter(AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()), bloc));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(TablerIcons.arrowLeft));
@@ -117,7 +119,7 @@ void main() {
           path: '/detail',
           builder: (_, __) => BlocProvider<HymnsBloc>.value(
             value: bloc,
-            child: const AlbumDetailPage(albumId: 100),
+            child: AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
           ),
         ),
       ],
@@ -134,4 +136,23 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
   });
+}
+
+class _FakeOfflinePort implements OfflineMusicPort {
+  @override
+  bool get isSupported => false;
+
+  @override
+  Future<String?> localPathFor(int musicId, {bool instrumental = false}) async => null;
+
+  @override
+  Future<String> download({
+    required int musicId,
+    required String url,
+    bool instrumental = false,
+    ProgressCallback? onReceiveProgress,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> remove(int musicId, {bool instrumental = false}) async {}
 }

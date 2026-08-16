@@ -3,6 +3,9 @@ library;
 import 'dart:async';
 
 import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
+import 'package:louvorja_piano_mobile/core/services/connectivity_service.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_library_filter.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
@@ -50,7 +53,19 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
   /// Opcional: quando nulo, a busca usa fonte propria (fallback).
   final HymnCatalogProvider? catalogProvider;
 
-  HymnsBloc(this._repository, {this.catalogProvider}) : super(HymnsInitial()) {
+  /// Porta offline opcional: quando fornecida E sem rede, o catálogo
+  /// emitido é a BIBLIOTECA BAIXADA (offline-first), não o cache completo.
+  final OfflineMusicPort? offlinePort;
+
+  /// Consulta de conectividade injetável (testes); produção usa real.
+  Future<bool> Function()? connectivityCheck;
+
+  HymnsBloc(
+    this._repository, {
+    this.catalogProvider,
+    this.offlinePort,
+    this.connectivityCheck,
+  }) : super(HymnsInitial()) {
     on<HymnsLoadRequested>(_onLoad);
     on<HymnsRefreshRequested>(_onRefresh);
   }
@@ -66,7 +81,7 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
       // serial demorava minutos e a tela ficava em loading infinito
       // (bug 2026-08-16). A busca global preenche quando concluir.
       unawaited(_syncCatalog(categories));
-      emit(HymnsLoaded(categories));
+      emit(HymnsLoaded(await _visibleCategories(categories)));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
     } catch (_) {
@@ -78,12 +93,28 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
     try {
       final categories = await _repository.getCategories();
       unawaited(_syncCatalog(categories));
-      emit(HymnsLoaded(categories));
+      emit(HymnsLoaded(await _visibleCategories(categories)));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
     } catch (_) {
       emit(const HymnsError('errors.unknown'));
     }
+  }
+
+  /// Offline: apenas a biblioteca baixada. Online: catálogo completo.
+  Future<List<AlbumCategory>> _visibleCategories(
+    List<AlbumCategory> categories,
+  ) async {
+    final port = offlinePort;
+    if (port == null) return categories;
+    final offline = connectivityCheck != null
+        ? !(await connectivityCheck!())
+        : !(await ConnectivityService().isConnected);
+    if (!offline) return categories;
+    return OfflineLibraryFilter.filterCategories(
+      categories: categories,
+      offline: port,
+    );
   }
 
   /// Popula o provider de catalogo (busca global) sem bloquear o emit
