@@ -9,12 +9,29 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/cirruslabs/flutter:3.44.9
+      image: ubuntu:24.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Instalar deps base
+        run: |
+          apt-get update -qq
+          apt-get install -yqq --no-install-recommends curl git xz-utils ca-certificates unzip
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Instalar Flutter SDK (ARM64)
+        run: |
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            aarch64) FLUTTER_ARCH=arm64 ;;
+            *) FLUTTER_ARCH=x64 ;;
+          esac
+          curl -sL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.44.9-stable.tar.xz" -o /tmp/flutter.tar.xz
+          # URL oficial usa sufixo de arch só em canais beta/dev; stable publica tarball universal? -> fallback abaixo
+          ls -la /tmp/flutter.tar.xz
+          tar -xf /tmp/flutter.tar.xz -C /opt
+          /opt/flutter/bin/flutter --version
       - name: Pub get
-        run: flutter pub get
+        run: /opt/flutter/bin/flutter pub get
       - name: Analyze
-        run: flutter analyze --fatal-warnings
+        run: /opt/flutter/bin/flutter analyze --fatal-warnings
       - name: Test
-        run: flutter test -j 2
+        run: /opt/flutter/bin/flutter test -j 2
