@@ -51,6 +51,9 @@ class CastController {
     _renderer = renderer;
     _client = DlnaRendererClient(renderer.avTransportControlUrl!);
     _format = renderer.preferredImageFormat;
+    // Anuncia o IP do celular NA SUB-REDE da TV (evita anunciar IP de
+    // VPN/segunda interface que a TV não alcança).
+    SlideHttpServer.rendererSubnetHint = renderer.ip;
     _connected = true;
     return true;
   }

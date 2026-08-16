@@ -66,9 +66,34 @@ class SlideHttpServer {
     await res.close();
   }
 
+  /// IP do celular na MESMA sub-rede da TV (prefixo /24 do renderer).
+  ///
+  /// Bug real (2026-08-16): com VPN ativa (Tailscale 100.x) ou múltiplas
+  /// interfaces, o app anunciava um IP que a TV não alcança — a TV aceitava
+  /// o Set, dava timeout no download e o app reportava "TV desconectou".
+  /// Agora: se o renderer está em 192.168.1.x, anunciamos o IP do celular
+  /// também em 192.168.1.x.
+  static String? rendererSubnetHint;
+
   static Future<String?> _localIp() async {
     try {
+      final hint = rendererSubnetHint;
+      final prefix = hint?.split('.').take(3).join('.');
       final interfaces = await NetworkInterface.list();
+      // 1) IP na mesma sub-rede da TV (preferência absoluta)
+      if (prefix != null) {
+        for (final it in interfaces) {
+          for (final addr in it.addresses) {
+            if (addr.type == InternetAddressType.IPv4 &&
+                !addr.isLoopback &&
+                addr.address.startsWith('$prefix.')) {
+              return addr.address;
+            }
+          }
+        }
+      }
+      // 2) Fallback: primeiro IPv4 privado de LAN (não VPN 100.64/10,
+      //    não loopback) — mesma heurística anterior, agora por último.
       for (final it in interfaces) {
         for (final addr in it.addresses) {
           if (addr.type == InternetAddressType.IPv4 &&

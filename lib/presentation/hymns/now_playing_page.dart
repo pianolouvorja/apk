@@ -9,11 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../core/services/now_playing.dart';
-import '../../core/services/dlna/cast_controller.dart';
-import '../../core/services/dlna/ssdp_discovery.dart';
-import '../../core/services/dlna/stage_slide_painter.dart';
-import '../../core/services/dlna/stage_settings_repository.dart';
-import 'stage_customization_sheet.dart';
+import '../../core/services/dlna/stage_session.dart';
+import '../shared/widgets/stage_cast_button.dart';
 import '../../domain/entities/hymn.dart';
 import '../../domain/entities/lyric_slides.dart';
 import '../shared/widgets/player_timeline.dart';
@@ -52,13 +49,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   bool _noAudio = false;
   StreamSubscription<Duration>? _posSub;
 
-  // Palco (cast DLNA)
-  final CastController _cast = CastController();
-  List<DlnaRenderer> _tvs = [];
-  bool _scanning = false;
-  bool _casting = false;
-  StageSettings _stageSettings = const StageSettings();
-  final StageSettingsRepository _stageRepo = StageSettingsRepository();
+  // Palco: sessão GLOBAL (StageSession) — o player projeta no mesmo
+  // palco que Liturgia/Bíblia. Sem controller local (bug 2026-08-16:
+  // cast do player era órfão e os slides nunca chegavam à TV).
 
   @override
   void initState() {
@@ -68,9 +61,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       coverUrl: widget.detail.imageUrl,
       raw: widget.detail.lyricRaw ?? const [],
     );
-    _stageRepo.load().then((s) {
-      if (mounted) setState(() => _stageSettings = s);
-    });
     _posSub = widget.player.positionStream.listen((pos) {
       if (!mounted || _noAudio) return;
       final idx = _slides.indexAt(pos, instrumental: widget.instrumental);
@@ -84,134 +74,29 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   @override
   void dispose() {
     _posSub?.cancel();
-    _cast.disconnect();
+    // Palco global NÃO é desconectado aqui: sessão persiste entre telas.
     super.dispose();
   }
 
-  // ===== Palco (cast DLNA) =====
+  // ===== Palco: usar o botão compartilhado na AppBar (StageSession) =====
 
-  Future<void> _scanTvs() async {
-    setState(() => _scanning = true);
-    final tvs = await CastController.discoverTvs();
-    if (mounted) setState(() { _tvs = tvs; _scanning = false; });
-  }
-
-  Future<void> _openTvPicker() async {
-    await _scanTvs();
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text('stage.title'.tr(),
-                          style: theme.textTheme.titleMedium),
-                    ),
-                    IconButton(
-                      tooltip: 'Personalizar Palco',
-                      icon: const Icon(TablerIcons.adjustments),
-                      onPressed: () => _openStageCustomization(ctx),
-                    ),
-                  ],
-                ),
-              ),
-              if (_scanning)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_tvs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('stage.noTvs'.tr()),
-                )
-              else
-                for (final tv in _tvs)
-                  ListTile(
-                    leading: const Icon(TablerIcons.deviceTv),
-                    title: Text(tv.friendlyName ?? tv.ip),
-                    subtitle: Text(
-                        '${tv.ip} • ${tv.screenCapability.width}x${tv.screenCapability.height}'),
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      _connectCast(tv);
-                    },
-                  ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _openStageCustomization(BuildContext ctx) async {
-    await showModalBottomSheet<void>(
-      context: ctx,
-      isScrollControlled: true,
-      builder: (_) => StageCustomizationSheet(
-        initial: _stageSettings,
-        onApply: (s) {
-          setState(() => _stageSettings = s);
-          _projectCurrentSlide(); // re-projeta com novo visual imediatamente
-        },
-      ),
-    );
-  }
-
-  Future<void> _connectCast(DlnaRenderer tv) async {
-    final ok = await _cast.connect(tv);
-    if (!mounted) return;
-    if (!ok) {
-      final err = _cast.lastError;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('stage.connectFail'.tr() + (err != null ? '\n($err)' : ''))));
-      return;
-    }
-    setState(() {
-      _casting = true;
-      _stageSettings = _stageSettings.copyWith(capability: tv.screenCapability);
-    });
-    await _projectCurrentSlide();
-  }
-
-  /// Renderiza o SLIDE DE PALCO (1920x1080 dedicado, tipografia TV)
-  /// e projeta. Não é captura de tela do celular — fix do texto pequeno.
+  /// Projeta o slide ATUAL do hino no palco global (se ligado).
+  /// Mesma sessão da Liturgia/Bíblia — um palco só.
   Future<void> _projectCurrentSlide() async {
-    if (!_casting) return;
+    final stage = StageSession.instance;
+    if (!stage.isOn) return;
     final slide = _slides.slides.isEmpty ? null : _slides.slides[_index];
     if (slide == null) return;
-    try {
-      final bytes = await StageSlidePainter.render(
-        slide: slide,
-        settings: _stageSettings,
-        backgroundUrl: slide.imageUrl,
-      );
-      final ok = await _cast.projectSlide(
-        bytes,
-        title: widget.detail.title ?? 'Slide',
-      );
-      if (!ok && mounted) {
-        setState(() => _casting = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('stage.disconnected'.tr())));
-      }
-    } catch (_) {/* falha de render: próxima troca tenta de novo */}
+    final ok = await stage.project(
+      title: slide.text,
+      footer: widget.detail.title,
+    );
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('stage.disconnected'.tr())));
+    }
   }
 
-  Future<void> _disconnectCast() async {
-    await _cast.disconnect();
-    if (mounted) setState(() => _casting = false);
-  }
 
   void _goToSlide(int index) {
     if (index < 0 || index >= _slides.slides.length) return;
@@ -276,6 +161,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         ],
                       ),
                     ),
+                    const StageCastButton(),
                     if (widget.detail.hasInstrumental)
                       IconButton(
                         tooltip: widget.instrumental ? 'Cantado' : 'Instrumental',
@@ -287,14 +173,6 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                           // Alterna modo local na exibição; reabrir troca fonte.
                         }),
                       ),
-                    IconButton(
-                      tooltip: _casting ? 'stage.turnOff'.tr() : 'stage.castOff'.tr(),
-                      icon: Icon(
-                        _casting ? TablerIcons.castOff : TablerIcons.cast,
-                        color: _casting ? theme.colorScheme.primary : Colors.white,
-                      ),
-                      onPressed: _casting ? _disconnectCast : _openTvPicker,
-                    ),
                     IconButton(
                       tooltip: _noAudio ? 'Com áudio' : 'Sem áudio',
                       icon: Icon(
