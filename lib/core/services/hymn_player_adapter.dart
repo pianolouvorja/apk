@@ -26,6 +26,15 @@ class HymnPlayerAdapter implements HymnPlayerLike {
   ValueListenable<bool> get playingListenable => _playing;
 
   @override
+  Stream<Duration> get positionStream => _player.positionStream;
+
+  @override
+  Stream<Duration> get durationStream => _player.durationStream;
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
   Future<void> pause() => _player.pause();
 
   @override

@@ -25,6 +25,12 @@ class ConnectivityService {
   bool _isConnected(List<ConnectivityResult> results) {
     return results.any((result) => result != ConnectivityResult.none);
   }
+
+  /// true quando conectado via Wi-Fi (download sob demanda só em Wi-Fi).
+  Future<bool> get isWifi async {
+    final results = await _connectivity.checkConnectivity();
+    return results.contains(ConnectivityResult.wifi);
+  }
 }
 
 /// Estado observável simples para widgets.

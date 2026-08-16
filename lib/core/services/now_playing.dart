@@ -3,9 +3,17 @@ library;
 import 'package:flutter/foundation.dart';
 
 /// Interface minima do player para o miniplayer (facilita testes).
+///
+/// Timeline (paridade Player.vue): posição, duração e seek têm default
+/// inofensivo — implementações que suportam sobrescrevem.
 abstract class HymnPlayerLike {
   bool get isPlaying;
   ValueListenable<bool> get playingListenable;
+
+  Stream<Duration> get positionStream => const Stream.empty();
+  Stream<Duration> get durationStream => const Stream.empty();
+  Future<void> seek(Duration position) async {}
+
   Future<void> pause();
   Future<void> resume();
   Future<void> stop();

@@ -15,8 +15,12 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   bool _isPlaying = false;
 
   final _controller = StreamController<bool>.broadcast();
+  final _positions = StreamController<Duration>.broadcast();
+  final _durations = StreamController<Duration>.broadcast();
 
   _NativeAudioPlayer() {
+    _player.onPositionChanged.listen((pos) => _positions.add(pos));
+    _player.onDurationChanged.listen((dur) => _durations.add(dur));
     _player.onPlayerStateChanged.listen((state) {
       _isPlaying = state == PlayerState.playing;
       _controller.add(_isPlaying);
@@ -31,6 +35,15 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
 
   @override
   Stream<bool> get playingStream => _controller.stream;
+
+  @override
+  Stream<Duration> get positionStream => _positions.stream;
+
+  @override
+  Stream<Duration> get durationStream => _durations.stream;
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
 
   @override
   Future<void> toggleUrl(String url) async {

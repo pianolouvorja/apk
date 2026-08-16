@@ -71,6 +71,15 @@ class _MockApi implements LouvorjaApiClient {
 }
 
 class _FakePlayer implements HymnAudioPlayer {
+  @override
+  Stream<Duration> get positionStream => const Stream.empty();
+
+  @override
+  Stream<Duration> get durationStream => const Stream.empty();
+
+  @override
+  Future<void> seek(Duration position) async {}
+
   final _stream = StreamController<bool>.broadcast();
   bool paused = false;
   String? playedUrl;
@@ -124,8 +133,11 @@ void main() {
       bloc,
       AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
     ));
-    // Antes do pumpAndSettle, deve ter loading
+    // Primeiro frame: loading visível antes de qualquer dado chegar.
+    await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Consome os timeouts do fluxo offline (timers não podem pendurar).
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('AlbumDetailPage mostra lista de hinos', (tester) async {
@@ -277,6 +289,7 @@ void main() {
   });
 
   _offlineGroup();
+  _onlineFullListGroup();
 }
 
 // ===== Testes do modo offline (downloads persistidos + playback local) =====
@@ -364,6 +377,40 @@ void _offlineGroup() {
 
       expect(find.byIcon(TablerIcons.checks), findsOneWidget,
           reason: 'faixa baixada deve exibir check de baixado');
+    });
+  });
+}
+
+// ===== Regressão 2026-08-16: online mostra TODAS as faixas =====
+// Bug: o filtro offline rodava também ONLINE e escondia as não baixadas.
+void _onlineFullListGroup() {
+  group('AlbumDetailPage online (regressão)', () {
+    testWidgets('online com downloads ainda lista faixas NÃO baixadas',
+        (tester) async {
+      final offline = _FakeOfflinePort();
+      offline.local.add(1); // só a faixa 1 está no disco
+
+      // Catálogo tem 1 (baixada) e 2 (NÃO baixada).
+      final api = _MockApi(hymns: const [
+        Hymn(id: 1, title: 'Hino Baixado', number: 1),
+        Hymn(id: 2, title: 'Hino Só Online', number: 2),
+      ]);
+      final repo = HymnRepositoryImpl(api, CatalogCache.noop());
+      final bloc = HymnsBloc(repo);
+
+      await tester.pumpWidget(_wrap(
+        bloc,
+        AlbumDetailPage(
+          albumId: 100,
+          offlineService: offline,
+          audioPlayer: _FakePlayer(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hino Baixado'), findsOneWidget);
+      expect(find.text('Hino Só Online'), findsOneWidget,
+          reason: 'online deve listar tudo, não só o que está no disco');
     });
   });
 }

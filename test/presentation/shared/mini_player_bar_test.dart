@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/mini_player_bar.dart';
 
-class _FakePlayer implements HymnPlayerLike {
+class _FakePlayer extends HymnPlayerLike {
   final _playing = ValueNotifier<bool>(false);
   bool stopped = false;
 

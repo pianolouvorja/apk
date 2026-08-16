@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../../../core/services/now_playing.dart';
+import 'player_timeline.dart';
 
 /// Miniplayer fixo (issue #90): barra acima da nav com a faixa ativa.
 ///
@@ -107,6 +108,17 @@ class _MiniPlayerBarState extends State<MiniPlayerBar> {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    // Timeline compacta (paridade Player.vue footer): seek
+                    // direto no miniplayer sem abrir tela cheia.
+                    SizedBox(
+                      height: 18,
+                      child: PlayerTimeline(
+                        key: const Key('miniplayer-timeline'),
+                        positionStream: widget.player.positionStream,
+                        durationStream: widget.player.durationStream,
+                        onSeek: widget.player.seek,
                       ),
                     ),
                   ],

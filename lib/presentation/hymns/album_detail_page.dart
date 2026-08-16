@@ -18,6 +18,7 @@ import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/connectivity_service.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_library_filter.dart';
+import 'package:louvorja_piano_mobile/core/services/stream_cache_service.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/core/services/playback_resolver.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
@@ -125,6 +126,19 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           return;
         }
         source = DownloadUrlBuilder.build(relativeUrl);
+        // Download sob demanda (ouvir = baixar): em Wi-Fi, o play remoto
+        // dispara em background o cache da faixa com metadados. Falha
+        // silenciosa — reprodução nunca depende disto.
+        unawaited(
+          StreamCacheService(offline: _offline).onRemotePlay(
+            musicId: hymn.id,
+            url: source,
+            title: hymn.title ?? 'Hino #${hymn.id}',
+            number: hymn.number?.toString(),
+            albumId: widget.albumId,
+            albumName: hymnCatalogProvider.albumNameById(widget.albumId),
+          ),
+        );
       }
       // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
@@ -346,16 +360,24 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   // coverage:ignore-end
 
   Future<List<Hymn>> _loadHymns() async {
-    // Offline-first: com o álbum tendo downloads, a lista é a BIBLIOTECA
-    // BAIXADA (tocável do disco) — não depende de rede nem do catálogo.
+    // Offline-first: SEM REDE e com downloads, a lista é a BIBLIOTECA
+    // BAIXADA (tocável do disco). ONLINE mostra o catálogo completo —
+    // baixadas e não baixadas (bug: filtro rodava também online e
+    // escondia faixas não baixadas).
     // Timeout curto: em ambiente sem path_provider (test harness) o
     // índice pode pendurar; catálogo segue como fonte.
     try {
-      final localHymns = await OfflineLibraryFilter.hymnsForAlbum(
-        albumId: widget.albumId,
-        offline: _offline,
-      ).timeout(const Duration(seconds: 2));
-      if (localHymns != null && localHymns.isNotEmpty) return localHymns;
+      final offlineNow = await _isOffline().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false, // sem veredito: assume online
+      );
+      if (offlineNow) {
+        final localHymns = await OfflineLibraryFilter.hymnsForAlbum(
+          albumId: widget.albumId,
+          offline: _offline,
+        ).timeout(const Duration(seconds: 2));
+        if (localHymns != null && localHymns.isNotEmpty) return localHymns;
+      }
     } catch (_) {
       // Índice offline inacessível: segue para as fontes de catálogo.
     }

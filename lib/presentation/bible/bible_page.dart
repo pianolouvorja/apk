@@ -15,6 +15,7 @@ import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/book_colors.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/bible_download_button.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 
 class BiblePage extends StatelessWidget {
@@ -78,7 +79,10 @@ class _BibleViewState extends State<_BibleView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('bible.title'.tr())),
+      appBar: AppBar(
+        title: Text('bible.title'.tr()),
+        actions: const [BibleDownloadButton()],
+      ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {
           if (state is BibleLoading || state is BibleInitial) {
