@@ -246,5 +246,18 @@
     "turnOff": "Turn stage off",
     "castOn": "Stage active",
     "castOff": "Cast to TV"
+  },
+  "sync": {
+    "sectionTitle": "Synchronization",
+    "cardTitle": "Transfer data",
+    "hint": "Export your liturgy, settings and presets to another device (web or desktop) — or import a .louvorja package.",
+    "export": "Export",
+    "import": "Import",
+    "exported": "Package exported.",
+    "exportCancelled": "Export cancelled.",
+    "imported": "Synced: {applied}.",
+    "importedNone": "Nothing to update (local is already newer).",
+    "importInvalid": "Invalid file or not a .louvorja package.",
+    "importCancelled": "Import cancelled."
   }
 }

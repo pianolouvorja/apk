@@ -245,5 +245,18 @@
     "turnOff": "Desligar palco",
     "castOn": "Palco ativo",
     "castOff": "Transmitir para TV"
+  },
+  "sync": {
+    "sectionTitle": "Sincronização",
+    "cardTitle": "Transferir dados",
+    "hint": "Exporte sua liturgia, configurações e presets para outro dispositivo (web ou desktop) — ou importe um pacote .louvorja.",
+    "export": "Exportar",
+    "import": "Importar",
+    "exported": "Pacote exportado.",
+    "exportCancelled": "Exportação cancelada.",
+    "imported": "Sincronizado: {applied}.",
+    "importedNone": "Nada a atualizar (local já é mais recente).",
+    "importInvalid": "Arquivo inválido ou não é um pacote .louvorja.",
+    "importCancelled": "Importação cancelada."
   }
 }

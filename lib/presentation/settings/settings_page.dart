@@ -12,7 +12,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/theme/app_accents.dart';
 import '../../core/constants/app_version.dart';
 import '../../core/services/settings_controller.dart';
+import '../../core/services/sync/sync_file_service.dart';
 import '../../core/services/update_service.dart';
+import 'widgets/sync_section.dart';
 
 /// SettingsPage — tela de configuracoes (tab "Mais").
 ///
@@ -33,6 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _checkingUpdate = false;
   String? _updateStatus;
   bool _isClearing = false;
+  bool _syncBusy = false;
 
   @override
   Widget build(BuildContext context) {
@@ -287,6 +290,14 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 24),
 
+            // --- Sincronizacao (pacote .louvorja) ---
+            SyncSection(
+              busy: _syncBusy,
+              onExport: _handleSyncExport,
+              onImport: _handleSyncImport,
+            ),
+            const SizedBox(height: 24),
+
             // Termos e Privacidade (link)
             ListTile(
               leading: Icon(
@@ -301,6 +312,51 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSyncExport() async {
+    setState(() => _syncBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final path = await SyncFileService().export();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(path != null
+            ? 'sync.exported'.tr()
+            : 'sync.exportCancelled'.tr()),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Falha ao exportar.')));
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
+  }
+
+  Future<void> _handleSyncImport() async {
+    setState(() => _syncBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final r = await SyncFileService().import();
+      if (!mounted) return;
+      if (r == null) {
+        messenger.showSnackBar(
+            SnackBar(content: Text('sync.importInvalid'.tr())));
+      } else if (r.applied.isEmpty) {
+        messenger.showSnackBar(
+            SnackBar(content: Text('sync.importedNone'.tr())));
+      } else {
+        messenger.showSnackBar(SnackBar(
+          content: Text('sync.imported'.tr(
+              namedArgs: {'applied': r.applied.join(', ')})),
+        ));
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Falha ao importar.')));
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
   }
 
   // coverage:ignore-start
