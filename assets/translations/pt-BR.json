@@ -258,5 +258,33 @@
     "importedNone": "Nada a atualizar (local já é mais recente).",
     "importInvalid": "Arquivo inválido ou não é um pacote .louvorja.",
     "importCancelled": "Importação cancelada."
+  },
+  "remote": {
+    "title": "Controle Remoto",
+    "subtitle": "Controle o Piano no desktop ou no navegador pelo celular",
+    "mode_idle": "Desconectado",
+    "mode_desktop": "Desktop (Electron)",
+    "mode_web": "Navegador (web)",
+    "desktop_host": "Endereço do desktop",
+    "desktop_hint": "IP:porta (ex.: 192.168.1.50:7070)",
+    "token_label": "Token de emparelhamento",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "start_weblink": "Controlar o navegador",
+    "weblink_url": "Abra no navegador do desktop:",
+    "weblink_waiting": "Aguardando o navegador conectar…",
+    "connected_to": "Conectado a {target}",
+    "status_disconnected": "Desconectado",
+    "status_connecting": "Conectando…",
+    "status_connected": "Conectado",
+    "status_listening": "Aguardando navegador",
+    "no_state": "Nenhuma mídia em execução no alvo",
+    "cmd_failed": "O alvo não confirmou o comando",
+    "play": "Tocar",
+    "pause": "Pausar",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "stop": "Parar",
+    "volume": "Volume"
   }
 }

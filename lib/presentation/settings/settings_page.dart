@@ -14,6 +14,7 @@ import '../../core/constants/app_version.dart';
 import '../../core/services/settings_controller.dart';
 import '../../core/services/sync/sync_file_service.dart';
 import '../../core/services/update_service.dart';
+import 'widgets/remote/remote_section.dart';
 import 'widgets/sync_section.dart';
 
 /// SettingsPage — tela de configuracoes (tab "Mais").
@@ -296,6 +297,10 @@ class _SettingsPageState extends State<SettingsPage> {
               onExport: _handleSyncExport,
               onImport: _handleSyncImport,
             ),
+            const SizedBox(height: 24),
+
+            // --- Controle remoto (APK → Desktop/Web) ---
+            const RemoteSection(),
             const SizedBox(height: 24),
 
             // Termos e Privacidade (link)

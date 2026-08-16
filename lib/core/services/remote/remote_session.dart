@@ -17,8 +17,10 @@ enum RemoteMode { idle, desktop, web }
 /// Em AMBOS o APK é o CONTROLADOR: comandos saem do APK (send), estado
 /// chega do alvo (states). A UI escuta `states` e `status`.
 class RemoteSession {
-  RemoteSession._();
-  static final RemoteSession instance = RemoteSession._();
+  /// Público para testes injetarem instâncias isoladas; no app o canônico
+  /// é [RemoteSession.instance] (padrão StageSession).
+  RemoteSession();
+  static final RemoteSession instance = RemoteSession();
 
   DesktopConnection? _desktop;
   WebLinkServer? _web;
@@ -99,6 +101,30 @@ class RemoteSession {
   RemotePlayerState? lastState;
   
 // (v1: o APK é controlador — estado flui alvo→APK. pushState reservado v2.)
+
+  /// Hook de teste: injeta um estado como se tivesse vindo do alvo.
+  void debugInjectStateForTest({
+    String? title,
+    required bool playing,
+    bool canPrevious = false,
+    bool canNext = false,
+  }) {
+    final state = RemotePlayerState(
+      hymnId: 1,
+      title: title,
+      mode: 'audio',
+      playing: playing,
+      position: const Duration(seconds: 34),
+      duration: const Duration(minutes: 3),
+      slideIndex: 1,
+      slideCount: 5,
+      volume: 80,
+      canPrevious: canPrevious,
+      canNext: canNext,
+    );
+    lastState = state;
+    _statesCtrl.add(state);
+  }
 
   Future<void> disconnect() async {
     await _teardown();

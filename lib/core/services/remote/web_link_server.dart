@@ -126,7 +126,11 @@ class WebLinkServer {
           if (!addr.isLoopback) return addr.address;
         }
       }
-    } catch (_) {}
-    return null;
+      // Ambiente sem IP externo (emulador/teste): loopback mantém o fluxo
+      // utilizável em dev; em device real sempre há IP de LAN/Wi-Fi.
+      return InternetAddress.loopbackIPv4.address;
+    } catch (_) {
+      return null;
+    }
   }
 }
