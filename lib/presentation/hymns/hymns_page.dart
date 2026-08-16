@@ -17,6 +17,7 @@ import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart'
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
+import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
@@ -163,6 +164,16 @@ class _HymnsViewState extends State<_HymnsView> {
               musicId: hymn.id,
               url: DownloadUrlBuilder.build(url),
             );
+            final OfflineMusicPort offlinePort = offline;
+            if (offlinePort is OfflineLibraryPort) {
+              await (offlinePort as OfflineLibraryPort).saveMetadata(
+                musicId: hymn.id,
+                title: hymn.title ?? 'Hino #${hymn.id}',
+                number: hymn.number?.toString(),
+                albumId: album.id,
+                albumName: album.name,
+              );
+            }
           }
           // Pausa entre faixas: respeita rate limiting da API.
           await Future<void>.delayed(const Duration(milliseconds: 400));

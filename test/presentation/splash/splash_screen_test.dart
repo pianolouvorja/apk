@@ -1,9 +1,12 @@
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/codename_piano.dart';
 import 'package:louvorja_piano_mobile/presentation/splash/splash_screen.dart';
 
 void main() {
@@ -39,6 +42,26 @@ void main() {
       // deixar timers pendentes no fim do teste.
       await tester.pump(const Duration(milliseconds: 450));
       await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('NAO espera a versao para animar: codename+loading aparecem mesmo com versionFuture lento', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SplashScreen(
+            // Future que nunca resolve: simula PackageInfo lento/timeout
+            versionFuture: Completer<String>().future,
+          ),
+        ),
+      );
+      await tester.pump(); // primeiro frame
+      await tester.pump(const Duration(milliseconds: 600)); // boot timer (400ms) dispara
+      await tester.pump(const Duration(milliseconds: 400)); // animacao avanca (intervalo codename 0.3-0.7)
+
+      // Animacao ja comecou INDEPENDENTE da versao: codename SVG presente
+      expect(find.byType(CodenamePiano), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2)); // consome boot timer
     });
 
     testWidgets('usa fundo claro quando o tema é light', (tester) async {

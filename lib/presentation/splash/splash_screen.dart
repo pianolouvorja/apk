@@ -82,6 +82,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller!.forward();
 
+    // CRITICO: reconstruir a arvore agora. Sem este setState o rebuild
+    // so acontecia quando a versao chegava (setState de _version) — com
+    // PackageInfo lento (>2s Android) a splash ficava PRESA no logo
+    // estatico sem codename/loading ate o boot timer abrir o app.
+    // (regressao v0.1.9 reportada pelo usuario)
+    setState(() {});
+
     // Boot mínimo visual. Será substituído pelo bootstrap real de catálogo.
     _bootTimer = Timer(const Duration(milliseconds: 2200), _completeInitialization);
   }
@@ -96,16 +103,15 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final versionLoaded = _version.isNotEmpty;
     final fadeLogo = _fadeLogo;
     final fadeCodename = _fadeCodename;
     final fadeStatus = _fadeStatus;
 
-    // Antes da versao carregar: mostra logo estatico (sem animacao)
-    if (!versionLoaded || fadeLogo == null || fadeCodename == null || fadeStatus == null) {
+    // Antes do boot timer (400ms): logo estatico (primeiro frame rapido).
+    // A versao NUNCA bloqueia a animacao — bug v0.1.9: PackageInfo lento
+    // (>2s no cold start) deixava a splash presa no logo sem codename.
+    if (fadeLogo == null || fadeCodename == null || fadeStatus == null) {
       return Scaffold(
-        // A splash acompanha o tema ativo: branca no Luminous Clarity,
-        // escura no Ethereal Lumens.
         backgroundColor: theme.colorScheme.surface,
         body: Center(
           child: const LouvorJaLogo(size: 140),
@@ -152,14 +158,15 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _version,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w300,
+                  if (_version.isNotEmpty)
+                    Text(
+                      _version,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w300,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -170,6 +170,16 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           musicId: hymn.id,
           url: DownloadUrlBuilder.build(url),
         );
+        final OfflineMusicPort offline = _offline;
+        if (offline is OfflineLibraryPort) {
+          await (offline as OfflineLibraryPort).saveMetadata(
+            musicId: hymn.id,
+            title: hymn.title ?? 'Hino #${hymn.id}',
+            number: hymn.number?.toString(),
+            albumId: widget.albumId,
+            albumName: hymnCatalogProvider.albumNameById(widget.albumId),
+          );
+        }
       }
       if (mounted) {
         setState(() {
