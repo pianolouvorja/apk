@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
@@ -60,7 +62,10 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
     emit(HymnsLoading());
     try {
       final categories = await _repository.getCategories();
-      await _syncCatalog(categories);
+      // Sync do catálogo de busca NÃO bloqueia a UI: com 67 álbuns o loader
+      // serial demorava minutos e a tela ficava em loading infinito
+      // (bug 2026-08-16). A busca global preenche quando concluir.
+      unawaited(_syncCatalog(categories));
       emit(HymnsLoaded(categories));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
@@ -72,7 +77,7 @@ class HymnsBloc extends Bloc<HymnsEvent, HymnsState> {
   Future<void> _onRefresh(HymnsRefreshRequested event, Emitter<HymnsState> emit) async {
     try {
       final categories = await _repository.getCategories();
-      await _syncCatalog(categories);
+      unawaited(_syncCatalog(categories));
       emit(HymnsLoaded(categories));
     } on LouvorjaApiException catch (e) {
       emit(HymnsError(e.code));
