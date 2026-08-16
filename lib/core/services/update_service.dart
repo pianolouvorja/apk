@@ -73,25 +73,45 @@ class UpdateService {
     defaultValue: '',
   );
 
+  /// Endpoint proxy próprio (ex.: https://pianolouvorja.duckdns.org).
+  /// Quando definido via --dart-define=UPDATE_API=..., a consulta de
+  /// releases vai para o proxy — o token GitHub fica no servidor e o
+  /// APK distribuído não carrega credencial alguma.
+  static const _updateApiBase = String.fromEnvironment(
+    'UPDATE_API',
+    defaultValue: '',
+  );
+
   UpdateService({
     Dio? dio,
     String repo = 'pianolouvorja/apk',
+    String? updateApiBase,
     Future<PackageInfo> Function()? packageInfoProvider,
   }) : _dio = dio ?? Dio(),
        _repo = repo,
+       _updateBase = (updateApiBase ?? _updateApiBase).replaceAll(
+         RegExp(r'/+$'),
+         '',
+       ),
        _packageInfoProvider = packageInfoProvider ?? PackageInfo.fromPlatform;
+
+  final String _updateBase;
 
   /// Verifica se existe uma versao mais recente no GitHub Releases.
   /// Retorna [UpdateCheckResult.none] se nao houver update ou se falhar.
   Future<UpdateCheckResult> checkForUpdates() async {
     try {
       final response = await _dio.get<dynamic>(
-        'https://api.github.com/repos/$_repo/releases/latest',
+        _updateBase.isNotEmpty
+            ? '$_updateBase/repos/$_repo/releases/latest'
+            : 'https://api.github.com/repos/$_repo/releases/latest',
         cancelToken: _cancelToken,
         options: Options(
           headers: {
             'Accept': 'application/vnd.github+json',
-            if (_ghToken.isNotEmpty) 'Authorization': 'token $_ghToken',
+            // No modo proxy o token vive no servidor — nunca enviar.
+            if (_updateBase.isEmpty && _ghToken.isNotEmpty)
+              'Authorization': 'token $_ghToken',
           },
           sendTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
