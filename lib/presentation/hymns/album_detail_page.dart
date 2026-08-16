@@ -17,6 +17,8 @@ import 'package:louvorja_piano_mobile/core/services/download_queue_storage_facto
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
 import 'package:louvorja_piano_mobile/core/services/connectivity_service.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
+import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_library_filter.dart';
 import 'package:louvorja_piano_mobile/core/services/stream_cache_service.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
@@ -162,6 +164,63 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   }
 
   bool _isThisPlaying(Hymn hymn) => _playingHymnId == hymn.id;
+
+  /// Abre o player modo vídeo (slides sincronizados — paridade Electron).
+  /// Busca o detail (lyric estruturado) e abre a tela cheia; o áudio
+  /// inicia pela URL remota ou arquivo local (PlaybackResolver).
+  // coverage:ignore-start
+  Future<void> _openNowPlaying(Hymn hymn, {bool instrumental = false}) async {
+    setState(() => _loadingMusicId = hymn.id);
+    try {
+      var detail = hymn;
+      if (hymn.lyricRaw == null) {
+        detail = await _repository().getHymnDetails(hymn.id);
+      }
+
+      // Fonte de áudio: local baixada > URL remota.
+      final local = await PlaybackResolver.localFor(
+        musicId: hymn.id,
+        instrumental: instrumental,
+        offline: _offline,
+      );
+      final relativeUrl =
+          instrumental ? detail.urlInstrumental : detail.urlMusic;
+      if (local == null && (relativeUrl == null || relativeUrl.isEmpty)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('errors.notFound'.tr())));
+        }
+        return;
+      }
+      final source = local ?? DownloadUrlBuilder.build(relativeUrl!);
+
+      nowPlaying.start(
+        hymnId: hymn.id,
+        title: hymn.title ?? '',
+        album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
+        albumId: widget.albumId,
+      );
+      await _player.playUrl(source);
+
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => NowPlayingPage(
+          detail: detail,
+          instrumental: instrumental,
+          player: HymnPlayerAdapter(_player),
+          filesUrl: 'https://api.louvorja.com.br/file',
+        ),
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMusicId = null);
+    }
+  }
+  // coverage:ignore-end
 
     OfflineMusicPort get _offline =>
         widget.offlineService ?? createOfflineMusicService();
@@ -625,6 +684,15 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                           instrumental: true,
                                         ),
                                       ),
+                                    // Modo vídeo (slides sincronizados)
+                                    IconButton(
+                                      tooltip: 'Modo vídeo',
+                                      icon: const Icon(
+                                        TablerIcons.slideshow,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => _openNowPlaying(hymn),
+                                    ),
                                     // coverage:ignore-start
                                     // Download por faixa (APK apenas)
                                     if (_downloadingIds.contains(hymn.id))

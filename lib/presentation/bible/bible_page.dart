@@ -14,6 +14,7 @@ import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.da
 import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/book_colors.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bible_download_button.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
@@ -256,9 +257,12 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final versionLanguage = context.locale.languageCode == 'es' ? 'es' : 'pt';
-    final visibleVersions = state.versions
+    final langVersions = state.versions
         .where((version) => version.languageId == versionLanguage)
         .toList();
+    // Offline: só versões com download completo no disco (marcadas pelo
+    // BibleDownloadButton). Pedido Rafael 2026-08-16.
+    final visibleVersions = BibleOfflineVersions.filter(langVersions);
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
@@ -795,3 +799,4 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+

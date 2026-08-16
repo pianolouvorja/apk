@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import 'package:louvorja_piano_mobile/core/services/bible_download_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
@@ -52,6 +53,14 @@ class _BibleDownloadButtonState extends State<BibleDownloadButton> {
           if (mounted) setState(() { _done = d; _total = t; });
         },
       );
+      // Marca a versão como baixada: offline o dropdown mostra só as que
+      // têm conteúdo no disco (pedido Rafael 2026-08-16).
+      if (ok > 0) {
+        final mark = (await getApplicationDocumentsDirectory())
+            .path;
+        File('$mark/catalog_bible_version_downloaded_$versionId.json')
+            .writeAsStringSync('{"versionId": $versionId}');
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
