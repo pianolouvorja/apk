@@ -1,0 +1,20 @@
+name: CI (Forgejo ARM64)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/cirruslabs/flutter:3.44.9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pub get
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze --fatal-warnings
+      - name: Test
+        run: flutter test -j 2
