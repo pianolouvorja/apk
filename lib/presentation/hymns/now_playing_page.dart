@@ -2,6 +2,8 @@ library;
 
 import 'dart:async';
 
+import 'package:easy_localization/easy_localization.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -111,7 +113,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Transmitir para TV',
+                      child: Text('stage.title'.tr(),
                           style: theme.textTheme.titleMedium),
                     ),
                     IconButton(
@@ -128,10 +130,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (_tvs.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                      'Nenhuma TV encontrada. Verifique se a TV está na mesma rede e com DLNA ativo (Configurações → Rede).'),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('stage.noTvs'.tr()),
                 )
               else
                 for (final tv in _tvs)
@@ -171,8 +172,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     final ok = await _cast.connect(tv);
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível conectar à TV.')));
+      final err = _cast.lastError;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('stage.connectFail'.tr() + (err != null ? '\n($err)' : ''))));
       return;
     }
     setState(() {
@@ -200,8 +202,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       );
       if (!ok && mounted) {
         setState(() => _casting = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('TV desconectou — projeção interrompida.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('stage.disconnected'.tr())));
       }
     } catch (_) {/* falha de render: próxima troca tenta de novo */}
   }
@@ -286,7 +288,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         }),
                       ),
                     IconButton(
-                      tooltip: _casting ? 'Parar transmissão' : 'Transmitir para TV',
+                      tooltip: _casting ? 'stage.turnOff'.tr() : 'stage.castOff'.tr(),
                       icon: Icon(
                         _casting ? TablerIcons.castOff : TablerIcons.cast,
                         color: _casting ? theme.colorScheme.primary : Colors.white,

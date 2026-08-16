@@ -229,5 +229,21 @@
     "downloading": "Baixando...",
     "offlineEmpty": "Sem conexão e nenhuma música baixada nesta coletânea.",
     "noneDownloaded": "Nenhuma música baixada nesta coletânea."
+  },
+  "stage": {
+    "title": "Palco — transmitir para TV",
+    "active": "Palco ativo",
+    "waiting": "LouvorJA — aguardando conteúdo",
+    "noTvs": "Nenhuma TV encontrada. Verifique a TV na mesma rede com DLNA ativo.",
+    "connectFail": "Não foi possível conectar à TV.",
+    "disconnected": "TV desconectou — projeção interrompida.",
+    "background": "Imagem de fundo",
+    "backgroundHint": "Escolher da galeria (otimizada para a TV)",
+    "backgroundUpdated": "Fundo do palco atualizado.",
+    "customize": "Personalizar",
+    "customizeHint": "Cores, fonte, tamanho",
+    "turnOff": "Desligar palco",
+    "castOn": "Palco ativo",
+    "castOff": "Transmitir para TV"
   }
 }

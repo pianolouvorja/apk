@@ -25,6 +25,9 @@ class CastController {
   String? get rendererName => _renderer?.friendlyName;
   StageImageFormat get imageFormat => _format;
 
+  /// Último erro do SOAP (diagnóstico do porquê a projeção falhou).
+  String? get lastError => _client?.lastError;
+
   /// Escaneia a LAN e devolve renderers com controlURL resolvido.
   static Future<List<DlnaRenderer>> discoverTvs() async {
     // Android: mantém multicast ativo só durante o scan (economia bateria).

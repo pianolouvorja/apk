@@ -1,5 +1,6 @@
 library;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as image;
 
@@ -29,6 +30,7 @@ class StageSession extends ChangeNotifier {
 
   bool get isOn => _cast.isConnected;
   String? get rendererName => _cast.rendererName;
+  String? get castLastError => _cast.lastError;
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
   Future<bool> turnOn(DlnaRenderer tv) async {
@@ -147,7 +149,7 @@ class StageSession extends ChangeNotifier {
     var bytes = await StageSlidePainter.renderGeneric(
       title: '',
       body: '',
-      footer: 'LouvorJA — aguardando conteúdo',
+      footer: 'stage.waiting'.tr(),
       settings: settings,
       backgroundImage: _backgroundImage,
     );

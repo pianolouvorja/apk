@@ -1,5 +1,6 @@
 library;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -63,7 +64,7 @@ class _StageCastButtonState extends State<StageCastButton> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Palco — transmitir para TV',
+                      child: Text('stage.title'.tr(),
                           style: theme.textTheme.titleMedium),
                     ),
                   ],
@@ -75,10 +76,9 @@ class _StageCastButtonState extends State<StageCastButton> {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (tvs.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                      'Nenhuma TV encontrada. Verifique a TV na mesma rede com DLNA ativo.'),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('stage.noTvs'.tr()),
                 )
               else
                 for (final tv in tvs)
@@ -104,8 +104,10 @@ class _StageCastButtonState extends State<StageCastButton> {
     final ok = await StageSession.instance.turnOn(tv);
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível conectar à TV.')));
+      final err = StageSession.instance.castLastError;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('stage.connectFail'.tr() +
+              (err != null ? '\n($err)' : ''))));
     }
   }
 
@@ -124,14 +126,13 @@ class _StageCastButtonState extends State<StageCastButton> {
               ListTile(
                 leading: Icon(TablerIcons.deviceTv,
                     color: theme.colorScheme.primary),
-                title: const Text('Palco ativo'),
+                title: Text('stage.active'.tr()),
                 subtitle: Text(session.rendererName ?? ''),
               ),
               ListTile(
                 leading: const Icon(TablerIcons.photo),
-                title: const Text('Imagem de fundo'),
-                subtitle: const Text(
-                    'Escolher da galeria (otimizada para a TV)'),
+                title: Text('stage.background'.tr()),
+                subtitle: Text('stage.backgroundHint'.tr()),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   final picked = await ImagePicker()
@@ -139,16 +140,16 @@ class _StageCastButtonState extends State<StageCastButton> {
                   if (picked != null) {
                     await session.setBackgroundFromFile(picked.path);
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Fundo do palco atualizado.')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('stage.backgroundUpdated'.tr())));
                     }
                   }
                 },
               ),
               ListTile(
                 leading: const Icon(TablerIcons.adjustments),
-                title: const Text('Personalizar'),
-                subtitle: const Text('Cores, fonte, tamanho'),
+                title: Text('stage.customize'.tr()),
+                subtitle: Text('stage.customizeHint'.tr()),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   showModalBottomSheet<void>(
@@ -163,7 +164,7 @@ class _StageCastButtonState extends State<StageCastButton> {
               ),
               ListTile(
                 leading: const Icon(TablerIcons.castOff),
-                title: const Text('Desligar palco'),
+                title: Text('stage.turnOff'.tr()),
                 onTap: () async {
                   Navigator.of(ctx).pop();
                   await session.turnOff();
@@ -182,7 +183,7 @@ class _StageCastButtonState extends State<StageCastButton> {
     final theme = Theme.of(context);
     final on = StageSession.instance.isOn;
     return IconButton(
-      tooltip: on ? 'Palco ativo' : 'Transmitir para TV',
+      tooltip: on ? 'stage.castOn'.tr() : 'stage.castOff'.tr(),
       icon: _scanning
           ? const SizedBox(
               width: 18,

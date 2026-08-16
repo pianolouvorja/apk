@@ -7,9 +7,11 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app/theme/app_spacing.dart';
 import '../../core/services/apk_installer.dart';
+import '../../core/services/apk_version_guard.dart';
 import '../../core/services/update_service.dart';
 import '../shared/widgets/gradient_background.dart';
 import '../shared/widgets/update_banner.dart';
@@ -72,9 +74,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   // coverage:ignore-start
+  Future<PackageInfo> _packageInfo() => // coverage:ignore-line
+      PackageInfo.fromPlatform();
+
   Future<void> _performUpdate() async {
     final update = _update;
     if (update == null || update.downloadUrl == null) return;
+
+    // Guard: APK alvo precisa AVANÇAR a versão instalada. Bloqueia o
+    // loop release-quebrada (v0.1.16 com APK 0.1.15 interno, 2026-08-16).
+    final guard = ApkVersionGuard.canInstall(
+      installed: (await _packageInfo()).version,
+      available: update.latestVersion ?? '',
+    );
+    if (!guard.allowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(guard.reason == ApkVersionRejectReason.sameVersion
+              ? 'A atualização disponível é a mesma versão instalada.'
+              : 'A atualização disponível é mais antiga que a instalada.'),
+        ));
+      }
+      return;
+    }
 
     setState(() {
       _downloading = true;

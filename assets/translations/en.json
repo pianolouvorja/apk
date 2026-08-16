@@ -230,5 +230,21 @@
     "downloading": "Downloading...",
     "offlineEmpty": "No connection and no downloaded songs in this collection.",
     "noneDownloaded": "No downloaded songs in this collection."
+  },
+  "stage": {
+    "title": "Stage — cast to TV",
+    "active": "Stage active",
+    "waiting": "LouvorJA — waiting for content",
+    "noTvs": "No TVs found. Check the TV is on the same network with DLNA enabled.",
+    "connectFail": "Could not connect to the TV.",
+    "disconnected": "TV disconnected — projection stopped.",
+    "background": "Background image",
+    "backgroundHint": "Pick from gallery (optimized for TV)",
+    "backgroundUpdated": "Stage background updated.",
+    "customize": "Customize",
+    "customizeHint": "Colors, font, size",
+    "turnOff": "Turn stage off",
+    "castOn": "Stage active",
+    "castOff": "Cast to TV"
   }
 }

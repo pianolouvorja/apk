@@ -1,8 +1,9 @@
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show visibleForTesting, debugPrint;
 
 /// Cliente SOAP do AVTransport DLNA — projeta conteúdo na TV.
 ///
@@ -15,9 +16,13 @@ class DlnaRendererClient {
   final HttpClient _client = HttpClient()
     ..connectionTimeout = const Duration(seconds: 5);
 
+  /// Último erro de SOAP (diagnóstico): ex. 'timeout', 'HTTP 500: ...'.
+  String? lastError;
+
   DlnaRendererClient(this.controlUrl);
 
   Future<bool> _soap(String action, String body) async {
+    lastError = null;
     try {
       final req = await _client.postUrl(Uri.parse(controlUrl));
       req.headers.set('Content-Type', 'text/xml; charset="utf-8"');
@@ -27,9 +32,15 @@ class DlnaRendererClient {
       );
       req.write(body);
       final res = await req.close();
-      await res.drain<void>();
-      return res.statusCode == 200;
-    } catch (_) {
+      final responseBody = await res.transform(const Utf8Decoder()).join();
+      if (res.statusCode != 200) {
+        lastError = 'HTTP ${res.statusCode}: ${responseBody.substring(0, responseBody.length.clamp(0, 200))}';
+        return false;
+      }
+      return true;
+    } catch (e) {
+      lastError = e.toString();
+      debugPrint('[DLNA] SOAP $action falhou: $e');
       return false;
     }
   }
