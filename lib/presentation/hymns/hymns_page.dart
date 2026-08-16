@@ -358,7 +358,7 @@ class _AlbumCard extends StatelessWidget {
     // coverage:ignore-start
     final hasCover = coverUrl != null && coverUrl.isNotEmpty;
     final isAsset = hasCover && coverUrl.startsWith('asset:');
-    final assetName = isAsset ? coverUrl.substring(7) : null;
+    final assetName = isAsset ? coverUrl.substring('asset:'.length) : null;
     final fullCoverUrl = hasCover && !isAsset
         ? 'https://api.louvorja.com.br/file/$coverUrl'
         : null;
