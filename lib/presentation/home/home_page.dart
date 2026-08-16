@@ -9,6 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_filex/open_filex.dart';
 
 import '../../app/theme/app_spacing.dart';
+import '../../core/services/apk_installer.dart';
 import '../../core/services/update_service.dart';
 import '../shared/widgets/gradient_background.dart';
 import '../shared/widgets/update_banner.dart';
@@ -90,7 +91,12 @@ class _HomePageState extends State<HomePage> {
           }
         },
       );
-      await OpenFilex.open(path);
+      // PackageInstaller.Session (nativo): imune ao congelamento do app
+      // no OneUI. Fallback OpenFilex só se o channel não existir.
+      final delivered = await ApkInstaller.install(path);
+      if (!delivered) {
+        await OpenFilex.open(path);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

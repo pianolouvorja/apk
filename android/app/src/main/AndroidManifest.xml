@@ -20,6 +20,8 @@
 
     <!-- Auto-update: instalar APK baixado sem Play Store -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- SSDP multicast: necessário para descobrir TVs DLNA na rede Wi-Fi. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <application
         android:label="Piano LouvorJA"

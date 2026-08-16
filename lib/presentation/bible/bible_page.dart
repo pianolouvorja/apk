@@ -17,6 +17,8 @@ import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/book_colors.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bible_download_button.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 
 class BiblePage extends StatelessWidget {
@@ -82,7 +84,7 @@ class _BibleViewState extends State<_BibleView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('bible.title'.tr()),
-        actions: const [BibleDownloadButton()],
+        actions: const [StageCastButton(), BibleDownloadButton()],
       ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {
@@ -591,6 +593,26 @@ class _VerseList extends StatefulWidget {
 }
 
 class _VerseListState extends State<_VerseList> {
+  /// Palco: projeta os versículos selecionados na TV (se ligado).
+  Future<void> _projectSelectedVerses(BibleLoaded state, int toggledVerse) async {
+    final stage = StageSession.instance;
+    if (!stage.isOn) return;
+    final selected = [...state.selectedVerses]..sort();
+    final versesToShow = selected.contains(toggledVerse)
+        ? selected
+        : [toggledVerse];
+    final text = versesToShow
+        .map((n) => state.verses[n.toString()] ?? '')
+        .join(' ');
+    final book = state.books
+        .where((b) => b.id == state.selectedBookId)
+        .firstOrNull;
+    await stage.project(
+      title: text,
+      footer:
+          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+    );
+  }
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -697,6 +719,7 @@ class _VerseListState extends State<_VerseList> {
                       onTap: () {
                         context.read<BibleBloc>()
                             .add(BibleSelectVerse(verseNum));
+                        _projectSelectedVerses(state, verseNum);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(

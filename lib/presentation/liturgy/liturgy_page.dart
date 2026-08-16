@@ -6,6 +6,8 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,7 +50,10 @@ class LiturgyPage extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Scaffold(
-            appBar: AppBar(title: Text('liturgy.title'.tr())),
+            appBar: AppBar(
+            title: Text('liturgy.title'.tr()),
+            actions: const [StageCastButton()],
+          ),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
@@ -71,7 +76,10 @@ class _LiturgyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('liturgy.title'.tr())),
+      appBar: AppBar(
+            title: Text('liturgy.title'.tr()),
+            actions: const [StageCastButton()],
+          ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
           if (state is LiturgyLoaded && state.items.isNotEmpty) {
@@ -506,6 +514,15 @@ class _Timeline extends StatelessWidget {
 // --- Item Card ---
 
 class _ItemCard extends StatelessWidget {
+  /// Palco: projeta o item da liturgia em execução na TV (se ligado).
+  Future<void> _projectToStage(LiturgyItem item) async {
+    final stage = StageSession.instance;
+    if (!stage.isOn) return;
+    await stage.project(
+      title: item.name,
+      body: item.subtitle.isEmpty ? null : item.subtitle,
+    );
+  }
   final LiturgyItem item;
   final bool isCategory;
   final ThemeData theme;
@@ -550,6 +567,7 @@ class _ItemCard extends StatelessWidget {
       child: ListTile(
         onTap: !isCategory && LiturgyItemExecutor.isExecutable(item.type)
             ? () async {
+                _projectToStage(item);
                 final msg = await LiturgyItemExecutor.execute(context, item);
                 if (msg.isNotEmpty && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
