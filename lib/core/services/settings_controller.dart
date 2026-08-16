@@ -1,7 +1,11 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:louvorja_piano_mobile/core/services/sync/sync_timestamps.dart';
 
 /// Controller de preferencias do usuario (tema, acento, interacao, glass).
 ///
@@ -49,6 +53,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyThemeMode, mode.name);
+    unawaited(SyncTimestamps.touch('settings'));
   }
 
   Future<void> setAccent(AccentKey key) async {
@@ -56,6 +61,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyAccent, key.name);
+    unawaited(SyncTimestamps.touch('settings'));
   }
 
   Future<void> setInteraction(InteractionKey key) async {
@@ -63,6 +69,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyInteraction, key.name);
+    unawaited(SyncTimestamps.touch('settings'));
   }
 
   Future<void> setGlassIntensity(int value) async {
@@ -70,6 +77,7 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyGlassIntensity, _glassIntensity);
+    unawaited(SyncTimestamps.touch('settings'));
   }
 }
 
