@@ -92,6 +92,13 @@ class HymnRepositoryImpl implements HymnRepository {
 
       _categoriesCache = categoriesWithHymnals;
       _flatAlbumsCache = null;
+      // Persiste em disco: cold start SEM internet serve daqui (offline-first).
+      // Sem isto o cache só existia em memória e o app fechado+offline
+      // mostrava "verifique sua conexão" mesmo com conteúdo baixado.
+      _cache.write(
+        'categories',
+        categoriesWithHymnals.map((c) => c.toJson()).toList(),
+      );
       return _categoriesCache!;
     } catch (_) {
       // Fallback: cache expirado
