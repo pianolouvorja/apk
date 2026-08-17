@@ -1,0 +1,259 @@
+library;
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show debugPrint;
+
+import 'palco_models.dart';
+import 'palco_proxy.dart';
+
+/// Sender do Palco: HTTP (:7080, proxy + mídia local) + WS (:7081) no celular.
+///
+/// Reimplementação Dart do sender.py validado no spike ~/palco-spike
+/// (LG UM7510, 2026-08-17). Mesmo protocolo — a TV (receiver webOS) conecta
+/// aqui e recebe as mensagens v2.
+///
+/// Regras críticas herdadas do spike (NÃO regredir):
+/// 1. WS SEM ping — webOS 4.x não responde pings e a conexão cai em loop.
+/// 2. Mídia sempre com IP da sub-rede da TV (nunca localhost).
+/// 3. Proxy: headers Web0S/Accept/Referer (API retorna 406 sem eles).
+/// 4. Threading: cada request em handler isolado (HttpServer dart:io já é
+///    concorrente por listen).
+class PalcoSender {
+  HttpServer? _http;
+  HttpServer? _ws;
+  final Set<WebSocket> _clients = {};
+  final _events = StreamController<PalcoMessage>.broadcast();
+
+  /// Eventos receiver→sender (unlocked, ended, remote-key, ...).
+  Stream<PalcoMessage> get events => _events.stream;
+  int get clientCount => _clients.length;
+  bool get isRunning => _ws != null;
+
+  /// Sub-rede da TV (hint para anunciar o IP certo — igual DLNA).
+  String? rendererSubnetHint;
+
+  static const int httpPort = 7080;
+  static const int wsPort = 7081;
+
+  PalcoSender({this.httpPortFixed = httpPort, this.wsPortFixed = wsPort});
+
+  /// Portas fixas em produção; 0 (efêmera) em teste.
+  final int httpPortFixed;
+  final int wsPortFixed;
+
+  int get effectiveHttpPort => _http?.port ?? httpPortFixed;
+  int get effectiveWsPort => _ws?.port ?? wsPortFixed;
+
+  /// Sobe os servidores. Retorna a base HTTP (ex: http://192.168.1.5:7080)
+  /// ou null se falhou (sem IP LAN).
+  Future<String?> start() async {
+    final ip = await _localIp();
+    if (ip == null) {
+      debugPrint('[PALCO] start(): sem IP LAN');
+      return null;
+    }
+    try {
+      _http = await HttpServer.bind(InternetAddress.anyIPv4, httpPortFixed,
+          shared: true);
+      _http!.listen(_handleHttp, onError: (_) {});
+
+      _ws = await HttpServer.bind(InternetAddress.anyIPv4, wsPortFixed,
+          shared: true);
+      _ws!.listen(_handleWsUpgrade, onError: (_) {});
+
+      debugPrint('[PALCO] sender em http://$ip:$effectiveHttpPort + ws://$ip:$effectiveWsPort');
+      return 'http://$ip:$effectiveHttpPort';
+    } catch (e) {
+      debugPrint('[PALCO] start() FALHOU: $e (portas em uso?)');
+      await stop();
+      return null;
+    }
+  }
+
+  Future<void> stop() async {
+    for (final c in _clients.toList()) {
+      await c.close();
+    }
+    _clients.clear();
+    await _http?.close(force: true);
+    await _ws?.close(force: true);
+    _http = null;
+    _ws = null;
+  }
+
+  // ---- WS ----
+
+  void _handleWsUpgrade(HttpRequest req) {
+    if (req.uri.path == '/palco') {
+      WebSocketTransformer.upgrade(req).then((ws) {
+        _clients.add(ws);
+        debugPrint('[PALCO] receiver conectado (${_clients.length})');
+        ws.listen(
+          (data) {
+            try {
+              final m = PalcoMessage.fromJson(
+                  jsonDecode(data as String) as Map<String, dynamic>);
+              _events.add(m);
+            } catch (_) {}
+          },
+          onDone: () {
+            _clients.remove(ws);
+            debugPrint('[PALCO] receiver saiu (${_clients.length})');
+          },
+          onError: (_) {
+            _clients.remove(ws);
+          },
+          // SEM ping: webOS 4.x não responde (lição do spike).
+          cancelOnError: false,
+        );
+      }).catchError((_) {});
+    } else {
+      req.response.statusCode = 404;
+      req.response.close();
+    }
+  }
+
+  /// Broadcast de mensagem para todos os receivers conectados.
+  void send(PalcoMessage msg) {
+    if (_clients.isEmpty) return;
+    final data = jsonEncode(msg.toJson());
+    for (final c in _clients.toList()) {
+      try {
+        c.add(data);
+      } catch (_) {
+        _clients.remove(c);
+      }
+    }
+  }
+
+  // ---- HTTP: proxy + mídia ----
+
+  /// Bytes de mídia local servida em `/media/<nome>.<ext>` (PPT rasterizado etc).
+  final Map<String, Uint8ListListEntry> _media = {};
+
+  void serveMedia(String name, List<int> bytes) {
+    _media[name] = Uint8ListListEntry(bytes);
+  }
+
+  void clearMedia() => _media.clear();
+
+  Future<void> _handleHttp(HttpRequest req) async {
+    final res = req.response;
+    try {
+      final path = req.uri.path;
+      if (path == '/status') {
+        res.headers.contentType = ContentType.json;
+        res.write('{"unlocked":true,"clients":${_clients.length}}');
+        await res.close();
+      } else if (path.startsWith('/media/')) {
+        await _serveMedia(req, path);
+      } else if (path == '/proxy') {
+        await _serveProxy(req);
+      } else {
+        res.statusCode = 404;
+        await res.close();
+      }
+    } catch (e) {
+      try {
+        res.statusCode = 502;
+        res.write('palco error: $e');
+        await res.close();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _serveMedia(HttpRequest req, String path) async {
+    final name = path.substring('/media/'.length).split('/').last;
+    final entry = _media[name];
+    if (entry == null) {
+      req.response.statusCode = 404;
+      await req.response.close();
+      return;
+    }
+    final bytes = entry.bytes;
+    final r = PalcoRangeResponse.forRange(
+      req.headers.value(HttpHeaders.rangeHeader),
+      bytes.length,
+      PalcoContentType.forPath(name),
+    );
+    _applyRangeHeaders(req, r);
+    final (start, end) =
+        PalcoRangeResponse.parseRange(req.headers.value(HttpHeaders.rangeHeader), bytes.length) ??
+            (0, bytes.length - 1);
+    req.response.add(bytes.sublist(start, end + 1));
+    await req.response.close();
+  }
+
+  Future<void> _serveProxy(HttpRequest req) async {
+    final target = PalcoProxyHeaders.unwrapFromProxy(req.uri.query);
+    if (target == null) {
+      req.response.statusCode = 400;
+      await req.response.close();
+      return;
+    }
+    final url = PalcoProxyHeaders.reencodePath(target);
+    final hc = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+    try {
+      final fr = await hc.getUrl(Uri.parse(url));
+      PalcoProxyHeaders.forUrl(url).forEach(fr.headers.set);
+      final range = req.headers.value(HttpHeaders.rangeHeader);
+      if (range != null) fr.headers.set(HttpHeaders.rangeHeader, range);
+      final fres = await fr.close();
+      req.response.statusCode = fres.statusCode;
+      fres.headers.forEach((n, v) {
+        if (n.toLowerCase() != HttpHeaders.transferEncodingHeader) {
+          req.response.headers.set(n, v);
+        }
+      });
+      req.response.headers.set('Access-Control-Allow-Origin', '*');
+      await fres.pipe(req.response);
+    } catch (e) {
+      try {
+        req.response.statusCode = 502;
+        req.response.write('proxy error: $e');
+        await req.response.close();
+      } catch (_) {}
+    } finally {
+      hc.close(force: true);
+    }
+  }
+
+  void _applyRangeHeaders(HttpRequest req, PalcoRangeResponse r) {
+    req.response.statusCode = r.status;
+    req.response.headers
+        .contentType = ContentType.parse(r.contentType);
+    req.response.headers.set(
+        HttpHeaders.contentLengthHeader, r.contentLength.toString());
+    req.response.headers.set('Accept-Ranges', 'bytes');
+    req.response.headers.set('Access-Control-Allow-Origin', '*');
+    if (r.contentRange != null) {
+      req.response.headers.set(HttpHeaders.contentRangeHeader, r.contentRange!);
+    }
+  }
+
+  Future<String?> _localIp() async {
+    final hint = rendererSubnetHint;
+    final candidates = <String>[];
+    for (final iface in await NetworkInterface.list()) {
+      for (final addr in iface.addresses) {
+        if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
+          candidates.add(addr.address);
+        }
+      }
+    }
+    if (hint != null && candidates.isNotEmpty) {
+      final prefix = hint.split('.').take(3).join('.');
+      final match = candidates.where((c) => c.startsWith('$prefix.')).toList();
+      if (match.isNotEmpty) return match.first;
+    }
+    return candidates.isEmpty ? null : candidates.first;
+  }
+}
+
+class Uint8ListListEntry {
+  Uint8ListListEntry(this.bytes);
+  final List<int> bytes;
+}
