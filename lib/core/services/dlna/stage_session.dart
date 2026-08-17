@@ -10,12 +10,18 @@ import 'ssdp_discovery.dart';
 import 'cast_controller.dart';
 import 'stage_slide_painter.dart';
 import 'stage_settings_repository.dart';
+import '../palco/palco_controller.dart';
 
 /// Palco global: sessão de cast PERSISTENTE entre telas.
 ///
 /// Quando ligado, a TV mostra o background/personalização definida e
 /// AGUARDA conteúdo — qualquer módulo (liturgia, bíblia, player) projeta
 /// nele via [project]. Desligar = desconecta da TV.
+///
+/// Transportes:
+/// - DLNA (rasteriza PNG/JPEG + SOAP) — TVs genéricas.
+/// - Palco WS (protocolo v2) — receiver LouvorJA (webOS): texto nativo,
+///   áudio, vídeo, timer e controle por setas do remote.
 class StageSession extends ChangeNotifier {
   StageSession._();
   static final StageSession instance = StageSession._();
@@ -23,14 +29,34 @@ class StageSession extends ChangeNotifier {
   final CastController _cast = CastController();
   final StageSettingsRepository _settingsRepo = StageSettingsRepository();
 
+  /// Transporte Palco WS (nulo = usando DLNA).
+  PalcoController? _palco;
+  bool get isPalcoMode => _palco != null;
+
   StageSettings settings = const StageSettings();
   DlnaRenderer? renderer;
   bool _busy = false;
   ui.Image? _backgroundImage;
 
-  bool get isOn => _cast.isConnected;
-  String? get rendererName => _cast.rendererName;
+  bool get isOn => _cast.isConnected || isPalcoMode;
+  String? get rendererName => isPalcoMode ? _palco!.target?.name : _cast.rendererName;
   String? get castLastError => _cast.lastError;
+
+  /// Liga o palco no modo Palco WS (receiver LouvorJA na TV).
+  /// A TV conecta no sender do celular ao abrir o app dela.
+  Future<bool> turnOnPalco(PalcoTarget tv) async {
+    final p = PalcoController();
+    final ok = await p.connect(tv);
+    if (!ok) return false;
+    _palco = p;
+    renderer = null;
+    notifyListeners();
+    return true;
+  }
+
+  /// Acesso ao transporte Palco (áudio, vídeo, timer, eventos).
+  /// Nulo quando ligado via DLNA.
+  PalcoController? get palco => _palco;
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
   Future<bool> turnOn(DlnaRenderer tv) async {
@@ -51,7 +77,12 @@ class StageSession extends ChangeNotifier {
   }
 
   Future<void> turnOff() async {
-    await _cast.disconnect();
+    if (_palco != null) {
+      await _palco!.disconnect();
+      _palco = null;
+    } else {
+      await _cast.disconnect();
+    }
     renderer = null;
     _backgroundImage?.dispose();
     _backgroundImage = null;
@@ -113,13 +144,24 @@ class StageSession extends ChangeNotifier {
     if (!isOn) return false;
     final content = _StageContent(title: title, body: body, footer: footer);
     _lastContent = content;
+    if (isPalcoMode) {
+      // Palco WS: texto nativo (body com \n vira <br> no receiver).
+      final text = [title, body].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
+      _palco!.project(text: text, footer: footer ?? '');
+      return true;
+    }
     return _project(content);
   }
 
   /// Volta ao idle (background aguardando mídia).
   Future<void> clearContent() async {
     _lastContent = null;
-    if (isOn) await _projectIdle();
+    if (!isOn) return;
+    if (isPalcoMode) {
+      _palco!.projectIdle();
+      return;
+    }
+    await _projectIdle();
   }
 
   Future<bool> _project(_StageContent c) async {

@@ -8,6 +8,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import '../../../core/services/dlna/cast_controller.dart';
 import '../../../core/services/dlna/ssdp_discovery.dart';
 import '../../../core/services/dlna/stage_session.dart';
+import '../../../core/services/palco/palco_controller.dart';
 import '../../hymns/stage_customization_sheet.dart';
 
 /// Botão Palco compartilhado: liga/desliga o cast global.
@@ -92,6 +93,16 @@ class _StageCastButtonState extends State<StageCastButton> {
                       await _connect(tv);
                     },
                   ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(TablerIcons.cast),
+                title: const Text('Palco LouvorJA (app na TV)'),
+                subtitle: const Text('Conectar por IP — receiver webOS'),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await _connectPalcoManual(context);
+                },
+              ),
               const SizedBox(height: 8),
             ],
           ),
@@ -109,6 +120,44 @@ class _StageCastButtonState extends State<StageCastButton> {
           content: Text('stage.connectFail'.tr() +
               (err != null ? '\n($err)' : ''))));
     }
+  }
+
+  /// Conexão manual Palco WS: pede o IP da TV (receiver já aberto nela).
+  Future<void> _connectPalcoManual(BuildContext context) async {
+    final ip = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final ctrl = TextEditingController();
+        return AlertDialog(
+          title: const Text('Palco LouvorJA'),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+                hintText: 'IP da TV (ex: 192.168.1.174)'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+                child: const Text('Conectar')),
+          ],
+        );
+      },
+    );
+    if (ip == null || ip.isEmpty) return;
+    final ok = await StageSession.instance.turnOnPalco(PalcoTarget(
+      name: 'Palco ($ip)',
+      ip: ip,
+    ));
+    if (!mounted) return;
+    ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Palco ativo — abra o app LouvorJA Palco na TV (ela conecta sozinha)'
+            : 'Falha ao iniciar o sender Palco (rede/porta)')));
   }
 
   /// Ligado: painel de controles do palco (personalizar/desligar).
