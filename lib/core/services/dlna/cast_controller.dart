@@ -2,6 +2,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'dlna_renderer_client.dart';
 import 'multicast_lock.dart';
 import 'slide_http_server.dart';
@@ -47,7 +49,13 @@ class CastController {
   /// Conecta num renderer: sobe o HTTP server local.
   Future<bool> connect(DlnaRenderer renderer) async {
     final base = await _server.start();
-    if (base == null) return false;
+    if (base == null) {
+      debugPrint('[DLNA] connect() FALHOU: SlideHttpServer.start() = null '
+          '(bind ou _localIp falhou)');
+      return false;
+    }
+    debugPrint('[DLNA] connect OK: server em $base, controlURL='
+        '${renderer.avTransportControlUrl}');
     _renderer = renderer;
     _client = DlnaRendererClient(renderer.avTransportControlUrl!);
     _format = renderer.preferredImageFormat;

@@ -33,6 +33,8 @@ class DlnaRendererClient {
       req.write(body);
       final res = await req.close();
       final responseBody = await res.transform(const Utf8Decoder()).join();
+      debugPrint('[DLNA] SOAP $action -> HTTP ${res.statusCode} '
+          '(${responseBody.length} bytes)');
       if (res.statusCode != 200) {
         lastError = 'HTTP ${res.statusCode}: ${responseBody.substring(0, responseBody.length.clamp(0, 200))}';
         return false;

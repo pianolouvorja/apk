@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 /// Servidor HTTP local que serve o slide atual (PNG) para a TV baixar.
 ///
 /// A TV faz HEAD antes do GET (validação LG do PoC) — ambos suportados.
@@ -23,9 +25,13 @@ class SlideHttpServer {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server!.listen(_handle, onError: (_) {});
       final ip = await _localIp();
-      if (ip == null) return null;
+      if (ip == null) {
+        debugPrint('[DLNA] SlideHttpServer: _localIp() = null (sem IP LAN)');
+        return null;
+      }
       return 'http://$ip:${_server!.port}';
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[DLNA] SlideHttpServer.start() exceção: $e');
       return null;
     }
   }
@@ -48,6 +54,9 @@ class SlideHttpServer {
   }
 
   Future<void> _handle(HttpRequest req) async {
+    debugPrint('[DLNA] server ${req.method} ${req.uri.path}'
+        '${req.uri.query.isNotEmpty ? '?${req.uri.query}' : ''} de '
+        '${req.connectionInfo?.remoteAddress.address}');
     final res = req.response;
     final bytes = _currentSlide;
     if (bytes == null) {

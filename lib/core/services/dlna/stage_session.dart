@@ -39,8 +39,13 @@ class StageSession extends ChangeNotifier {
     if (!ok) return false;
     renderer = tv;
     settings = settings.copyWith(capability: tv.screenCapability);
-    await _loadBackground();
-    await _projectIdle();
+    try {
+      await _loadBackground();
+      await _projectIdle();
+    } catch (e, st) {
+      debugPrint('[DLNA] turnOn(): falha em loadBackground/projectIdle: '
+          '$e\n$st');
+    }
     notifyListeners();
     return true;
   }

@@ -266,7 +266,7 @@
     "mode_desktop": "Desktop (Electron)",
     "mode_web": "Navegador (web)",
     "desktop_host": "Endereço do desktop",
-    "desktop_hint": "IP:porta (ex.: 192.168.1.50:7070)",
+    "desktop_hint": "IP ou IP:porta (ex.: 192.168.1.50 ou 192.168.1.50:7071)",
     "token_label": "Token de emparelhamento",
     "connect": "Conectar",
     "disconnect": "Desconectar",
