@@ -198,6 +198,8 @@ class _StageCastButtonState extends State<StageCastButton> {
                     selected: {session.audioRoute},
                     onSelectionChanged: (sel) {
                       setSheet(() => session.audioRoute = sel.first);
+                      // F3.2: re-roteia a faixa corrente com o modo novo.
+                      session.rerouteCurrentAudio();
                     },
                   ),
                 )),

@@ -55,6 +55,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   int _index = 0;
   bool _noAudio = false;
   StreamSubscription<Duration>? _posSub;
+  bool _routeListenerAdded = false; // F3.2: listener de mudança de audioRoute
 
   // Palco: sessão GLOBAL (StageSession) — o player projeta no mesmo
   // palco que Liturgia/Bíblia. Sem controller local (bug 2026-08-16:
@@ -68,6 +69,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       coverUrl: widget.detail.imageUrl,
       raw: widget.detail.lyricRaw ?? const [],
     );
+    // F3.2: modo de áudio mudado em runtime (painel do cast) — ajusta
+    // o player local: modo tv = mudo, volta pro local = retoma.
+    StageSession.instance.addListener(_onAudioRouteChanged);
+    _routeListenerAdded = true;
     _posSub = widget.player.positionStream.listen((pos) {
       if (!mounted || _noAudio) return;
       final idx = _slides.indexAt(pos, instrumental: widget.instrumental);
@@ -80,8 +85,21 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _routeAudio());
   }
 
+  /// F3.2: modo mudou em runtime — silencia/retoma o player local.
+  void _onAudioRouteChanged() {
+    if (!mounted) return;
+    final route = StageSession.instance.audioRoute;
+    if (route == PalcoAudioRoute.tv) {
+      widget.player.pause(); // TV vira a caixa de som
+    }
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    if (_routeListenerAdded) {
+      StageSession.instance.removeListener(_onAudioRouteChanged);
+    }
     _posSub?.cancel();
     // F3.2: ao sair da tela, para o áudio também no palco (se roteado).
     StageSession.instance.stopHymnAudio();

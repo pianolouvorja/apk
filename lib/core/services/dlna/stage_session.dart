@@ -60,7 +60,22 @@ class StageSession extends ChangeNotifier {
 
   // ===== Roteamento de áudio (F3.2) =====
   // local: só celular | tv: só TV (celular = controle) | mirror: ambos.
-  PalcoAudioRoute audioRoute = PalcoAudioRoute.local;
+  PalcoAudioRoute _audioRoute = PalcoAudioRoute.local;
+  PalcoAudioRoute get audioRoute => _audioRoute;
+
+  /// Troca o modo e notifica ouvintes (UI re-roteia a faixa corrente).
+  set audioRoute(PalcoAudioRoute v) {
+    if (_audioRoute == v) return;
+    _audioRoute = v;
+    notifyListeners();
+  }
+
+  /// Faixa corrente roteada (para re-enviar ao trocar o modo em runtime).
+  String? _currentAudioUrl;
+  String? _currentAudioTitle;
+  String? _currentAudioSubtitle;
+  String? _currentAudioCover;
+
   bool get _routesToTv =>
       isPalcoMode && audioRoute != PalcoAudioRoute.local;
 
@@ -68,9 +83,27 @@ class StageSession extends ChangeNotifier {
   /// (local quando palco desligado, independente da config).
   PalcoAudioRoute playHymnAudio(String url,
       {String? title, String? subtitle, String? cover}) {
+    _currentAudioUrl = url;
+    _currentAudioTitle = title;
+    _currentAudioSubtitle = subtitle;
+    _currentAudioCover = cover;
     if (!_routesToTv) return PalcoAudioRoute.local;
     _palco!.playAudio(url, title: title, subtitle: subtitle, cover: cover);
     return audioRoute;
+  }
+
+  /// Re-envia a faixa corrente com o modo novo (chamado ao trocar modo).
+  void rerouteCurrentAudio() {
+    if (_currentAudioUrl == null) return;
+    if (!_routesToTv) {
+      // voltou pra local: para na TV (player local segue por conta da UI)
+      _palco?.stopAudio();
+      return;
+    }
+    _palco!.playAudio(_currentAudioUrl!,
+        title: _currentAudioTitle,
+        subtitle: _currentAudioSubtitle,
+        cover: _currentAudioCover);
   }
 
   void pauseHymnAudio() {
