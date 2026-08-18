@@ -235,8 +235,14 @@ class PalcoSender {
       if (range != null) fr.headers.set(HttpHeaders.rangeHeader, range);
       final fres = await fr.close();
       req.response.statusCode = fres.statusCode;
+      // HttpClient do Dart descomprime gzip automaticamente (autoUncompress),
+      // mas os headers da origem chegam intactos — repassar content-encoding
+      // faz o browser tentar descomprimir duas vezes
+      // (ERR_CONTENT_DECODING_FOUND, bug F3.4 2026-08-18: BG/áudio 200 mas morto).
+      const drop = {'content-encoding', 'content-length',
+          HttpHeaders.transferEncodingHeader};
       fres.headers.forEach((n, v) {
-        if (n.toLowerCase() != HttpHeaders.transferEncodingHeader) {
+        if (!drop.contains(n.toLowerCase())) {
           req.response.headers.set(n, v);
         }
       });
