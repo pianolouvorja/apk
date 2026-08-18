@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
+import 'package:louvorja_piano_mobile/core/services/palco/palco_controller.dart' show PalcoAudioRoute;
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
@@ -158,6 +160,17 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
       _playingInstrumental = instrumental;
       if (mounted) setState(() => _playingHymnId = hymn.id);
+      // F3.4: roteia áudio ao Palco também no play direto da lista
+      // (antes só roteava abrindo o NowPlayingPage — bug 2026-08-18).
+      if (StageSession.instance.isOn) {
+        StageSession.instance.playHymnAudio(source,
+            title: hymn.title ?? '',
+            subtitle: instrumental ? 'Instrumental' : null,
+            cover: hymn.imageUrl);
+        if (StageSession.instance.audioRoute == PalcoAudioRoute.tv) {
+          await player.pause(); // TV é a caixa de som
+        }
+      }
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',

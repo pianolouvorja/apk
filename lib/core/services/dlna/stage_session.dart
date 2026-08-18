@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async' show unawaited;
+import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -86,6 +87,9 @@ class StageSession extends ChangeNotifier {
 
   /// Toca faixa no destino configurado. Retorna o modo efetivo
   /// (local quando palco desligado, independente da config).
+  ///
+  /// Fonte LOCAL (hino baixado, path /data/...) não é alcançável pela TV:
+  /// os bytes são servidos via /media do sender e a URL substituída.
   PalcoAudioRoute playHymnAudio(String url,
       {String? title, String? subtitle, String? cover}) {
     _currentAudioUrl = url;
@@ -93,7 +97,21 @@ class StageSession extends ChangeNotifier {
     _currentAudioSubtitle = subtitle;
     _currentAudioCover = cover;
     if (!_routesToTv) return PalcoAudioRoute.local;
-    _palco!.playAudio(url, title: title, subtitle: subtitle, cover: cover);
+    var playable = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      try {
+        final file = File(url);
+        if (file.existsSync()) {
+          final name =
+              'hymn_${file.uri.pathSegments.last}'.replaceAll(
+                  RegExp(r'[^A-Za-z0-9._-]'), '_');
+          playable = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
+        }
+      } catch (e) {
+        debugPrint('[PALCO] serveMedia local falhou: $e');
+      }
+    }
+    _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover);
     return audioRoute;
   }
 
