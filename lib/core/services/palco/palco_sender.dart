@@ -184,6 +184,9 @@ class PalcoSender {
         await _serveMedia(req, path);
       } else if (path == '/proxy') {
         await _serveProxy(req);
+      } else if (path.startsWith('/images/')) {
+        // /images/... proxy para API (receiver pede covers/backgrounds)
+        await _serveProxy(req);
       } else {
         res.statusCode = 404;
         await res.close();

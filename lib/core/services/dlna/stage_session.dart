@@ -121,7 +121,19 @@ class StageSession extends ChangeNotifier {
       _palco?.stopAudio();
       return;
     }
-    _palco!.playAudio(_currentAudioUrl!,
+    var url = _currentAudioUrl!;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      final file = File(url);
+      if (file.existsSync()) {
+        final name = 'hymn_${file.uri.pathSegments.last}'
+            .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+        url = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
+        debugPrint('[PALCO] reroute: local served as $url');
+      } else {
+        debugPrint('[PALCO] reroute ERROR: local not found: $url');
+      }
+    }
+    _palco!.playAudio(url,
         title: _currentAudioTitle,
         subtitle: _currentAudioSubtitle,
         cover: _currentAudioCover);

@@ -113,3 +113,5 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     _controller.close();
   }
 }
+
+// volume: no-op em web

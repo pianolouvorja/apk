@@ -46,6 +46,9 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
+  Future<void> setVolume(double v) => _player.setVolume(v);
+
+  @override
   Future<void> toggleUrl(String url) async {
     if (_currentUrl == url && _isPlaying) {
       await _player.pause();
