@@ -19,6 +19,18 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   final _durations = StreamController<Duration>.broadcast();
 
   _NativeAudioPlayer() {
+    // AudioContext explicito (F3.3b): sem usage=media o One UI classifica a
+    // reproducao como nao-midia em background ("AudioHardening ... would be
+    // muted") e muta/pausa o player — que e o relogio dos slides do Palco.
+    // stayAwake mantem o wake lock do audio (letra sincronizada em bg).
+    unawaited(_player.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        usageType: AndroidUsageType.media,
+        contentType: AndroidContentType.music,
+        audioFocus: AndroidAudioFocus.gain,
+        stayAwake: true,
+      ),
+    )));
     _player.onPositionChanged.listen((pos) => _positions.add(pos));
     _player.onDurationChanged.listen((dur) => _durations.add(dur));
     _player.onPlayerStateChanged.listen((state) {
