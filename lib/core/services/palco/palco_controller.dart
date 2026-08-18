@@ -104,6 +104,9 @@ class PalcoController extends ChangeNotifier {
   void pauseAudio() => _sender.send(const PalcoMessage(
       type: 'audio', fields: {'action': 'pause'}));
 
+  void resumeAudio() => _sender.send(const PalcoMessage(
+      type: 'audio', fields: {'action': 'play'}));
+
   void stopAudio() => _sender.send(const PalcoMessage(
       type: 'audio', fields: {'action': 'stop'}));
 
@@ -120,4 +123,16 @@ class PalcoController extends ChangeNotifier {
   void stopTimer() =>
       _sender.send(PalcoMessage.timer(action: 'stop'));
 
+}
+
+/// Destino do áudio quando o Palco está ativo (F3.2).
+enum PalcoAudioRoute {
+  /// Áudio só no celular (comportamento pré-F3.2).
+  local,
+
+  /// Áudio SÓ na TV — celular vira controle (player local parado).
+  tv,
+
+  /// Espelho: toca no celular E na TV (drift aceitável, sem sync de clock).
+  mirror,
 }

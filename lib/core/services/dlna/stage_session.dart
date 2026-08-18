@@ -58,6 +58,29 @@ class StageSession extends ChangeNotifier {
   /// Nulo quando ligado via DLNA.
   PalcoController? get palco => _palco;
 
+  // ===== Roteamento de áudio (F3.2) =====
+  // local: só celular | tv: só TV (celular = controle) | mirror: ambos.
+  PalcoAudioRoute audioRoute = PalcoAudioRoute.local;
+  bool get _routesToTv =>
+      isPalcoMode && audioRoute != PalcoAudioRoute.local;
+
+  /// Toca faixa no destino configurado. Retorna o modo efetivo
+  /// (local quando palco desligado, independente da config).
+  PalcoAudioRoute playHymnAudio(String url,
+      {String? title, String? subtitle, String? cover}) {
+    if (!_routesToTv) return PalcoAudioRoute.local;
+    _palco!.playAudio(url, title: title, subtitle: subtitle, cover: cover);
+    return audioRoute;
+  }
+
+  void pauseHymnAudio() {
+    if (_routesToTv) _palco!.pauseAudio();
+  }
+
+  void stopHymnAudio() {
+    if (_routesToTv) _palco!.stopAudio();
+  }
+
   /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
   Future<bool> turnOn(DlnaRenderer tv) async {
     settings = await _settingsRepo.load();
@@ -140,6 +163,7 @@ class StageSession extends ChangeNotifier {
     required String title,
     String? body,
     String? footer,
+    String? background,
   }) async {
     if (!isOn) return false;
     final content = _StageContent(title: title, body: body, footer: footer);
@@ -147,7 +171,7 @@ class StageSession extends ChangeNotifier {
     if (isPalcoMode) {
       // Palco WS: texto nativo (body com \n vira <br> no receiver).
       final text = [title, body].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
-      _palco!.project(text: text, footer: footer ?? '');
+      _palco!.project(text: text, footer: footer ?? '', background: background);
       return true;
     }
     return _project(content);

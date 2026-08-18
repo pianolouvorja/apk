@@ -10,6 +10,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../core/services/now_playing.dart';
 import '../../core/services/dlna/stage_session.dart';
+import '../../core/services/palco/palco_controller.dart' show PalcoAudioRoute;
 import '../shared/widgets/stage_cast_button.dart';
 import '../../domain/entities/hymn.dart';
 import '../../domain/entities/lyric_slides.dart';
@@ -29,6 +30,10 @@ class NowPlayingPage extends StatefulWidget {
   final HymnPlayerLike player;
   final String filesUrl;
   final VoidCallback? onClose;
+  // F3.2: fonte de áudio resolvida (local ou remota) + modo instrumental,
+  // para rotear o som pro Palco quando audioRoute != local.
+  final String? audioSource;
+  final bool audioIsLocal;
 
   const NowPlayingPage({
     super.key,
@@ -37,6 +42,8 @@ class NowPlayingPage extends StatefulWidget {
     required this.player,
     required this.filesUrl,
     this.onClose,
+    this.audioSource,
+    this.audioIsLocal = false,
   });
 
   @override
@@ -69,16 +76,45 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
         _projectCurrentSlide();
       }
     });
+    // F3.2: roteia áudio pro palco (se ativo e modo != local).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _routeAudio());
   }
 
   @override
   void dispose() {
     _posSub?.cancel();
+    // F3.2: ao sair da tela, para o áudio também no palco (se roteado).
+    StageSession.instance.stopHymnAudio();
     // Palco global NÃO é desconectado aqui: sessão persiste entre telas.
     super.dispose();
   }
 
   // ===== Palco: usar o botão compartilhado na AppBar (StageSession) =====
+
+  /// F3.2: roteia o áudio pro palco (se ativo e modo != local).
+  /// Em modo tv, o player LOCAL fica mudo (palco vira a caixa de som).
+  void _routeAudio() {
+    final stage = StageSession.instance;
+    if (!stage.isOn || widget.audioSource == null) return;
+    if (stage.audioRoute == PalcoAudioRoute.tv) {
+      // só TV: para o player local; a TV toca via proxy do sender.
+      widget.player.pause();
+    }
+    stage.playHymnAudio(widget.audioSource!,
+        title: widget.detail.title ?? '',
+        subtitle: widget.instrumental ? 'Instrumental' : null,
+        cover: widget.detail.imageUrl);
+  }
+
+  void _pauseAudioEverywhere() {
+    widget.player.pause();
+    StageSession.instance.pauseHymnAudio();
+  }
+
+  void _stopAudioEverywhere() {
+    widget.player.stop();
+    StageSession.instance.stopHymnAudio();
+  }
 
   /// Projeta o slide ATUAL do hino no palco global (se ligado).
   /// Mesma sessão da Liturgia/Bíblia — um palco só.
@@ -90,6 +126,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     final ok = await stage.project(
       title: slide.text,
       footer: widget.detail.title,
+      background: _bgUrl, // F3.2: BG do slide atrás do texto
     );
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,6 +183,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     IconButton(
                       icon: const Icon(TablerIcons.x, color: Colors.white),
                       onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
+                      onLongPress: _stopAudioEverywhere, // F3.2: para tudo (local+TV)
                     ),
                     Expanded(
                       child: Column(
@@ -243,9 +281,15 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                       onPressed: () async {
                         if (widget.player.isPlaying) {
-                          await widget.player.pause();
+                          _pauseAudioEverywhere();
+                        } else if (StageSession
+                                .instance.audioRoute ==
+                            PalcoAudioRoute.tv) {
+                          // só-TV: retoma só no palco (player local mudo)
+                          StageSession.instance.palco?.resumeAudio();
                         } else {
                           await widget.player.resume();
+                          _routeAudio();
                         }
                         if (mounted) setState(() {});
                       },

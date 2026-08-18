@@ -132,4 +132,54 @@ void main() {
     await rx.close();
     await ctrl.disconnect();
   });
+
+  test('routing: primitivas de audio (play/pause/stop) espelháveis', () async {
+    final ctrl = PalcoController(
+        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+    await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
+    final rx = FakeReceiver();
+    await rx.connect('127.0.0.1', ctrl.wsPort);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    ctrl.playAudio('https://api.louvorja.com.br/file/musics/pt/a.mp3',
+        title: 'Hino 1', subtitle: 'Harpa', cover: 'https://x/c.jpg');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(rx.received.last['type'], 'audio');
+    expect(rx.received.last['action'], 'play');
+    expect(rx.received.last['subtitle'], 'Harpa');
+
+    ctrl.pauseAudio();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(rx.received.last['type'], 'audio');
+    expect(rx.received.last['action'], 'pause');
+
+    ctrl.stopAudio();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(rx.received.last['action'], 'stop');
+
+    await rx.close();
+    await ctrl.disconnect();
+  });
+
+  test('projection com background externo passa URL crua (receiver resolve proxy)',
+      () async {
+    final ctrl = PalcoController(
+        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+    await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
+    final rx = FakeReceiver();
+    await rx.connect('127.0.0.1', ctrl.wsPort);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+
+    ctrl.project(text: 'estrofe', footer: 'Hino 10',
+        background: 'https://api.louvorja.com.br/file/images/bg1.jpg');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
+    final msg = rx.received.last;
+    expect(msg['type'], 'projection');
+    expect(msg['background'],
+        'https://api.louvorja.com.br/file/images/bg1.jpg');
+
+    await rx.close();
+    await ctrl.disconnect();
+  });
 }

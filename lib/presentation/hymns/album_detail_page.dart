@@ -209,6 +209,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           instrumental: instrumental,
           player: HymnPlayerAdapter(_player),
           filesUrl: 'https://api.louvorja.com.br/file',
+          audioSource: source, // F3.2: roteamento de áudio no Palco
+          audioIsLocal: local != null,
         ),
       ));
     } catch (_) {

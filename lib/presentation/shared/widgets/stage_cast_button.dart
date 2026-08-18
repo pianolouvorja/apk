@@ -178,6 +178,29 @@ class _StageCastButtonState extends State<StageCastButton> {
                 title: Text('stage.active'.tr()),
                 subtitle: Text(session.rendererName ?? ''),
               ),
+              // F3.2: roteamento de áudio (só em modo Palco WS).
+              if (session.isPalcoMode)
+                StatefulBuilder(builder: (ctx2, setSheet) => ListTile(
+                  leading: const Icon(TablerIcons.volume),
+                  title: const Text('Áudio'),
+                  subtitle: const Text(
+                      'Celular · TV · Ambos'),
+                  trailing: SegmentedButton<PalcoAudioRoute>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                          value: PalcoAudioRoute.local, label: Text('Celular')),
+                      ButtonSegment(
+                          value: PalcoAudioRoute.tv, label: Text('TV')),
+                      ButtonSegment(
+                          value: PalcoAudioRoute.mirror, label: Text('Ambos')),
+                    ],
+                    selected: {session.audioRoute},
+                    onSelectionChanged: (sel) {
+                      setSheet(() => session.audioRoute = sel.first);
+                    },
+                  ),
+                )),
               ListTile(
                 leading: const Icon(TablerIcons.photo),
                 title: Text('stage.background'.tr()),
