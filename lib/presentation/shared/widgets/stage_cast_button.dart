@@ -9,6 +9,7 @@ import '../../../core/services/dlna/cast_controller.dart';
 import '../../../core/services/dlna/ssdp_discovery.dart';
 import '../../../core/services/dlna/stage_session.dart';
 import '../../../core/services/palco/palco_controller.dart';
+import 'palco_connect_dialog.dart';
 import '../../hymns/stage_customization_sheet.dart';
 
 /// Botão Palco compartilhado: liga/desliga o cast global.
@@ -126,27 +127,7 @@ class _StageCastButtonState extends State<StageCastButton> {
   Future<void> _connectPalcoManual(BuildContext context) async {
     final ip = await showDialog<String>(
       context: context,
-      builder: (ctx) {
-        final ctrl = TextEditingController();
-        return AlertDialog(
-          title: const Text('Palco LouvorJA'),
-          content: TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-                hintText: 'IP da TV (ex: 192.168.1.174)'),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-                child: const Text('Conectar')),
-          ],
-        );
-      },
+      builder: (ctx) => const PalcoConnectDialog(),
     );
     if (ip == null || ip.isEmpty) return;
     final ok = await StageSession.instance.turnOnPalco(PalcoTarget(
