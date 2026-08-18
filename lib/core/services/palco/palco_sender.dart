@@ -3,6 +3,9 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 
@@ -38,7 +41,14 @@ class PalcoSender {
   static const int httpPort = 7080;
   static const int wsPort = 7081;
 
-  PalcoSender({this.httpPortFixed = httpPort, this.wsPortFixed = wsPort});
+  PalcoSender(
+      {this.httpPortFixed = httpPort, this.wsPortFixed = wsPort, Uint8List? receiverPage})
+      : _receiverPage = receiverPage;
+
+  /// Receiver embutido (F3.4): carregado uma vez do asset
+  /// assets/palco/receiver.html — servido em / e /receiver.html.
+  /// Testes injetam bytes direto (rootBundle não funciona em unit test).
+  Uint8List? _receiverPage;
 
   /// Portas fixas em produção; 0 (efêmera) em teste.
   final int httpPortFixed;
@@ -144,7 +154,26 @@ class PalcoSender {
     final res = req.response;
     try {
       final path = req.uri.path;
-      if (path == '/status') {
+      if (path == '/' || path == '/receiver.html' || path == '/index.html') {
+        _receiverPage ??= (await rootBundle.load('assets/palco/receiver.html'))
+            .buffer
+            .asUint8List();
+        res.headers.contentType = ContentType.html;
+        res.headers.set('Access-Control-Allow-Origin', '*');
+        res.add(_receiverPage!);
+        await res.close();
+      } else if (path == '/logo-louvor-ja.svg') {
+        try {
+          final svg = (await rootBundle.load('assets/palco/logo-louvor-ja.svg'))
+              .buffer
+              .asUint8List();
+          res.headers.contentType = ContentType.parse('image/svg+xml');
+          res.add(svg);
+        } catch (_) {
+          res.statusCode = 404;
+        }
+        await res.close();
+      } else if (path == '/status') {
         res.headers.contentType = ContentType.json;
         // CORS obrigatório: o receiver usa fetch(:7080/status) na
         // auto-descoberta — sem isso o scan é bloqueado (F3.3).
