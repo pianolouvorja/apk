@@ -99,16 +99,14 @@ class StageSession extends ChangeNotifier {
     if (!_routesToTv) return PalcoAudioRoute.local;
     var playable = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      try {
-        final file = File(url);
-        if (file.existsSync()) {
-          final name =
-              'hymn_${file.uri.pathSegments.last}'.replaceAll(
-                  RegExp(r'[^A-Za-z0-9._-]'), '_');
-          playable = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
-        }
-      } catch (e) {
-        debugPrint('[PALCO] serveMedia local falhou: $e');
+      final file = File(url);
+      if (file.existsSync()) {
+        final name = 'hymn_${file.uri.pathSegments.last}'
+            .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+        playable = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
+        debugPrint('[PALCO] midia local servida: $playable');
+      } else {
+        debugPrint('[PALCO] ERRO: fonte local inexistente roteada: $url');
       }
     }
     _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover);
