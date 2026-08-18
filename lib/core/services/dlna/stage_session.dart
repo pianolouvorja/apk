@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async' show unawaited;
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as image;
@@ -11,6 +13,7 @@ import 'cast_controller.dart';
 import 'stage_slide_painter.dart';
 import 'stage_settings_repository.dart';
 import '../palco/palco_controller.dart';
+import '../palco/palco_foreground.dart';
 
 /// Palco global: sessão de cast PERSISTENTE entre telas.
 ///
@@ -50,6 +53,8 @@ class StageSession extends ChangeNotifier {
     if (!ok) return false;
     _palco = p;
     renderer = null;
+    // F3.3: foreground service — sobrevive a background (One UI mata rede).
+    unawaited(PalcoForeground.start());
     notifyListeners();
     return true;
   }
@@ -114,6 +119,14 @@ class StageSession extends ChangeNotifier {
     if (_routesToTv) _palco!.stopAudio();
   }
 
+  /// Seek espelhado (modo tv: a TV é o relógio; local/mirror: no-op
+  /// porque o player local já é a fonte).
+  void seekHymnAudio(Duration position) {
+    if (audioRoute == PalcoAudioRoute.tv && isPalcoMode) {
+      _palco!.seekAudio(position.inMilliseconds / 1000.0);
+    }
+  }
+
   /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
   Future<bool> turnOn(DlnaRenderer tv) async {
     settings = await _settingsRepo.load();
@@ -134,6 +147,7 @@ class StageSession extends ChangeNotifier {
 
   Future<void> turnOff() async {
     if (_palco != null) {
+      unawaited(PalcoForeground.stop());
       await _palco!.disconnect();
       _palco = null;
     } else {

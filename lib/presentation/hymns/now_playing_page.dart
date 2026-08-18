@@ -161,7 +161,14 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       final t = widget.instrumental
           ? _slides.slides[index].instrumentalTime
           : _slides.slides[index].time;
-      if (t != null) widget.player.seek(t);
+      if (t != null) {
+        if (StageSession.instance.audioRoute == PalcoAudioRoute.tv) {
+          // só-TV: seek vai pro receiver (celular mudo não é o relógio)
+          StageSession.instance.seekHymnAudio(t);
+        } else {
+          widget.player.seek(t);
+        }
+      }
     }
   }
 
@@ -300,10 +307,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       onPressed: () async {
                         if (widget.player.isPlaying) {
                           _pauseAudioEverywhere();
-                        } else if (StageSession
-                                .instance.audioRoute ==
+                        } else if (StageSession.instance.audioRoute ==
                             PalcoAudioRoute.tv) {
-                          // só-TV: retoma só no palco (player local mudo)
+                          // só-TV: retoma SÓ no palco; player local nunca
+                          // volta a tocar neste modo (F3.3 T3).
                           StageSession.instance.palco?.resumeAudio();
                         } else {
                           await widget.player.resume();

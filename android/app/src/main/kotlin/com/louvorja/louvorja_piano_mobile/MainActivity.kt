@@ -41,6 +41,20 @@ class MainActivity : FlutterActivity() {
                             .apply { setReferenceCounted(false); acquire() }
                         result.success(true)
                     }
+                    // F3.3: foreground service — mantém rede/áudio com app
+                    // em background (One UI AudioHardening congelava o sender).
+                    "startPalcoForeground" -> {
+                        try {
+                            PalcoForegroundService.start(applicationContext)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("FG_FAIL", e.message, null)
+                        }
+                    }
+                    "stopPalcoForeground" -> {
+                        PalcoForegroundService.stop(applicationContext)
+                        result.success(true)
+                    }
                     "releaseMulticastLock" -> {
                         multicastLock?.let { if (it.isHeld) it.release() }
                         multicastLock = null

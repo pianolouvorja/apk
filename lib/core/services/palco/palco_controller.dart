@@ -110,6 +110,10 @@ class PalcoController extends ChangeNotifier {
   void stopAudio() => _sender.send(const PalcoMessage(
       type: 'audio', fields: {'action': 'stop'}));
 
+  /// Seek no receiver (segundos). F3.3: modo tv usa a TV como relógio.
+  void seekAudio(double seconds) => _sender.send(PalcoMessage(
+      type: 'audio', fields: {'action': 'seek', 'position': seconds}));
+
   void playVideo(String url) =>
       _sender.send(PalcoMessage.video(proxyUrl(url)));
 
