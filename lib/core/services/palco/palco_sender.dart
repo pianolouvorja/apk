@@ -242,9 +242,13 @@ class PalcoSender {
       const drop = {'content-encoding', 'content-length',
           HttpHeaders.transferEncodingHeader};
       fres.headers.forEach((n, v) {
-        if (!drop.contains(n.toLowerCase())) {
-          req.response.headers.set(n, v);
-        }
+        if (drop.contains(n.toLowerCase())) return;
+        // Headers com não-ASCII (Content-Disposition com acento no
+        // filename, ex: "É Jesus.mp3") quebram headers.set → 502
+        // (bug 2026-08-18: áudio 502, imagens ok por não terem acento).
+        final flat = v.join(', ');  // List<String> multi-valor plano
+        if (flat.codeUnits.any((c) => c > 127)) return;
+        req.response.headers.set(n, v);
       });
       req.response.headers.set('Access-Control-Allow-Origin', '*');
       await fres.pipe(req.response);
