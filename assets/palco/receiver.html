@@ -237,14 +237,36 @@ function hideNp(){
 const a0=$('audio');
 a0.onended=()=>showIdle('Aguardando conteúdo…');
 let pendingPlay=false;
+// F3.3f: overlay de unlock — o autoplay do browser/webOS bloqueia o 1o
+// play sem gesto (NotAllowedError). Overlay com texto grande; qualquer
+// clique/toque/tecla destrava (na TV o OK do controle também cai aqui).
+function showUnlockOverlay(){
+  if($('unlockOverlay'))return;
+  const d=document.createElement('div');
+  d.id='unlockOverlay';
+  d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.82);'+
+    'display:flex;flex-direction:column;align-items:center;justify-content:center;'+
+    'cursor:pointer;text-align:center';
+  d.innerHTML='<div style="font-size:5vh;font-weight:700;color:#fff;margin-bottom:2vh">▶ Toque para iniciar o áudio</div>'+
+    '<div style="font-size:2.5vh;color:#aaa">O navegador bloqueia o áudio sem interação</div>';
+  d.addEventListener('click',tryPendingPlay);
+  document.body.appendChild(d);
+}
+function hideUnlockOverlay(){const d=$('unlockOverlay');if(d)d.remove()}
+function tryPendingPlay(){
+  if(!pendingPlay)return;
+  pendingPlay=false;hideUnlockOverlay();
+  a0.play().then(()=>sendEvent({v:1,type:'unlocked'})).catch(()=>{});
+}
 window.addEventListener('keydown',function(e){
-  if(pendingPlay){pendingPlay=false;a0.play().then(()=>sendEvent({v:1,type:'unlocked'})).catch(()=>{});}
+  if(pendingPlay)tryPendingPlay();
   var k=e.keyCode;
   if(k===37||k===39||k===4063){ // setas + OK
     e.preventDefault();
     sendEvent({v:2,type:'remote-key',key:k===37?'prev':'next'});
   }
 },true);
+document.addEventListener('pointerdown',function(){if(pendingPlay)tryPendingPlay()},true);
 
 function handle(m){
   if(m.v!==1&&m.v!==2)return;
@@ -280,8 +302,8 @@ function handle(m){
       }
       if(m.action==='play'){
         dlog('PLAY tentativa src='+(a.src||'').slice(0,60));
-        a.play().then(()=>{dlog('PLAY OK');sendEvent({v:1,type:'unlocked'})})
-                .catch(e=>{dlog('PLAY FAIL: '+e.name+' '+e.message);pendingPlay=true});
+        a.play().then(()=>{dlog('PLAY OK');pendingPlay=false;hideUnlockOverlay();sendEvent({v:1,type:'unlocked'})})
+                .catch(e=>{dlog('PLAY FAIL: '+e.name+' '+e.message);pendingPlay=true;showUnlockOverlay()});
       }
       if(m.action==='pause')a.pause();
       if(m.action==='stop'){a.pause();a.currentTime=0;showIdle('Aguardando conteúdo…')}
