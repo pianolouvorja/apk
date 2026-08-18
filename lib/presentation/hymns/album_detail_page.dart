@@ -68,6 +68,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   int? _loadingMusicId;
   int? _expandedHymnId;
   int? _playingHymnId;
+  bool _playingInstrumental = false; // modo corrente (F3.3 UX toggle)
   StreamSubscription<bool>? _playingSubscription;
   final Set<int> _downloadedIds = {};
   final Set<int> _downloadingIds = {};
@@ -94,12 +95,23 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   Future<void> _togglePlay(Hymn hymn, {required bool instrumental}) async {
     final player = _player;
 
-    // Mesmo hino em execução: alterna para pausa.
+    // Mesmo hino em execução:
+    // - mesmo modo -> pausa (toggle play/pause clássico)
+    // - outro modo (cantado <-> playback) -> TROCA o modo sem pausar
+    //   (UX 2026-08-18: clicar no playback quando já toca cantado volta
+    //   pro playback e vice-versa — o usuário espera alternância).
     if (_playingHymnId == hymn.id) {
-      await player.pause();
-      nowPlaying.pause();
-      if (mounted) setState(() => _playingHymnId = null);
-      return;
+      if (_playingInstrumental != instrumental) {
+        await player.stop();
+        nowPlaying.stop();
+        if (mounted) setState(() => _playingHymnId = null);
+        // cai através pro fluxo normal iniciar o novo modo
+      } else {
+        await player.pause();
+        nowPlaying.pause();
+        if (mounted) setState(() => _playingHymnId = null);
+        return;
+      }
     }
 
     setState(() => _loadingMusicId = hymn.id);
@@ -144,6 +156,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       }
       // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
+      _playingInstrumental = instrumental;
       if (mounted) setState(() => _playingHymnId = hymn.id);
       nowPlaying.start(
         hymnId: hymn.id,
@@ -678,12 +691,23 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                     ),
                                     if (hymn.hasInstrumental)
                                       IconButton(
-                                        tooltip: 'Instrumental',
-                                        icon: const Icon(TablerIcons.piano),
+                                        tooltip: isPlaying &&
+                                                _playingInstrumental
+                                            ? 'Voltar ao cantado'
+                                            : 'Playback instrumental',
+                                        icon: Icon(
+                                          TablerIcons.piano,
+                                          color: isPlaying &&
+                                                  _playingInstrumental
+                                              ? theme.colorScheme.primary
+                                              : null,
+                                        ),
                                         // coverage:ignore-line
                                         onPressed: () => _togglePlay(
                                           hymn,
-                                          instrumental: true,
+                                          instrumental:
+                                              !(isPlaying &&
+                                                  _playingInstrumental),
                                         ),
                                       ),
                                     // Modo vídeo (slides sincronizados)

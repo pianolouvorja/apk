@@ -146,6 +146,9 @@ class PalcoSender {
       final path = req.uri.path;
       if (path == '/status') {
         res.headers.contentType = ContentType.json;
+        // CORS obrigatório: o receiver usa fetch(:7080/status) na
+        // auto-descoberta — sem isso o scan é bloqueado (F3.3).
+        res.headers.set('Access-Control-Allow-Origin', '*');
         res.write('{"unlocked":true,"clients":${_clients.length}}');
         await res.close();
       } else if (path.startsWith('/media/')) {
