@@ -89,7 +89,9 @@ class LyricSlides {
     parsed.sort((a, b) => a.order.compareTo(b.order));
 
     // Carry-over de imagem (Electron): slide sem imagem herda a última.
-    String? lastImage = coverUrl;
+    // F3.3e: o COVER (capa de álbum, ex: covers/2026.bmp) NÃO entra como
+    // carry-over — cover não é BG de projeção. Só url_image dos slides.
+    String? lastImage;
     final body = <LyricSlide>[];
     for (final s in parsed) {
       final img = s.imageUrl ?? lastImage;

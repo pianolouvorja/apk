@@ -162,6 +162,20 @@ class PalcoSender {
         res.headers.set('Access-Control-Allow-Origin', '*');
         res.add(_receiverPage!);
         await res.close();
+      } else if (path == '/logo-piano-louvorja.png') {
+        // Fallback de cover (F3.3e): logo da org quando o item de audio
+        // nao tem capa ou a capa falha no load.
+        try {
+          final png = (await rootBundle.load('assets/palco/logo-piano-louvorja.png'))
+              .buffer
+              .asUint8List();
+          res.headers.contentType = ContentType.parse('image/png');
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          res.add(png);
+        } catch (_) {
+          res.statusCode = 404;
+        }
+        await res.close();
       } else if (path == '/logo-louvor-ja.svg') {
         try {
           final svg = (await rootBundle.load('assets/palco/logo-louvor-ja.svg'))
@@ -190,7 +204,12 @@ class PalcoSender {
         // origem (http://host:7080/images/generico_116.jpg) — sem query
         // ?url=, o _serveProxy devolvia 400/404 e a capa ficava quebrada.
         // Monta a URL da API a partir do path e proxya.
-        final rel = path.substring(1); // images/...
+        final rel = path.substring(1); // images/... ou covers/...
+        await _serveProxy(req, overrideQuery: 'url='
+            '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}');
+      } else if (path.startsWith('/covers/')) {
+        // covers/... (F3.3e): mesma rota — capa de album relativa.
+        final rel = path.substring(1);
         await _serveProxy(req, overrideQuery: 'url='
             '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}');
       } else {

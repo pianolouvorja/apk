@@ -211,13 +211,23 @@ function showIdle(msg){
   $('text').textContent='';$('footer').textContent='';
 }
 function hideIdle(){$('idle').classList.add('hidden')}
+// F3.3e: fallback de cover — sem capa ou capa quebrada = logo da org.
+// Cover relativo (images/... ou covers/...) resolve contra / do sender.
+function coverUrl(cover){
+  if(!cover) return null;
+  if(cover.startsWith('http://')||cover.startsWith('https://'))return proxyUrl(cover);
+  return proxyUrl('http://'+(host||location.hostname)+':7080/'+cover.replace(/^\/+/,''));
+}
 function showNp(title,sub,cover){
   hideIdle();$('text').style.display='none';
   const np=$('np');np.style.display='';
   $('npTitle').textContent=title;
   $('npSub').textContent=sub;
   const c=$('npCover');
-  if(cover){c.src=proxyUrl(cover);c.style.display='block'}else{c.style.display='none'}
+  c.onerror=()=>{c.onerror=null;c.src='/logo-piano-louvorja.png'};
+  const u=coverUrl(cover);
+  if(u){c.src=u;c.style.display='block'}
+  else{c.src='/logo-piano-louvorja.png';c.style.display='block'}
 }
 function hideNp(){
   const np=$('np');if(np.style.display==='none')return;

@@ -85,12 +85,16 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _routeAudio());
   }
 
-  /// F3.2: modo mudou em runtime — silencia/retoma o player local.
+  /// F3.2/F3.3e: modo mudou em runtime — silencia/retoma o player local.
+  /// Modo tv: MUDO (setVolume 0), NÃO pausado — o player local continua
+  /// sendo o relógio dos slides (pausar congelava a letra projetada).
   void _onAudioRouteChanged() {
     if (!mounted) return;
     final route = StageSession.instance.audioRoute;
     if (route == PalcoAudioRoute.tv) {
-      widget.player.pause(); // TV vira a caixa de som
+      widget.player.setVolume(0); // TV vira a caixa de som; celular = controle
+    } else {
+      widget.player.setVolume(1); // local/mirror: som volta no celular
     }
     setState(() {});
   }
@@ -109,14 +113,16 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
 
   // ===== Palco: usar o botão compartilhado na AppBar (StageSession) =====
 
-  /// F3.2: roteia o áudio pro palco (se ativo e modo != local).
-  /// Em modo tv, o player LOCAL fica mudo (palco vira a caixa de som).
+  /// F3.2/F3.3e: roteia o áudio pro palco (se ativo e modo != local).
+  /// Em modo tv, o player LOCAL fica MUDO (não pausado) — continua sendo
+  /// o relógio dos slides; a TV toca via proxy do sender.
   void _routeAudio() {
     final stage = StageSession.instance;
     if (!stage.isOn || widget.audioSource == null) return;
     if (stage.audioRoute == PalcoAudioRoute.tv) {
-      // só TV: para o player local; a TV toca via proxy do sender.
-      widget.player.pause();
+      widget.player.setVolume(0); // mudo, não pausado (relógio dos slides)
+    } else {
+      widget.player.setVolume(1);
     }
     stage.playHymnAudio(widget.audioSource!,
         title: widget.detail.title ?? '',

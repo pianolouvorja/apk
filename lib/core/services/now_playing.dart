@@ -14,6 +14,10 @@ abstract class HymnPlayerLike {
   Stream<Duration> get durationStream => const Stream.empty();
   Future<void> seek(Duration position) async {}
 
+  /// F3.3e: modo tv do Palco silencia o player local (0) sem pausar —
+  /// ele continua sendo o relógio dos slides projetados.
+  Future<void> setVolume(double v) async {}
+
   Future<void> pause();
   Future<void> resume();
   Future<void> stop();

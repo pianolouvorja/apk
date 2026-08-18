@@ -168,7 +168,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             subtitle: instrumental ? 'Instrumental' : null,
             cover: hymn.imageUrl);
         if (StageSession.instance.audioRoute == PalcoAudioRoute.tv) {
-          await player.pause(); // TV é a caixa de som
+          // F3.3e: mudo, não pausado — player local é o relógio dos slides.
+          await player.setVolume(0);
+        } else {
+          await player.setVolume(1);
         }
       }
       nowPlaying.start(
