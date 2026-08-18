@@ -185,8 +185,14 @@ class PalcoSender {
       } else if (path == '/proxy') {
         await _serveProxy(req);
       } else if (path.startsWith('/images/')) {
-        // /images/... proxy para API (receiver pede covers/backgrounds)
-        await _serveProxy(req);
+        // /images/... proxy para API (receiver pede covers/backgrounds).
+        // Bug 2026-08-18: o receiver resolve covers relativos contra a
+        // origem (http://host:7080/images/generico_116.jpg) — sem query
+        // ?url=, o _serveProxy devolvia 400/404 e a capa ficava quebrada.
+        // Monta a URL da API a partir do path e proxya.
+        final rel = path.substring(1); // images/...
+        await _serveProxy(req, overrideQuery: 'url='
+            '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}');
       } else {
         res.statusCode = 404;
         await res.close();
@@ -222,8 +228,9 @@ class PalcoSender {
     await req.response.close();
   }
 
-  Future<void> _serveProxy(HttpRequest req) async {
-    final target = PalcoProxyHeaders.unwrapFromProxy(req.uri.query);
+  Future<void> _serveProxy(HttpRequest req, {String? overrideQuery}) async {
+    final target =
+        PalcoProxyHeaders.unwrapFromProxy(overrideQuery ?? req.uri.query);
     if (target == null) {
       req.response.statusCode = 400;
       await req.response.close();
