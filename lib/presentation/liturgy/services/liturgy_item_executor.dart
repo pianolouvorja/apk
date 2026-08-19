@@ -50,10 +50,22 @@ class LiturgyItemExecutor {
         return _executeUrl(context, item);
 
       case LiturgyItemType.video:
-      case LiturgyItemType.images:
       case LiturgyItemType.pdf:
-      case LiturgyItemType.presentation:
       case LiturgyItemType.otherFiles:
+        return _executeFile(context, item);
+
+      case LiturgyItemType.presentation:
+      case LiturgyItemType.images:
+        // F3.3i: com Palco ligado, PPTX/imagens projetam os slides na TV
+        // (imagens extraídas do .pptx servidas via /media do sender).
+        final stage = StageSession.instance;
+        final path = item.filePath;
+        if (stage.isOn && stage.isPalcoMode && path != null) {
+          final count = stage.projectPptxSlides(path);
+          if (count > 0) {
+            return 'Projetando $count slides — setas do controle navegam';
+          }
+        }
         return _executeFile(context, item);
 
       case LiturgyItemType.scheduled:

@@ -1,6 +1,6 @@
 library;
 
-import 'dart:async' show unawaited;
+import 'dart:async' show unawaited, StreamSubscription;
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -14,6 +14,8 @@ import 'cast_controller.dart';
 import 'stage_slide_painter.dart';
 import 'stage_settings_repository.dart';
 import '../palco/palco_controller.dart';
+import '../palco/palco_models.dart' show PalcoMessage;
+import '../palco/pptx_slide_extractor.dart';
 import '../palco/palco_foreground.dart';
 
 /// Palco global: sessão de cast PERSISTENTE entre telas.
@@ -56,9 +58,18 @@ class StageSession extends ChangeNotifier {
     renderer = null;
     // F3.3: foreground service — sobrevive a background (One UI mata rede).
     unawaited(PalcoForeground.start());
+    // F3.3i: setas do controle da TV navegam a sequência de slides.
+    _remoteKeySub?.cancel();
+    _remoteKeySub = p.events.listen((m) {
+      if (m.type == 'remote-key' && m.fields['key'] is String) {
+        navigateSlides(m.fields['key'] as String);
+      }
+    });
     notifyListeners();
     return true;
   }
+
+  StreamSubscription<PalcoMessage>? _remoteKeySub;
 
   /// Acesso ao transporte Palco (áudio, vídeo, timer, eventos).
   /// Nulo quando ligado via DLNA.
@@ -157,6 +168,57 @@ class StageSession extends ChangeNotifier {
   }
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
+  // ===== Apresentação de slides (PPTX/images) no Palco — F3.3i =====
+  // Extraí as imagens do .pptx (ZIP ppt/media/*), serve via /media e
+  // projeta como sequência. Setas do controle da TV navegam.
+  List<String> _slideUrls = [];
+  int _slideIndex = -1;
+
+  /// Projeta o slide [index] da sequência carregada.
+  void _projectSlide(int index) {
+    if (index < 0 || index >= _slideUrls.length) return;
+    _slideIndex = index;
+    _palco?.project(
+        text: '', footer: '', background: _slideUrls[index]);
+  }
+
+  /// Carrega e projeta a 1a imagem de slides extraídos de um .pptx.
+  /// Retorna a quantidade de slides projetados (0 = nada extraído).
+  int projectPptxSlides(String pptxPath) {
+    final slides = PptxSlideExtractor.extract(pptxPath);
+    if (slides.isEmpty || _palco == null) return 0;
+    _slideUrls = slides
+        .map((s) => _palco!.serveMedia(
+            'slide_${s.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}',
+            s.bytes))
+        .whereType<String>()
+        .toList();
+    _projectSlide(0);
+    return _slideUrls.length;
+  }
+
+  /// Navegação next/prev da sequência de slides (setas do controle).
+  bool navigateSlides(String direction) {
+    if (_slideUrls.isEmpty) return false;
+    if (direction == 'next' && _slideIndex < _slideUrls.length - 1) {
+      _projectSlide(_slideIndex + 1);
+      return true;
+    }
+    if (direction == 'prev' && _slideIndex > 0) {
+      _projectSlide(_slideIndex - 1);
+      return true;
+    }
+    return false;
+  }
+
+  /// Encerra a apresentação de slides (volta ao idle).
+  void stopSlides() {
+    _slideUrls = [];
+    _slideIndex = -1;
+    _palco?.projectIdle();
+  }
+
+  /// Liga o palco: conecta na TV e projeta o IDLE (background definida).
   Future<bool> turnOn(DlnaRenderer tv) async {
     settings = await _settingsRepo.load();
     final ok = await _cast.connect(tv);
