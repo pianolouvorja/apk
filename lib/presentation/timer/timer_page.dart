@@ -79,6 +79,18 @@ class _TimerPageState extends State<TimerPage> {
     _presetRepository = widget.presetRepository ?? CountdownPresetRepository();
     _alertService = widget.alertService ?? CountdownAlertService();
     _loadPresets();
+    // F3.3l: palco ligado DEPOIS do start — re-espelha o timer corrente.
+    StageSession.instance.addListener(_onStageChanged);
+  }
+
+  void _onStageChanged() {
+    if (!mounted) return;
+    if (_stopwatch.isRunning) {
+      _castStopwatch();
+    } else if (_countdownRunning) {
+      _castCountdown();
+    }
+    setState(() {}); // badge aparece/some
   }
 
   Future<void> _loadPresets() async {
@@ -217,6 +229,7 @@ class _TimerPageState extends State<TimerPage> {
 
   @override
   void dispose() {
+    StageSession.instance.removeListener(_onStageChanged);
     _stopwatch.stop();
     _countdownRunning = false;
     _castStop(); // F3.3l: sair da tela tira o timer da TV
@@ -225,15 +238,32 @@ class _TimerPageState extends State<TimerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // --- Cronometro (Timer progressivo) ---
-          _SectionCard(
-            icon: TablerIcons.clock,
+      final theme = Theme.of(context);
+      final casting = StageSession.instance.isOn; // F3.3l
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // F3.3l: badge de espelhamento — timer vai pra TV com palco ligado.
+            if (casting)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(TablerIcons.cast, size: 18,
+                        color: theme.colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text('Espelhando no Palco',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary)),
+                  ],
+                ),
+              ),
+            // --- Cronometro (Timer progressivo) ---
+            _SectionCard(
+              icon: TablerIcons.clock,
             title: 'timer.stopwatch'.tr(),
             child: Column(
               children: [
