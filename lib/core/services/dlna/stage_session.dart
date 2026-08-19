@@ -64,6 +64,10 @@ class StageSession extends ChangeNotifier {
       if (m.type == 'remote-key' && m.fields['key'] is String) {
         navigateSlides(m.fields['key'] as String);
       }
+      // F3.3k: vídeo terminou na TV → volta ao idle do palco.
+      if (m.type == 'ended' && m.fields['media'] == 'video') {
+        stopSlides();
+      }
     });
     notifyListeners();
     return true;
@@ -198,10 +202,15 @@ class StageSession extends ChangeNotifier {
   }
 
   /// Navegação next/prev da sequência de slides (setas do controle).
+  /// No ÚLTIMO slide, next encerra a apresentação → idle (F3.3k).
   bool navigateSlides(String direction) {
     if (_slideUrls.isEmpty) return false;
-    if (direction == 'next' && _slideIndex < _slideUrls.length - 1) {
-      _projectSlide(_slideIndex + 1);
+    if (direction == 'next') {
+      if (_slideIndex < _slideUrls.length - 1) {
+        _projectSlide(_slideIndex + 1);
+        return true;
+      }
+      stopSlides(); // último slide + next → volta pro palco (idle)
       return true;
     }
     if (direction == 'prev' && _slideIndex > 0) {
@@ -216,6 +225,24 @@ class StageSession extends ChangeNotifier {
     _slideUrls = [];
     _slideIndex = -1;
     _palco?.projectIdle();
+  }
+
+  /// F3.3k: toca vídeo no palco. Arquivo local → serveMedia; URL externa
+  /// → proxy do sender (mixed content + headers da API).
+  bool playVideoOnStage(String pathOrUrl) {
+    if (_palco == null) return false;
+    var url = pathOrUrl;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      final file = File(url);
+      if (!file.existsSync()) return false;
+      final name = 'video_${file.uri.pathSegments.last}'
+          .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+      final served = _palco!.serveMedia(name, file.readAsBytesSync());
+      if (served == null) return false;
+      url = served;
+    }
+    _palco!.playVideo(url);
+    return true;
   }
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definida).

@@ -46,10 +46,35 @@ class LiturgyItemExecutor {
         return _executeMusic(context, item);
 
       case LiturgyItemType.site:
-      case LiturgyItemType.onlineVideo:
         return _executeUrl(context, item);
 
       case LiturgyItemType.video:
+        // F3.3k: com Palco ligado, vídeo LOCAL renderiza NA TV (receiver
+        // tem <video>); ao terminar volta ao idle. Sem palco: abre externo.
+        final stageV = StageSession.instance;
+        final vpath = item.filePath;
+        if (stageV.isOn && stageV.isPalcoMode && vpath != null) {
+          if (stageV.playVideoOnStage(vpath)) {
+            return 'Reproduzindo vídeo no Palco';
+          }
+        }
+        return _executeFile(context, item);
+
+      case LiturgyItemType.onlineVideo:
+        // F3.3k: vídeo ONLINE (youtube etc) — só projeta se for URL de
+        // arquivo direto (mp4/webm); senão abre externo (player dedicado).
+        final stageO = StageSession.instance;
+        final ourl = item.url;
+        if (stageO.isOn && stageO.isPalcoMode && ourl != null) {
+          final lower = ourl.toLowerCase();
+          if (lower.endsWith('.mp4') || lower.endsWith('.webm')) {
+            if (stageO.playVideoOnStage(ourl)) {
+              return 'Reproduzindo vídeo no Palco';
+            }
+          }
+        }
+        return _executeUrl(context, item);
+
       case LiturgyItemType.pdf:
       case LiturgyItemType.otherFiles:
         return _executeFile(context, item);
