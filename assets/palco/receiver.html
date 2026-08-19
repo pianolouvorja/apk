@@ -59,6 +59,20 @@
 </style>
 </head>
 <body>
+<!-- F3.3j: splash screen — some no WS OPEN ou 2.5s -->
+<div id="splash" style="position:fixed;inset:0;z-index:200;background:#000;
+  display:flex;align-items:center;justify-content:center;transition:opacity .6s">
+  <img src="/splash-palco.png" alt="" style="width:100%;height:100%;object-fit:cover">
+</div>
+<script>
+(function(){
+  var s=document.getElementById('splash');
+  function hide(){if(!s)return;s.style.opacity='0';
+    setTimeout(function(){s&&s.remove()},700);s=null}
+  setTimeout(hide,2500);
+  window.__hideSplash=hide;
+})();
+</script>
 <img id="bgPalco" alt="">
 <video id="video" style="display:none" preload="auto"></video>
 <img id="bg" alt=""><div id="veil"></div>
@@ -190,6 +204,7 @@ function doConnect(){
   setStatus('conectando '+host+':'+port+'…');
   try{ws=new WebSocket('ws://'+host+':'+port+'/palco')}catch(e){retry();return}
   ws.onopen=()=>{tries=0;dlog('WS OPEN '+host);setStatus('● '+host);
+    if(window.__hideSplash)window.__hideSplash(); // F3.3j: splash sai no connect
     localStorage.setItem('palcoHost',host)};
   ws.onmessage=ev=>{try{handle(JSON.parse(ev.data))}catch(e){}};
   ws.onclose=()=>{dlog('WS CLOSE');showIdle();
@@ -297,6 +312,7 @@ function handle(m){
       {const t=$('timer'); if(t.style.display!=='none'){clearInterval(t._iv||0);
         t.style.display='none';$('text').style.display='';}}
       if(m.background){$('bg').src=proxyUrl(m.background)}
+      else{$('bg').src='/bg-fallback.png'} // F3.3j: BG padrão sem imagem
       $('text').innerHTML=m.text||'';
       $('footer').textContent=m.footer||'';
       break;
@@ -324,6 +340,8 @@ function handle(m){
         // now playing (só se audio for o conteúdo principal)
         if(m.title){
           showNp(m.title, m.subtitle||'', m.cover||'');
+          // F3.3j: áudio sem imagem de fundo → BG padrão do palco
+          $('bg').src=m.background?proxyUrl(m.background):'/bg-fallback.png';
         }
       }
       if(m.action==='play'){

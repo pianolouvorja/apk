@@ -176,6 +176,32 @@ class PalcoSender {
           res.statusCode = 404;
         }
         await res.close();
+      } else if (path == '/bg-fallback.png') {
+        // F3.3j: BG padrao do palco quando o audio nao tem imagem de fundo.
+        try {
+          final png = (await rootBundle.load('assets/palco/bg-fallback.png'))
+              .buffer
+              .asUint8List();
+          res.headers.contentType = ContentType.parse('image/png');
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          res.add(png);
+        } catch (_) {
+          res.statusCode = 404;
+        }
+        await res.close();
+      } else if (path == '/splash-palco.png') {
+        // F3.3j: splash screen do receiver (exibida ao carregar).
+        try {
+          final png = (await rootBundle.load('assets/palco/splash-palco.png'))
+              .buffer
+              .asUint8List();
+          res.headers.contentType = ContentType.parse('image/png');
+          res.headers.set('Access-Control-Allow-Origin', '*');
+          res.add(png);
+        } catch (_) {
+          res.statusCode = 404;
+        }
+        await res.close();
       } else if (path == '/logo-louvor-ja.svg') {
         try {
           final svg = (await rootBundle.load('assets/palco/logo-louvor-ja.svg'))
