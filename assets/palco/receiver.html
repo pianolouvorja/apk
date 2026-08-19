@@ -328,6 +328,13 @@ function handle(m){
       if(m.background){$('bg').src=proxyUrl(m.background)}
       else{$('bg').src='/bg-fallback.png'} // F3.3j: BG padrão sem imagem
       $('text').innerHTML=m.text||'';
+      // F3.3o: fontSize/fontWeight dinâmicos (settings do operador).
+      {const t=$('text');
+        if(typeof m.fontSize==='number')
+          t.style.fontSize=(m.fontSize/10.8)+'vh'; // px@1080p -> vh
+        if(typeof m.fontWeight==='number')
+          t.style.fontWeight=m.fontWeight;
+      }
       // F3.3m: estilos da letra — sombra (intensidade) + caixinha (borda)
       {const t=$('text');
         t.classList.remove('shadow-on','shadow-off','box-on','box-off');

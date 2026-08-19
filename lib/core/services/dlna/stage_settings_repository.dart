@@ -37,6 +37,10 @@ class StageSettingsRepository {
         footerRefColor: Color(j['refColor'] as int? ?? 0xFFFCCE02),
         footerRefWeight: j['refWeight'] as int? ?? 600,
         showBibleVersion: j['showVer'] as bool? ?? true,
+        // F3.3o
+        bibleFontSize: (j['bSize'] as num?)?.toDouble() ?? 84,
+        bibleFontWeight: j['bWeight'] as int? ?? 500,
+        bibleTextColor: Color(j['bFg'] as int? ?? 0xFFFFFFFF),
       );
     } catch (_) {
       return const StageSettings();
@@ -61,6 +65,10 @@ class StageSettingsRepository {
       'refColor': s.footerRefColor.toARGB32(),
       'refWeight': s.footerRefWeight,
       'showVer': s.showBibleVersion,
+      // F3.3o
+      'bSize': s.bibleFontSize,
+      'bWeight': s.bibleFontWeight,
+      'bFg': s.bibleTextColor.toARGB32(),
     }));
   }
 

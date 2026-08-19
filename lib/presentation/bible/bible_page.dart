@@ -618,6 +618,7 @@ class _VerseListState extends State<_VerseList> {
       footerRef:
           '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
       footerVersion: version?.abbreviation,
+      isBible: true, // F3.3o: tipografia própria da Bíblia
     );
   }
   final _searchController = TextEditingController();

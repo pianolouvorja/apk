@@ -40,6 +40,14 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
     (0xFFB8E0FF, 'Azul claro'),
   ];
 
+  // F3.3o: cores da referência da Bíblia (rodapé).
+  static const _refPresets = [
+    (0xFFFCCE02, 'Dourado'),
+    (0xFFFFFFFF, 'Branco'),
+    (0xFF00C1E6, 'Ciano'),
+    (0xFFFFE9A8, 'Amarelo suave'),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -136,6 +144,123 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
               onSelectionChanged: (sel) =>
                   setState(() => _s = _s.copyWith(fontWeight: sel.first)),
             ),
+            const SizedBox(height: 20),
+
+            // ===== F3.3o: Bíblia — tipografia própria =====
+            const Divider(),
+            Text('Bíblia — aparência própria',
+                style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+
+            Text('Cor do texto (Bíblia)', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final (c, label) in _fgPresets)
+                  _colorChip(theme, Color(c), label, _s.bibleTextColor,
+                      (v) => setState(() => _s = _s.copyWith(bibleTextColor: v))),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            Text('Tamanho da fonte: ${_s.bibleFontSize.round()} px',
+                style: theme.textTheme.labelLarge),
+            Slider(
+              min: 50,
+              max: 140,
+              value: _s.bibleFontSize.clamp(50, 140),
+              onChanged: (v) =>
+                  setState(() => _s = _s.copyWith(bibleFontSize: v)),
+            ),
+
+            Text('Espessura (Bíblia)', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 4),
+            SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 400, label: Text('Normal')),
+                ButtonSegment(value: 500, label: Text('Leve+')),
+                ButtonSegment(value: 700, label: Text('Forte')),
+              ],
+              selected: {_s.bibleFontWeight},
+              onSelectionChanged: (sel) => setState(
+                  () => _s = _s.copyWith(bibleFontWeight: sel.first)),
+            ),
+            const SizedBox(height: 12),
+
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Mostrar versão da Bíblia no rodapé'),
+              value: _s.showBibleVersion,
+              onChanged: (v) =>
+                  setState(() => _s = _s.copyWith(showBibleVersion: v)),
+            ),
+
+            Text('Cor da referência (rodapé)',
+                style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final (c, label) in _refPresets)
+                  _colorChip(theme, Color(c), label, _s.footerRefColor,
+                      (v) => setState(() => _s = _s.copyWith(footerRefColor: v))),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ===== F3.3m: sombra e caixinha =====
+            const Divider(),
+            Text('Sombra e caixinha', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Sombra na letra'),
+              value: _s.textShadow,
+              onChanged: (v) =>
+                  setState(() => _s = _s.copyWith(textShadow: v)),
+            ),
+            if (_s.textShadow) ...[
+              Text('Intensidade da sombra', style: theme.textTheme.labelLarge),
+              Slider(
+                min: 0.2,
+                max: 1,
+                value: _s.shadowIntensity,
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(shadowIntensity: v)),
+              ),
+              Text('Espalhamento da sombra', style: theme.textTheme.labelLarge),
+              Slider(
+                min: 0.5,
+                max: 5,
+                value: _s.shadowBlur,
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(shadowBlur: v)),
+              ),
+            ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Caixinha atrás da letra'),
+              value: _s.textBox,
+              onChanged: (v) => setState(() => _s = _s.copyWith(textBox: v)),
+            ),
+            if (_s.textBox) ...[
+              Text('Opacidade da caixinha', style: theme.textTheme.labelLarge),
+              Slider(
+                min: 0.1,
+                max: 0.9,
+                value: _s.boxOpacity,
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(boxOpacity: v)),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Borda na caixinha'),
+                value: _s.boxBorder,
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(boxBorder: v)),
+              ),
+            ],
             const SizedBox(height: 20),
 
             Row(

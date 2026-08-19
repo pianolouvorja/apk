@@ -96,6 +96,8 @@ class PalcoController extends ChangeNotifier {
     bool? textBox,
     double? boxOpacity,
     Map<String, dynamic>? boxBorder,
+    double? fontSize,
+    int? fontWeight,
   }) {
     _sender.send(PalcoMessage.projection(
         text: text,
@@ -110,7 +112,9 @@ class PalcoController extends ChangeNotifier {
         shadowIntensity: shadowIntensity,
         textBox: textBox,
         boxOpacity: boxOpacity,
-        boxBorder: boxBorder));
+        boxBorder: boxBorder,
+        fontSize: fontSize,
+        fontWeight: fontWeight));
   }
 
   void projectIdle() {

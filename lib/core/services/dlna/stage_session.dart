@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:image/image.dart' as image;
 
 import 'dart:ui' as ui;
@@ -352,6 +353,7 @@ class StageSession extends ChangeNotifier {
     String? background,
     String? footerRef,
     String? footerVersion,
+    bool isBible = false,
   }) async {
     if (!isOn) return false;
     final content = _StageContent(title: title, body: body, footer: footer);
@@ -359,10 +361,14 @@ class StageSession extends ChangeNotifier {
     if (isPalcoMode) {
       // Palco WS: texto nativo (body com \n vira <br> no receiver).
       final text = [title, body].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
-      // F3.3m: estilos da letra (sombra/caixinha) e footer destacado.
+      // F3.3m/o: estilos da letra (sombra/caixinha) e footer destacado.
+      // Bíblia tem tipografia PRÓPRIA (tamanho/peso/cor) — diferente da música.
       final s = settings;
+      final fSize = isBible ? s.bibleFontSize : s.fontSize;
+      final fWeight =
+          isBible ? s.bibleFontWeight : s.fontWeight.value;
       _palco!.project(
-        text: text,
+        text: _colorize(text, isBible ? s.bibleTextColor : s.textColor),
         footer: footer ?? '',
         background: background,
         footerRef: footerRef,
@@ -377,10 +383,19 @@ class StageSession extends ChangeNotifier {
         boxBorder: s.boxBorder
             ? {'width': 0.4, 'color': 'rgba(255,255,255,.25)'}
             : null,
+        fontSize: fSize,
+        fontWeight: fWeight,
       );
       return true;
     }
     return _project(content);
+  }
+
+  /// Envolve o texto em <span style="color"> preservando <br>.
+  String _colorize(String text, Color c) {
+    final hex =
+        '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    return '<span style="color:$hex">$text</span>';
   }
 
   /// Volta ao idle (background aguardando mídia).

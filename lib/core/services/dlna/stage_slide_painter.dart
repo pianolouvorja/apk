@@ -196,6 +196,11 @@ class StageSettings {
   final int footerRefWeight;
   final bool showBibleVersion;
 
+  // ===== F3.3o: tipografia PRÓPRIA da Bíblia (diferente da música) =====
+  final double bibleFontSize;
+  final int bibleFontWeight;
+  final Color bibleTextColor;
+
   /// Capacidade da TV conectada (setada ao conectar; default FHD).
   final DlnaScreenCapability capability;
 
@@ -215,6 +220,9 @@ class StageSettings {
     this.footerRefColor = const Color(0xFFFCCE02),
     this.footerRefWeight = 600,
     this.showBibleVersion = true,
+    this.bibleFontSize = 84,
+    this.bibleFontWeight = 500,
+    this.bibleTextColor = Colors.white,
     this.capability = DlnaScreenCapability.fhd,
   });
 
@@ -235,6 +243,9 @@ class StageSettings {
     Color? footerRefColor,
     int? footerRefWeight,
     bool? showBibleVersion,
+    double? bibleFontSize,
+    int? bibleFontWeight,
+    Color? bibleTextColor,
     DlnaScreenCapability? capability,
   }) =>
       StageSettings(
@@ -255,6 +266,9 @@ class StageSettings {
         footerRefColor: footerRefColor ?? this.footerRefColor,
         footerRefWeight: footerRefWeight ?? this.footerRefWeight,
         showBibleVersion: showBibleVersion ?? this.showBibleVersion,
+        bibleFontSize: bibleFontSize ?? this.bibleFontSize,
+        bibleFontWeight: bibleFontWeight ?? this.bibleFontWeight,
+        bibleTextColor: bibleTextColor ?? this.bibleTextColor,
         capability: capability ?? this.capability,
       );
 }

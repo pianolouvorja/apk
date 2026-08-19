@@ -53,6 +53,8 @@ class PalcoMessage {
     bool? textBox,
     double? boxOpacity,
     Map<String, dynamic>? boxBorder,
+    double? fontSize,
+    int? fontWeight,
   }) =>
       PalcoMessage(type: 'projection', fields: {
         'text': text,
@@ -68,6 +70,8 @@ class PalcoMessage {
         if (textBox != null) 'textBox': textBox,
         if (boxOpacity != null) 'boxOpacity': boxOpacity,
         if (boxBorder != null) 'boxBorder': boxBorder,
+        if (fontSize != null) 'fontSize': fontSize,
+        if (fontWeight != null) 'fontWeight': fontWeight,
       });
 
   /// Áudio com now-playing opcional. [positionMs] sincroniza a TV com a
