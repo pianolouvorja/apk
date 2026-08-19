@@ -402,6 +402,10 @@ class StageSession extends ChangeNotifier {
   Future<void> clearContent() async {
     _lastContent = null;
     if (!isOn) return;
+    // F3.3p: limpa TAMBÉM sequência de slides/timer pendentes.
+    _slideUrls = [];
+    _slideIndex = -1;
+    _palco?.stopTimer();
     if (isPalcoMode) {
       _palco!.projectIdle();
       return;
