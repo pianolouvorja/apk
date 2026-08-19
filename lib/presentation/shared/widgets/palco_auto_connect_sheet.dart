@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/services/palco/palco_controller.dart' show PalcoTarget;
 
 import '../../../core/services/dlna/stage_session.dart';
+import '../../../core/services/dlna/palco_mdns_discovery.dart';
 import '../../../core/services/dlna/webos_tv_dial_probe.dart';
 import '../../../core/services/dlna/slide_http_server.dart';
 
@@ -73,20 +74,25 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
 
     // já conectou instantâneo (TV com Palco aberto)? o listener cuida.
 
-    // 2. escaneia TV webOS em paralelo (DIAL na 1926)
+    // F3.4 fase 2: mDNS primeiro (instantâneo — Android TV via NSD);
+    // DIAL 1926 como fallback (LG sem NSD). Multicast cego = fallback.
+    var tvs = <WebosTv>[];
     try {
-      final tvs = await WebosTvDialProbe.scan();
-      if (mounted) {
-        setState(() {
-          _scanningTv = false;
-          if (tvs.isNotEmpty) {
-            _tvName = tvs.first.friendlyName;
-            _tvIp = tvs.first.ip;
-          }
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _scanningTv = false);
+      tvs = await PalcoMdnsDiscovery.scan();
+    } catch (_) {/* mDNS bloqueado — segue pro fallback */}
+    if (tvs.isEmpty) {
+      try {
+        tvs = await WebosTvDialProbe.scan();
+      } catch (_) {/* nenhuma TV */}
+    }
+    if (mounted) {
+      setState(() {
+        _scanningTv = false;
+        if (tvs.isNotEmpty) {
+          _tvName = tvs.first.friendlyName;
+          _tvIp = tvs.first.ip;
+        }
+      });
     }
   }
 
