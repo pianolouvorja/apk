@@ -182,6 +182,20 @@ class StageSettings {
   final double margin;
   final Uint8List? backgroundImageBytes;
 
+  // ===== F3.3m: estilos visuais do Palco =====
+  /// Sombra da letra: on/off, blur (vh) e intensidade (0-1).
+  final bool textShadow;
+  final double shadowBlur; // vh (padrão 2.2)
+  final double shadowIntensity; // 0-1 (padrão .8)
+  /// Caixinha atrás da letra: on/off, opacidade do fundo e borda.
+  final bool textBox;
+  final double boxOpacity; // 0-1 (padrão .45)
+  final bool boxBorder; // borda na caixinha
+  /// Footer da Bíblia: cor/ peso da referência e exibição da versão.
+  final Color footerRefColor;
+  final int footerRefWeight;
+  final bool showBibleVersion;
+
   /// Capacidade da TV conectada (setada ao conectar; default FHD).
   final DlnaScreenCapability capability;
 
@@ -192,6 +206,15 @@ class StageSettings {
     this.fontWeight = FontWeight.w600,
     this.margin = 120,
     this.backgroundImageBytes,
+    this.textShadow = true,
+    this.shadowBlur = 2.2,
+    this.shadowIntensity = 0.8,
+    this.textBox = false,
+    this.boxOpacity = 0.45,
+    this.boxBorder = true,
+    this.footerRefColor = const Color(0xFFFCCE02),
+    this.footerRefWeight = 600,
+    this.showBibleVersion = true,
     this.capability = DlnaScreenCapability.fhd,
   });
 
@@ -203,6 +226,15 @@ class StageSettings {
     double? margin,
     Uint8List? backgroundImageBytes,
     bool clearBackgroundImage = false,
+    bool? textShadow,
+    double? shadowBlur,
+    double? shadowIntensity,
+    bool? textBox,
+    double? boxOpacity,
+    bool? boxBorder,
+    Color? footerRefColor,
+    int? footerRefWeight,
+    bool? showBibleVersion,
     DlnaScreenCapability? capability,
   }) =>
       StageSettings(
@@ -214,6 +246,15 @@ class StageSettings {
         backgroundImageBytes: clearBackgroundImage
             ? null
             : backgroundImageBytes ?? this.backgroundImageBytes,
+        textShadow: textShadow ?? this.textShadow,
+        shadowBlur: shadowBlur ?? this.shadowBlur,
+        shadowIntensity: shadowIntensity ?? this.shadowIntensity,
+        textBox: textBox ?? this.textBox,
+        boxOpacity: boxOpacity ?? this.boxOpacity,
+        boxBorder: boxBorder ?? this.boxBorder,
+        footerRefColor: footerRefColor ?? this.footerRefColor,
+        footerRefWeight: footerRefWeight ?? this.footerRefWeight,
+        showBibleVersion: showBibleVersion ?? this.showBibleVersion,
         capability: capability ?? this.capability,
       );
 }

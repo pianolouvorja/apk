@@ -607,10 +607,17 @@ class _VerseListState extends State<_VerseList> {
     final book = state.books
         .where((b) => b.id == state.selectedBookId)
         .firstOrNull;
+    // F3.3m: referência destacada (cor/ peso próprios) + versão ao lado.
+    final version = state.versions
+        .where((v) => v.id == state.selectedVersionId)
+        .firstOrNull;
     await stage.project(
       title: text,
       footer:
           '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footerRef:
+          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footerVersion: version?.abbreviation,
     );
   }
   final _searchController = TextEditingController();

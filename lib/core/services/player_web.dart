@@ -40,6 +40,12 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     if (_audio != null) _audio!.currentTime = position.inMilliseconds / 1000.0;
   }
 
+  @override
+  Future<void> setVolume(double v) async {
+    _ensure();
+    if (_audio != null) _audio!.volume = v;
+  }
+
   void _ensure() {
     _audio ??= AudioElement()
       ..onPlay.listen((_) {

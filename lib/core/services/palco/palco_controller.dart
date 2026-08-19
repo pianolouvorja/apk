@@ -82,9 +82,35 @@ class PalcoController extends ChangeNotifier {
 
   // ---- Envios (espelham o protocolo v2) ----
 
-  void project({required String text, String footer = '', String? background}) {
+  void project({
+    required String text,
+    String footer = '',
+    String? background,
+    String? footerRef,
+    String? footerColor,
+    int? footerWeight,
+    String? footerVersion,
+    bool? textShadow,
+    double? shadowBlur,
+    double? shadowIntensity,
+    bool? textBox,
+    double? boxOpacity,
+    Map<String, dynamic>? boxBorder,
+  }) {
     _sender.send(PalcoMessage.projection(
-        text: text, footer: footer, background: background));
+        text: text,
+        footer: footer,
+        background: background,
+        footerRef: footerRef,
+        footerColor: footerColor,
+        footerWeight: footerWeight,
+        footerVersion: footerVersion,
+        textShadow: textShadow,
+        shadowBlur: shadowBlur,
+        shadowIntensity: shadowIntensity,
+        textBox: textBox,
+        boxOpacity: boxOpacity,
+        boxBorder: boxBorder));
   }
 
   void projectIdle() {

@@ -27,6 +27,16 @@ class StageSettingsRepository {
         fontSize: (j['size'] as num?)?.toDouble() ?? 96,
         fontWeight: FontWeight.values.firstWhere((w) => w.value == (j['weight'] as int? ?? 5), orElse: () => FontWeight.w600),
         margin: (j['margin'] as num?)?.toDouble() ?? 120,
+        // F3.3m
+        textShadow: j['tsOn'] as bool? ?? true,
+        shadowBlur: (j['tsBlur'] as num?)?.toDouble() ?? 2.2,
+        shadowIntensity: (j['tsInt'] as num?)?.toDouble() ?? 0.8,
+        textBox: j['boxOn'] as bool? ?? false,
+        boxOpacity: (j['boxBg'] as num?)?.toDouble() ?? 0.45,
+        boxBorder: j['boxBorder'] as bool? ?? true,
+        footerRefColor: Color(j['refColor'] as int? ?? 0xFFFCCE02),
+        footerRefWeight: j['refWeight'] as int? ?? 600,
+        showBibleVersion: j['showVer'] as bool? ?? true,
       );
     } catch (_) {
       return const StageSettings();
@@ -41,6 +51,16 @@ class StageSettingsRepository {
       'size': s.fontSize,
       'weight': s.fontWeight.value,
       'margin': s.margin,
+      // F3.3m
+      'tsOn': s.textShadow,
+      'tsBlur': s.shadowBlur,
+      'tsInt': s.shadowIntensity,
+      'boxOn': s.textBox,
+      'boxBg': s.boxOpacity,
+      'boxBorder': s.boxBorder,
+      'refColor': s.footerRefColor.toARGB32(),
+      'refWeight': s.footerRefWeight,
+      'showVer': s.showBibleVersion,
     }));
   }
 

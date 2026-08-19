@@ -36,15 +36,38 @@ class PalcoMessage {
   // ---- Fabricadores sender→receiver ----
 
   /// Projeta texto/BG. [text] aceita <br> (quebra de linha, innerHTML no receiver).
+/// F3.3m: [footerRef]/[footerColor]/[footerWeight]/[footerVersion] — footer
+/// com referência destacada + versão (Bíblia). [textShadow]/[shadowBlur]/
+/// [shadowIntensity]/[textBox]/[boxOpacity]/[boxBorder] — estilos da letra.
   static PalcoMessage projection({
     required String text,
     String footer = '',
     String? background,
+    String? footerRef,
+    String? footerColor,
+    int? footerWeight,
+    String? footerVersion,
+    bool? textShadow,
+    double? shadowBlur,
+    double? shadowIntensity,
+    bool? textBox,
+    double? boxOpacity,
+    Map<String, dynamic>? boxBorder,
   }) =>
       PalcoMessage(type: 'projection', fields: {
         'text': text,
         'footer': footer,
         if (background != null) 'background': background,
+        if (footerRef != null) 'footerRef': footerRef,
+        if (footerColor != null) 'footerColor': footerColor,
+        if (footerWeight != null) 'footerWeight': footerWeight,
+        if (footerVersion != null) 'footerVersion': footerVersion,
+        if (textShadow != null) 'textShadow': textShadow,
+        if (shadowBlur != null) 'shadowBlur': shadowBlur,
+        if (shadowIntensity != null) 'shadowIntensity': shadowIntensity,
+        if (textBox != null) 'textBox': textBox,
+        if (boxOpacity != null) 'boxOpacity': boxOpacity,
+        if (boxBorder != null) 'boxBorder': boxBorder,
       });
 
   /// Áudio com now-playing opcional. [positionMs] sincroniza a TV com a

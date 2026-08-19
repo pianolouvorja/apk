@@ -69,6 +69,14 @@ class StageSession extends ChangeNotifier {
         stopSlides();
       }
     });
+    // F3.3m: re-aplica o BG do usuário como bgPalco (body do palco).
+    try {
+      final bytes = await _settingsRepo.loadBackgroundImage();
+      if (bytes != null) {
+        final url = p.serveMedia('palco_bg.png', bytes);
+        if (url != null) p.setPalcoBackground(url);
+      }
+    } catch (_) {/* sem BG salvo: segue */}
     notifyListeners();
     return true;
   }
@@ -295,11 +303,24 @@ class StageSession extends ChangeNotifier {
   }
 
   /// Define nova imagem de fundo (path escolhido pelo usuário),
-  /// persiste e re-projeta se ligado.
+  /// persiste e re-projeta se ligado. F3.3m: no modo Palco WS o BG do
+  /// usuário vira o bgPalco (body do palco) servido via /media.
   Future<void> setBackgroundFromFile(String path) async {
     final saved = await _settingsRepo.saveBackgroundImage(path);
     if (saved == null) return;
     await _loadBackground();
+    if (isPalcoMode) {
+      final bytes = await _settingsRepo.loadBackgroundImage();
+      if (bytes != null && _palco != null) {
+        final ext = path.split('.').last.toLowerCase();
+        final url = _palco!.serveMedia(
+            'palco_bg.${ext == 'jpg' ? 'jpg' : 'png'}', bytes);
+        if (url != null) {
+          _palco!.setPalcoBackground(url);
+          return; // bgPalco aplicado; idle já mostra por trás
+        }
+      }
+    }
     await refresh();
   }
 
@@ -329,6 +350,8 @@ class StageSession extends ChangeNotifier {
     String? body,
     String? footer,
     String? background,
+    String? footerRef,
+    String? footerVersion,
   }) async {
     if (!isOn) return false;
     final content = _StageContent(title: title, body: body, footer: footer);
@@ -336,7 +359,25 @@ class StageSession extends ChangeNotifier {
     if (isPalcoMode) {
       // Palco WS: texto nativo (body com \n vira <br> no receiver).
       final text = [title, body].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
-      _palco!.project(text: text, footer: footer ?? '', background: background);
+      // F3.3m: estilos da letra (sombra/caixinha) e footer destacado.
+      final s = settings;
+      _palco!.project(
+        text: text,
+        footer: footer ?? '',
+        background: background,
+        footerRef: footerRef,
+        footerColor: '#${s.footerRefColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+        footerWeight: s.footerRefWeight,
+        footerVersion: (s.showBibleVersion && footerVersion != null) ? footerVersion : null,
+        textShadow: s.textShadow,
+        shadowBlur: s.shadowBlur,
+        shadowIntensity: s.shadowIntensity,
+        textBox: s.textBox,
+        boxOpacity: s.boxOpacity,
+        boxBorder: s.boxBorder
+            ? {'width': 0.4, 'color': 'rgba(255,255,255,.25)'}
+            : null,
+      );
       return true;
     }
     return _project(content);

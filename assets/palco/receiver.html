@@ -19,9 +19,19 @@
   #text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     text-align:center;width:84vw;font-size:6.5vh;font-weight:600;line-height:1.35;
     text-shadow:0 2px 12px rgba(0,0,0,.8)}
-  
+  /* F3.3m: estilos dinâmicos da letra (sombra/caixinha) */
+  #text.shadow-on{text-shadow:var(--ts,0 3px 18px rgba(0,0,0,.8))}
+  #text.box-on{background:rgba(0,0,0,var(--box-bg,.45));
+    padding:4vh 5vw;border-radius:2vh;
+    border:var(--box-border,.4vh solid rgba(255,255,255,.25))}
+  #text.shadow-off{text-shadow:none}
+  #text.box-off{background:none;padding:0;border:none}
+
   #footer{position:fixed;bottom:4vh;left:0;right:0;text-align:center;
     font-size:2.6vh;font-weight:300;opacity:.7}
+  /* F3.3m: referência da passagem destacada + versão ao lado */
+  #footer .ref{font-weight:var(--ref-weight,600);color:var(--ref-color,#FCCE02)}
+  #footer .ver{font-weight:300;opacity:.65;margin-left:1.2vh;font-size:.85em}
   #idle{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10;
     text-align:center;transition:opacity .5s}
   #idleCenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -314,7 +324,28 @@ function handle(m){
       if(m.background){$('bg').src=proxyUrl(m.background)}
       else{$('bg').src='/bg-fallback.png'} // F3.3j: BG padrão sem imagem
       $('text').innerHTML=m.text||'';
-      $('footer').textContent=m.footer||'';
+      // F3.3m: estilos da letra — sombra (intensidade) + caixinha (borda)
+      {const t=$('text');
+        t.classList.remove('shadow-on','shadow-off','box-on','box-off');
+        if(m.textShadow===false){t.classList.add('shadow-off')}
+        else{t.classList.add('shadow-on');
+          if(typeof m.shadowBlur==='number')
+            t.style.setProperty('--ts',`0 ${Math.max(1,m.shadowBlur/3)}vh ${m.shadowBlur}vh rgba(0,0,0,${m.shadowIntensity??0.8})`)}
+        if(m.textBox){t.classList.add('box-on');
+          if(typeof m.boxOpacity==='number')t.style.setProperty('--box-bg',m.boxOpacity);
+          t.style.setProperty('--box-border',
+            m.boxBorder?`${m.boxBorder.width||0.4}vh solid ${m.boxBorder.color||'rgba(255,255,255,.25)'}`:'none')}
+        else{t.classList.add('box-off')}
+      }
+      // F3.3m: footer com referência destacada + versão
+      {const f=$('footer');
+        if(m.footerRef){
+          f.innerHTML=`<span class="ref" style="--ref-color:${m.footerColor||'#FCCE02'};--ref-weight:${m.footerWeight||600}">${m.footerRef}</span>`+
+            (m.footerVersion?`<span class="ver">${m.footerVersion}</span>`:'');
+        }else{
+          f.textContent=m.footer||'';
+        }
+      }
       break;
     case 'bgPalco':
       // BG permanente do palco (idle) — personalização, não da música
