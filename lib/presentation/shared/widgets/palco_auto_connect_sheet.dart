@@ -9,6 +9,7 @@ import '../../../core/services/palco/palco_controller.dart' show PalcoTarget;
 
 import '../../../core/services/dlna/stage_session.dart';
 import '../../../core/services/dlna/palco_mdns_discovery.dart';
+import '../../../core/services/dlna/palco_wake.dart';
 import '../../../core/services/dlna/webos_tv_dial_probe.dart';
 import '../../../core/services/dlna/slide_http_server.dart';
 
@@ -91,6 +92,20 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
         if (tvs.isNotEmpty) {
           _tvName = tvs.first.friendlyName;
           _tvIp = tvs.first.ip;
+        }
+      });
+    }
+    // F3.4 fase 3a (RF-003): TV detectada mas receiver não conectou em 3s
+    // → WAKE (Android TV abre o Palco sozinha; LG ignora em silêncio).
+    if (tvs.isNotEmpty && !_connected) {
+      Future<void>.delayed(const Duration(seconds: 3), () async {
+        if (_connected || _tvIp == null) return;
+        final delivered = await PalcoWake.send(_tvIp!);
+        if (delivered && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Abrindo o Palco na TV…'),
+            duration: Duration(seconds: 2),
+          ));
         }
       });
     }
