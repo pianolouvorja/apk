@@ -34,6 +34,9 @@ class PalcoController extends ChangeNotifier {
   String? _httpBase;
 
   bool get isConnected => _sender.clientCount > 0;
+
+  /// F3.3x: IP da TV conectada (visto pelo socket WS no momento do connect).
+  String? get receiverIp => _sender.receiverIp;
   int get clientCount => _sender.clientCount;
 
   /// Eventos receiver→sender expostos (unlocked, ended, remote-key...).
@@ -48,7 +51,10 @@ class PalcoController extends ChangeNotifier {
     _httpBase = base;
     target = tv;
     _eventsSub?.cancel();
-    _eventsSub = _sender.events.listen((_) {}, onError: (_) {});
+    // F3.3x: qualquer evento do receiver notifica — isConnected/receiverIp
+    // mudam quando a TV conecta, e a UI precisa reagir.
+    _eventsSub = _sender.events.listen((_) => notifyListeners(),
+        onError: (_) {});
     debugPrint('[PALCO] conectado (sender ativo, TV=$tv.ip)');
     notifyListeners();
     return true;

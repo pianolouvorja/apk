@@ -244,7 +244,13 @@
     "customizeHint": "Cores, fonte, tamanho",
     "turnOff": "Desligar palco",
     "castOn": "Palco ativo",
-    "castOff": "Transmitir para TV"
+    "castOff": "Transmitir para TV",
+    "yourIp": "Seu IP (digite na TV)",
+    "ipHint": "Abra o app Palco na TV → digite este IP",
+    "dlnaSection": "TVs DLNA (hinos/slides)",
+    "palcoSection": "Palco LouvorJA (receiver webOS)",
+    "palcoManual": "Conectar Palco manual",
+    "palcoManualHint": "IP da TV onde o receiver já está aberto"
   },
   "sync": {
     "sectionTitle": "Sincronização",

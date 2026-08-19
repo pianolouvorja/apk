@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -52,7 +53,7 @@ class LiturgyPage extends StatelessWidget {
           return Scaffold(
             appBar: AppBar(
             title: Text('liturgy.title'.tr()),
-            actions: const [StageClearButton(), StageCastButton()],
+            actions: const [StageClearButton(), StageStopVideoButton(), StageCastButton()],
           ),
             body: const Center(child: CircularProgressIndicator()),
           );

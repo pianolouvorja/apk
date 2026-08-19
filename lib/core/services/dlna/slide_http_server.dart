@@ -25,6 +25,7 @@ class SlideHttpServer {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
       _server!.listen(_handle, onError: (_) {});
       final ip = await _localIp();
+      _cachedLocalIp = ip;
       if (ip == null) {
         debugPrint('[DLNA] SlideHttpServer: _localIp() = null (sem IP LAN)');
         return null;
@@ -83,6 +84,18 @@ class SlideHttpServer {
   /// Agora: se o renderer está em 192.168.1.x, anunciamos o IP do celular
   /// também em 192.168.1.x.
   static String? rendererSubnetHint;
+  static String? _cachedLocalIp;
+
+  static String? get localIp => _cachedLocalIp;
+
+  /// F3.3ab: resolve o IP LAN sem subir servidor (usado pelo bottom sheet
+  /// do cast antes de qualquer conexão).
+  static Future<String?> resolveLocalIp() async {
+    if (_cachedLocalIp != null) return _cachedLocalIp;
+    final ip = await _localIp();
+    _cachedLocalIp = ip;
+    return ip;
+  }
 
   static Future<String?> _localIp() async {
     try {

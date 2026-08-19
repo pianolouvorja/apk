@@ -12,6 +12,7 @@ import '../../core/services/now_playing.dart';
 import '../../core/services/dlna/stage_session.dart';
 import '../../core/services/palco/palco_controller.dart' show PalcoAudioRoute;
 import '../shared/widgets/stage_cast_button.dart';
+import '../shared/widgets/stage_stop_video_button.dart';
 import '../../domain/entities/hymn.dart';
 import '../../domain/entities/lyric_slides.dart';
 import '../shared/widgets/player_timeline.dart';
@@ -237,6 +238,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         ],
                       ),
                     ),
+                    const StageStopVideoButton(),
                     const StageCastButton(),
                     if (widget.detail.hasInstrumental)
                       IconButton(

@@ -13,6 +13,7 @@ import '../../data/repositories/countdown_preset_repository.dart';
 import '../../domain/entities/countdown_preset.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 
 class TimerPage extends StatefulWidget {
   final CountdownPresetRepository? presetRepository;
@@ -244,7 +245,7 @@ class _TimerPageState extends State<TimerPage> {
             return Scaffold(
               appBar: AppBar(
                 title: Text('timer.title'.tr()),
-                actions: const [StageClearButton(), StageCastButton()],
+                actions: const [StageClearButton(), StageStopVideoButton(), StageCastButton()],
               ),
               body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),

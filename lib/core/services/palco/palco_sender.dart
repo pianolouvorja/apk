@@ -35,6 +35,11 @@ class PalcoSender {
   int get clientCount => _clients.length;
   bool get isRunning => _ws != null;
 
+  /// F3.3x: IP do último receiver conectado (visto pelo socket WS).
+  /// Nulo até a TV conectar pela primeira vez.
+  String? _receiverIp;
+  String? get receiverIp => _receiverIp;
+
   /// Sub-rede da TV (hint para anunciar o IP certo — igual DLNA).
   String? rendererSubnetHint;
 
@@ -100,7 +105,22 @@ class PalcoSender {
     if (req.uri.path == '/palco') {
       WebSocketTransformer.upgrade(req).then((ws) {
         _clients.add(ws);
+        // F3.3x: IP do receiver (visto pelo socket) — exibido no app e
+        // na TV pra debug/ares sem precisar de scan reverso.
+        final remoteIp = req.connectionInfo?.remoteAddress.address;
+        if (remoteIp != null && remoteIp != _receiverIp) {
+          _receiverIp = remoteIp;
+          debugPrint('[PALCO] receiver IP: $remoteIp');
+        }
         debugPrint('[PALCO] receiver conectado (${_clients.length})');
+        // F3.3x: diz à TV qual o IP DELA (visto pelo socket) — o receiver
+        // exibe discretamente no idle (debug/ares).
+        if (remoteIp != null) {
+          try {
+            ws.add(jsonEncode(PalcoMessage(
+                type: 'youare', fields: {'ip': remoteIp}).toJson()));
+          } catch (_) {}
+        }
         ws.listen(
           (data) {
             try {

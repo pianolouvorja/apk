@@ -7,10 +7,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:image/image.dart' as image;
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'dart:ui' as ui;
 
 import 'ssdp_discovery.dart';
+import 'webos_tv_dial_probe.dart';
 import 'cast_controller.dart';
 import 'stage_slide_painter.dart';
 import 'stage_settings_repository.dart';
@@ -47,6 +49,11 @@ class StageSession extends ChangeNotifier {
 
   bool get isOn => _cast.isConnected || isPalcoMode;
   String? get rendererName => isPalcoMode ? _palco!.target?.name : _cast.rendererName;
+
+  /// F3.3x: IP real da TV conectada (via socket WS) — nulo até conectar.
+  /// Diferente do target (IP do próprio celular): este é o DA TV.
+  String? get receiverIp =>
+      isPalcoMode && _palco!.isConnected ? _palco!.receiverIp : null;
   String? get castLastError => _cast.lastError;
 
   /// Liga o palco no modo Palco WS (receiver LouvorJA na TV).
@@ -67,6 +74,8 @@ class StageSession extends ChangeNotifier {
       }
       // F3.3k: vídeo terminou na TV → volta ao idle do palco.
       if (m.type == 'ended' && m.fields['media'] == 'video') {
+        _videoOnStage = false;
+        notifyListeners();
         stopSlides();
       }
     });
@@ -78,8 +87,37 @@ class StageSession extends ChangeNotifier {
         if (url != null) p.setPalcoBackground(url);
       }
     } catch (_) {/* sem BG salvo: segue */}
+    // F3.3u: wakelock — CPU sleep com tela apagada derruba o WS mesmo com
+    // foreground service em alguns aparelhos (One UI agressivo).
+    try {
+      await WakelockPlus.enable();
+    } catch (_) {}
     notifyListeners();
     return true;
+  }
+
+  /// F3.3y: após ligar o sender, detecta TVs na rede (SSDP). Se uma TV foi
+  /// encontrada mas nenhum receiver conectou em ~8s, orienta o operador a
+  /// abrir o app Palco na TV pelo controle (webOS não permite launch remoto
+  /// fora do Dev Mode — limitação da plataforma, não do app).
+  /// Retorna mensagem de orientação ou null se tudo certo.
+  Future<String?> checkTvNeedsPalcoOpen() async {
+    // espera 8s pelo receiver conectar sozinho (scan da TV é rápido)
+    for (var i = 0; i < 16; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (_palco != null && _palco!.isConnected) return null; // conectou
+    }
+    // sem receiver: tem TV webOS na rede? (DIAL HTTP unicast na 1926 —
+    // imune a multicast; DLNA/SSDP desativado: multicast cego no Wi-Fi)
+    try {
+      final tvs = await WebosTvDialProbe.scan();
+      if (tvs.isNotEmpty) {
+        final tv = tvs.first;
+        return 'TV detectada: ${tv.friendlyName} (${tv.ip}). '
+            'Abra o app Palco nela pelo controle — ele conecta sozinho.';
+      }
+    } catch (_) {}
+    return 'Nenhuma TV webOS na rede. Verifique TV e celular na mesma rede Wi-Fi.';
   }
 
   StreamSubscription<PalcoMessage>? _remoteKeySub;
@@ -251,8 +289,23 @@ class StageSession extends ChangeNotifier {
       url = served;
     }
     _palco!.playVideo(url);
+    _videoOnStage = true;
+    notifyListeners();
     return true;
   }
+
+  /// F3.3w: interrompe o vídeo rodando no palco (volta ao idle).
+  /// Usado pelo botão "Parar vídeo" quando um item de vídeo da liturgia
+  /// está em execução na TV.
+  void stopVideoOnStage() {
+    _videoOnStage = false;
+    notifyListeners();
+    _palco?.stopVideo();
+  }
+
+  /// F3.3w: true enquanto um vídeo projetado pela liturgia roda na TV.
+  bool _videoOnStage = false;
+  bool get isVideoOnStage => _videoOnStage;
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definida).
   Future<bool> turnOn(DlnaRenderer tv) async {
@@ -275,6 +328,9 @@ class StageSession extends ChangeNotifier {
   Future<void> turnOff() async {
     if (_palco != null) {
       unawaited(PalcoForeground.stop());
+      try {
+        await WakelockPlus.disable();
+      } catch (_) {}
       await _palco!.disconnect();
       _palco = null;
     } else {

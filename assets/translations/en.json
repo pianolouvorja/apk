@@ -245,7 +245,13 @@
     "customizeHint": "Colors, font, size",
     "turnOff": "Turn stage off",
     "castOn": "Stage active",
-    "castOff": "Cast to TV"
+    "castOff": "Cast to TV",
+    "yourIp": "Your IP (enter on TV)",
+    "ipHint": "Open Palco app on TV → enter this IP",
+    "dlnaSection": "DLNA TVs (hymns/slides)",
+    "palcoSection": "Palco LouvorJA (webOS receiver)",
+    "palcoManual": "Connect Palco manually",
+    "palcoManualHint": "IP of TV where receiver is already open"
   },
   "sync": {
     "sectionTitle": "Synchronization",

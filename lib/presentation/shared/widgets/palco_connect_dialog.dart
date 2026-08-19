@@ -1,96 +1,94 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:flutter/services.dart';
 
-import '../../../core/services/palco/palco_discovery.dart';
-
-/// Dialog de conexão Palco F3.4: lista receivers descobertos na sub-rede
-/// (scan :7080/status) + campo de IP manual como alternativa avançada.
+/// F3.3t: o receiver Palco na TV é CLIENTE WebSocket — não escuta porta
+/// nenhuma, logo um scan de rede nunca vai encontrá-lo. O fluxo correto é
+/// invertido: o CELULAR sobe o sender (HTTP :7080 + WS :7081) e mostra o
+/// IP dele; a TV (app Palco instalado) conecta nesse IP.
 ///
-/// Retorna o IP escolhido (String) ou null se cancelado.
+/// Este dialog substitui o antigo scan enganoso (:7080/status na sub-rede,
+/// que achava outros celulares — nunca a TV) por:
+///  1. IP do celular em destaque + botão copiar (pra digitar/QR na TV)
+///  2. Campo de confirmação simples (o IP da TV não é mais necessário
+///     para conectar — o sender aceita qualquer receiver que conecte).
+///
+/// Retorna true se o usuário confirmou (sender ligado), null se cancelou.
 class PalcoConnectDialog extends StatefulWidget {
-  const PalcoConnectDialog({super.key});
+  final String mobileIp;
+
+  const PalcoConnectDialog({super.key, required this.mobileIp});
 
   @override
   State<PalcoConnectDialog> createState() => _PalcoConnectDialogState();
 }
 
 class _PalcoConnectDialogState extends State<PalcoConnectDialog> {
-  final TextEditingController _ctrl = TextEditingController();
-  List<String>? _found;
-  bool _scanning = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _scan();
-  }
-
-  Future<void> _scan() async {
-    final found = await PalcoDiscovery.scan();
-    if (mounted) setState(() { _found = found; _scanning = false; });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  bool _copied = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: const Text('Palco LouvorJA'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_scanning)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                  SizedBox(width: 12),
-                  Text('Procurando Palcos na rede…'),
-                ],
-              ),
-            )
-          else if (_found!.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text(
-                  'Nenhum Palco encontrado. Abra o app Palco na TV (ou um '
-                  'browser em http://<ip-do-celular>:7080) e tente de novo, '
-                  'ou use o IP manual abaixo.'),
-            )
-          else
-            ..._found!.map((ip) => ListTile(
-                  dense: true,
-                  leading: const Icon(TablerIcons.deviceTv),
-                  title: Text('Palco em $ip'),
-                  onTap: () => Navigator.of(context).pop(ip),
-                )),
-          const Divider(height: 1),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-                hintText: 'IP manual (ex: 192.168.1.12)'),
+          Text('Abra o app Palco na TV e digite este IP:',
+              style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.mobileIp,
+                    style: theme.textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copiar',
+                  onPressed: () async {
+                    await Clipboard.setData(
+                        ClipboardData(text: widget.mobileIp));
+                    if (mounted) {
+                      setState(() => _copied = true);
+                      Future.delayed(const Duration(seconds: 2),
+                          () => mounted ? setState(() => _copied = false) : null);
+                    }
+                  },
+                  icon: Icon(_copied ? Icons.check : Icons.copy),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'O receiver da TV conecta sozinho neste celular assim que o IP '
+            'for informado. O sender fica ativo aguardando a conexão.',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar')),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
         FilledButton(
-            onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
-            child: const Text('Conectar')),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Ligar sender'),
+        ),
       ],
     );
   }
