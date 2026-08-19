@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/services/countdown_alert_service.dart';
+import '../../core/services/dlna/stage_session.dart';
 import '../../data/repositories/countdown_preset_repository.dart';
 import '../../domain/entities/countdown_preset.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -25,6 +26,43 @@ class TimerPage extends StatefulWidget {
 class _TimerPageState extends State<TimerPage> {
   final _stopwatch = Stopwatch();
   Duration _elapsed = Duration.zero;
+
+  // ===== Cast do timer pro Palco (F3.3l) =====
+  // Palco ligado = timer espelha na TV. Regressivo usa o renderer NATIVO
+  // do receiver (conta sozinho, sem tick-a-tick); stopwatch manda o tempo
+  // decorrido e a TV conta a partir dele (chrono).
+  void _castCountdown() {
+    final stage = StageSession.instance;
+    if (!stage.isOn || !stage.isPalcoMode) return;
+    if (!_countdownRunning) {
+      stage.palco?.stopTimer();
+      return;
+    }
+    stage.palco?.startTimer(
+      duration: _countdownRemaining.inSeconds,
+      mode: 'countdown',
+      label: 'timer.countdown'.tr(),
+    );
+  }
+
+  void _castStopwatch() {
+    final stage = StageSession.instance;
+    if (!stage.isOn || !stage.isPalcoMode) return;
+    if (!_stopwatch.isRunning) {
+      stage.palco?.stopTimer();
+      return;
+    }
+    // chrono: TV conta a partir do elapsed atual (renderer nativo).
+    stage.palco?.startTimer(
+      duration: _stopwatch.elapsed.inSeconds,
+      mode: 'chrono',
+      label: 'timer.stopwatch'.tr(),
+    );
+  }
+
+  void _castStop() {
+    StageSession.instance.palco?.stopTimer();
+  }
 
   // Countdown
   int _countdownMinutes = 5;
@@ -103,6 +141,7 @@ class _TimerPageState extends State<TimerPage> {
     if (_stopwatch.isRunning) {
       _tickStopwatch();
     }
+    _castStopwatch(); // F3.3l
   }
 
   void _tickStopwatch() {
@@ -120,6 +159,7 @@ class _TimerPageState extends State<TimerPage> {
       _stopwatch.reset();
       _elapsed = Duration.zero;
     });
+    _castStop(); // F3.3l
   }
 
   void _startCountdown() {
@@ -133,6 +173,7 @@ class _TimerPageState extends State<TimerPage> {
       _countdownRunning = true;
     });
     _tickCountdown();
+    _castCountdown(); // F3.3l
   }
 
   void _tickCountdown() {
@@ -163,6 +204,7 @@ class _TimerPageState extends State<TimerPage> {
     setState(() {
       _countdownRunning = false;
     });
+    _castStop(); // F3.3l
   }
 
   void _resetCountdown() {
@@ -170,12 +212,14 @@ class _TimerPageState extends State<TimerPage> {
       _countdownRunning = false;
       _countdownRemaining = Duration.zero;
     });
+    _castStop(); // F3.3l
   }
 
   @override
   void dispose() {
     _stopwatch.stop();
     _countdownRunning = false;
+    _castStop(); // F3.3l: sair da tela tira o timer da TV
     super.dispose();
   }
 
