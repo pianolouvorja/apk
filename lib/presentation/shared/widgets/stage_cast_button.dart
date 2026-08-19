@@ -210,6 +210,11 @@ class _StageCastButtonState extends State<StageCastButton> {
                   showModalBottomSheet<void>(
                     context: context,
                     isScrollControlled: true,
+                    // A03 (tela pequena): sheet enorme passava da altura da
+                    // tela — constraint evita overflow/fechamento brusco.
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.85,
+                    ),
                     builder: (_) => StageCustomizationSheet(
                       initial: session.settings,
                       onApply: (s) => session.updateSettings(s),
