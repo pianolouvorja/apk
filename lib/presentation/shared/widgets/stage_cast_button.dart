@@ -10,7 +10,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import '../../../core/services/dlna/slide_http_server.dart';
 import '../../../core/services/dlna/stage_session.dart';
 import '../../../core/services/palco/palco_controller.dart';
-import 'palco_connect_dialog.dart';
+import 'palco_auto_connect_sheet.dart';
 import '../../hymns/stage_customization_sheet.dart';
 
 /// Botão Palco compartilhado: liga/desliga o cast global.
@@ -65,72 +65,10 @@ class _StageCastButtonState extends State<StageCastButton> {
     if (mounted) setState(() {});
   }
 
-  /// Lê último IP do Palco salvo (SharedPreferences).
-  Future<String?> _getLastPalcoIp() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('palco_last_ip');
-  }
 
   /// Salva IP do Palco para próxima vez.
-  Future<void> _saveLastPalcoIp(String ip) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('palco_last_ip', ip);
-  }
 
-  /// Conecta no receiver webOS pelo IP salvo.
-  Future<void> _connectPalcoByIp(String ip) async {
-    final ok = await StageSession.instance.turnOnPalco(PalcoTarget(
-      name: 'Palco ($ip)',
-      ip: ip,
-    ));
-    if (!mounted) return;
-    if (ok) {
-      await _saveLastPalcoIp(ip);
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok
-            ? 'Palco conectado em $ip'
-            : 'stage.connectFail'.tr() +
-                (StageSession.instance.castLastError != null
-                    ? '\n(${StageSession.instance.castLastError})'
-                    : ''))));
-  }
 
-  /// F3.3t: liga o sender e mostra o IP do celular pra digitar na TV.
-  /// O receiver é cliente — conecta sozinho; IP da TV não é necessário.
-  Future<void> _connectPalcoManual(BuildContext context) async {
-    final localIp = SlideHttpServer.localIp;
-    if (localIp == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Descobrindo IP da rede… tente de novo em instantes')));
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => PalcoConnectDialog(mobileIp: localIp),
-    );
-    if (confirmed != true) return;
-    // Sender aceita qualquer receiver que conectar — target é só informativo.
-    final ok = await StageSession.instance
-        .turnOnPalco(PalcoTarget(name: 'Palco (aguardando TV)', ip: localIp));
-    if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('stage.connectFail'.tr() +
-              (StageSession.instance.castLastError != null
-                  ? '\n(${StageSession.instance.castLastError})'
-                  : ''))));
-      return;
-    }
-    await _saveLastPalcoIp(localIp);
-    // F3.3y: espera o receiver conectar; se não, detecta a TV na rede e
-    // orienta abrir o Palco nela (webOS não permite launch remoto).
-    final hint = await StageSession.instance.checkTvNeedsPalcoOpen();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(hint ?? 'Palco conectado — TV $localIp'),
-        duration: Duration(seconds: hint != null ? 6 : 3)));
-  }
 
   Future<void> _open() async {
     if (StageSession.instance.isOn) {
@@ -143,129 +81,12 @@ class _StageCastButtonState extends State<StageCastButton> {
     if (!mounted) return;
     setState(() => _scanning = false);
 
-    // F3.3r: bottom sheet de descoberta/conexão — separa DLNA (slides) de Palco WS (receiver).
+    // F3.3ae: conexão AUTO-FIRST — liga o sender, detecta a TV (DIAL) e
+    // acompanha até o receiver conectar. Um toque só.
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        final localIp = SlideHttpServer.localIp ?? 'descobrindo...';
-        return SafeArea(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text('stage.title'.tr(),
-                            style: theme.textTheme.titleMedium),
-                      ),
-                      if (_scanning)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                    ],
-                  ),
-                ),
-                // IP do celular — ESSENCIAL pro Palco WS
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('stage.yourIp'.tr(),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SelectableText(
-                              localIp,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontFamily: 'monospace',
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Copiar IP',
-                            icon: const Icon(TablerIcons.copy, size: 20),
-                            onPressed: () {
-                              Clipboard.setData(
-                                  ClipboardData(text: localIp));
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text('IP copiado: $localIp')),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      Text('stage.ipHint'.tr(),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                // F3.3ab: seção DLNA removida — Palco WS é o único transporte.
-                // Seção 2: Palco LouvorJA (receiver webOS) — último IP salvo
-                FutureBuilder<String?>(
-                  future: _getLastPalcoIp(),
-                  builder: (ctx, snap) {
-                    final lastIp = snap.data;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-                          child: Text('stage.palcoSection'.tr(),
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: theme.colorScheme.primary)),
-                        ),
-                        if (lastIp != null && lastIp.isNotEmpty)
-                          ListTile(
-                            leading: const Icon(TablerIcons.deviceTv,
-                                color: Colors.green),
-                            title: Text('Última TV: $lastIp'),
-                            subtitle: const Text('Toque para reconectar'),
-                            onTap: () async {
-                              Navigator.of(ctx).pop();
-                              await _connectPalcoByIp(lastIp);
-                            },
-                          ),
-                        ListTile(
-                          leading: const Icon(TablerIcons.cast),
-                          title: Text('stage.palcoManual'.tr()),
-                          subtitle: Text('stage.palcoManualHint'.tr()),
-                          onTap: () async {
-                            Navigator.of(ctx).pop();
-                            await _connectPalcoManual(context);
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (ctx) => const PalcoAutoConnectSheet(),
     );
   }
 

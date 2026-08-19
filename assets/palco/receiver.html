@@ -143,7 +143,7 @@ function dlog(m1,m2,m3){try{console.log('[P]',m1,m2!==undefined?String(m2):'',m3
 const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 // F3.3q: versão no idle (canto inferior direito) — ?v= override ou padrão.
-try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.10')}catch(e){}
+try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.11')}catch(e){}
 // webOS: ares-launch -p '{"host":"..."}' chega em PalmSystem.launchParams,
 // NÃO na query string. Merge dos dois (query string tem prioridade).
 try{
@@ -258,6 +258,12 @@ function showIdle(msg){
   // volta pro BG do palco (personalizado) — música "saiu de cena"
   $('bg').removeAttribute('src');
   $('text').textContent='';$('footer').textContent='';
+  // F3.3ac: remove estilos de projeção (caixa/sombra) — senão a caixa
+  // vazia continuava desenhada no idle após "Limpar projeção".
+  $('text').classList.remove('box-on','shadow-on','box-off','shadow-off');
+  $('text').style.removeProperty('--box-bg');
+  $('text').style.removeProperty('--box-border');
+  $('text').style.removeProperty('--ts');
 }
 function hideIdle(){$('idle').classList.add('hidden')}
 // F3.3e: fallback de cover — sem capa ou capa quebrada = logo da org.
@@ -343,7 +349,7 @@ window.addEventListener('keydown',function(e){
       if(v.paused)v.play().catch(function(){});else v.pause();
       return;
     }
-    if(k===413||k===461||k===27){ // STOP (413) / BACK (461) / ESC — interrompe
+    if(k===413||k===461||k===27||k===4){ // STOP/BACK/ESC/Android-back(4) — interrompe
       e.preventDefault();
       v.pause();v.removeAttribute('src');v.style.display='none';v.load();
       sendEvent({v:2,type:'ended',media:'video'}); // sender sabe que saiu
@@ -534,6 +540,39 @@ function handle(m){
 
 
 connect();
+
+// ===== F3.3ad: auto-relaunch — o Palco volta ao foreground sozinho =====
+// Usado quando alguém sai do Palco sem querer (botão HOME/back) durante o
+// culto. O webOS não permite launch REMOTO (401 no second-screen desta
+// série), mas o próprio app tem permissão de launch via PalmServiceBridge
+// (validado: returnValue:true). Estratégia: se o app perde o foreground
+// (visibilitychange → hidden) e o sender estava CONECTADO, agenda o
+// relaunch em 3s. Cancelável se voltar antes (usuário só deu uma olhada).
+(function(){
+  var relaunchTimer=null;
+  function selfLaunch(){
+    try{
+      var b=new PalmServiceBridge();
+      b.onservicecallback=function(){};
+      b.call('luna://com.webos.applicationManager/launch',
+        '{"id":"com.piano.louvorja.palco"}');
+      dlog('AUTO-RELAUNCH disparado');
+    }catch(e){dlog('AUTO-RELAUNCH erro: '+e.message)}
+  }
+  document.addEventListener('visibilitychange',function(){
+    var wasConnected=ws&&ws.readyState===1;
+    if(document.hidden&&wasConnected){
+      if(relaunchTimer)clearTimeout(relaunchTimer);
+      relaunchTimer=setTimeout(function(){
+        if(document.hidden)selfLaunch(); // ainda fora? volta
+        relaunchTimer=null;
+      },3000);
+    }else if(!document.hidden&&relaunchTimer){
+      clearTimeout(relaunchTimer);relaunchTimer=null; // voltou sozinho
+      dlog('AUTO-RELAUNCH cancelado (voltou ao foreground)');
+    }
+  });
+})();
 </script>
 </body>
 </html>
