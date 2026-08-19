@@ -70,13 +70,11 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk \
              louvorja-piano-${VERSION#v}.apk
 
-      - name: Attach APK to release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ needs.resolve.outputs.version }}" \
-            louvorja-piano-*.apk \
-            --repo "$GITHUB_REPOSITORY" --clobber
+      - name: Attach APK to release (cria se nao existir)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.version }}
+          files: louvorja-piano-*.apk
 
   ios-unsigned-ipa:
     name: iOS IPA (no codesign)
@@ -105,10 +103,8 @@ jobs:
           cd -
           ls -lh build/ios/louvorja-piano-ios-unsigned.ipa
 
-      - name: Attach IPA to release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ needs.resolve.outputs.version }}" \
-            build/ios/louvorja-piano-ios-unsigned.ipa \
-            --repo "$GITHUB_REPOSITORY" --clobber
+      - name: Attach IPA to release (cria se nao existir)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.version }}
+          files: build/ios/louvorja-piano-ios-unsigned.ipa
