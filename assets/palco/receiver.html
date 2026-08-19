@@ -173,7 +173,7 @@ function dlog(m1,m2,m3){try{console.log('[P]',m1,m2!==undefined?String(m2):'',m3
 const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 // F3.3q: versão no idle (canto inferior direito) — ?v= override ou padrão.
-try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.13')}catch(e){}
+try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.14')}catch(e){}
 // webOS: ares-launch -p '{"host":"..."}' chega em PalmSystem.launchParams,
 // NÃO na query string. Merge dos dois (query string tem prioridade).
 try{
@@ -379,7 +379,7 @@ window.addEventListener('keydown',function(e){
       if(v.paused)v.play().catch(function(){});else v.pause();
       return;
     }
-    if(k===413||k===461||k===27||k===4){ // STOP/BACK/ESC/Android-back(4) — interrompe
+    if(k===413||k===461||k===27||k===4||k===10009||k===13){ // STOP/BACK/ESC/Android-back(4)/Tizen-RETURN(10009)/Enter(13) — interrompe
       e.preventDefault();
       v.pause();v.removeAttribute('src');v.style.display='none';v.load();
       sendEvent({v:2,type:'ended',media:'video'}); // sender sabe que saiu
