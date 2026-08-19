@@ -9,7 +9,6 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bible_page.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_page.dart';
 import 'package:louvorja_piano_mobile/presentation/timer/timer_page.dart';
-import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 class ToolsPage extends StatefulWidget {
   const ToolsPage({super.key});
@@ -71,9 +70,8 @@ class _ToolsPageState extends State<ToolsPage> {
           onPressed: () => setState(() => _activeView = null),
         ),
         title: Text(view.label.tr()),
-        // F3.3l: botão do Palco visível nas ferramentas — sem ele o usuário
-        // não descobre que o Timer (e Bíblia/Liturgia) pode ir pra TV.
-        actions: const [StageCastButton()],
+        // F3.3l: o botão do Palco vive na AppBar da PRÓPRIA ferramenta
+        // (Bíblia/Liturgia/Timer já têm StageCastButton) — um cast só.
       ),
       body: switch (view) {
         _ToolView.liturgy => const LiturgyPage(),
