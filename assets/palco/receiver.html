@@ -173,7 +173,7 @@ function dlog(m1,m2,m3){try{console.log('[P]',m1,m2!==undefined?String(m2):'',m3
 const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 // F3.3q: versão no idle (canto inferior direito) — ?v= override ou padrão.
-try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.12')}catch(e){}
+try{$('idleVer').textContent='PIANO LouvorJA Palco · receiver v'+(qs.get('v')||'0.1.13')}catch(e){}
 // webOS: ares-launch -p '{"host":"..."}' chega em PalmSystem.launchParams,
 // NÃO na query string. Merge dos dois (query string tem prioridade).
 try{
