@@ -84,7 +84,11 @@ class _BibleViewState extends State<_BibleView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('bible.title'.tr()),
-        actions: const [StageCastButton(), BibleDownloadButton()],
+        actions: const [
+          StageClearButton(),
+          StageCastButton(),
+          BibleDownloadButton(),
+        ],
       ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {

@@ -16,6 +16,28 @@ import '../../hymns/stage_customization_sheet.dart';
 ///
 /// Ligado = TV no modo palco (background definido, aguardando conteúdo).
 /// As telas projetam via StageSession.instance.project(...).
+// F3.3q: botão LIMPAR na AppBar — só visível com palco ativo.
+/// Ícone de borracha (distinto do cast/castOff), ao lado do StageCastButton.
+class StageClearButton extends StatelessWidget {
+  const StageClearButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: StageSession.instance,
+      builder: (context, _) {
+        if (!StageSession.instance.isOn) return const SizedBox.shrink();
+        final theme = Theme.of(context);
+        return IconButton(
+          tooltip: 'Limpar projeção (voltar ao idle)',
+          icon: Icon(TablerIcons.eraser, color: theme.colorScheme.error),
+          onPressed: () => StageSession.instance.clearContent(),
+        );
+      },
+    );
+  }
+}
+
 class StageCastButton extends StatefulWidget {
   const StageCastButton({super.key});
 

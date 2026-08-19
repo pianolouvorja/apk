@@ -12,6 +12,7 @@ import '../../core/services/dlna/stage_session.dart';
 import '../../data/repositories/countdown_preset_repository.dart';
 import '../../domain/entities/countdown_preset.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 class TimerPage extends StatefulWidget {
   final CountdownPresetRepository? presetRepository;
@@ -240,11 +241,16 @@ class _TimerPageState extends State<TimerPage> {
   Widget build(BuildContext context) {
       final theme = Theme.of(context);
       final casting = StageSession.instance.isOn; // F3.3l
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+            return Scaffold(
+              appBar: AppBar(
+                title: Text('timer.title'.tr()),
+                actions: const [StageClearButton(), StageCastButton()],
+              ),
+              body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             // F3.3l: badge de espelhamento — timer vai pra TV com palco ligado.
             if (casting)
               Padding(
@@ -428,15 +434,16 @@ class _TimerPageState extends State<TimerPage> {
                         color: theme.colorScheme.primary,
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+                                      ),
+                                  ],
+                                ),
+                              ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      ); // fecha Scaffold
+                                                    }
+                                                  }
 
 class _SectionCard extends StatelessWidget {
   final IconData icon;

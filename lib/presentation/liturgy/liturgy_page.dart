@@ -52,7 +52,7 @@ class LiturgyPage extends StatelessWidget {
           return Scaffold(
             appBar: AppBar(
             title: Text('liturgy.title'.tr()),
-            actions: const [StageCastButton()],
+            actions: const [StageClearButton(), StageCastButton()],
           ),
             body: const Center(child: CircularProgressIndicator()),
           );
@@ -78,7 +78,7 @@ class _LiturgyView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
             title: Text('liturgy.title'.tr()),
-            actions: const [StageCastButton()],
+            actions: const [StageClearButton(), StageCastButton()],
           ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
