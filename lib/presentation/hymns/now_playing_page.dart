@@ -55,6 +55,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   int _index = 0;
   bool _noAudio = false;
   StreamSubscription<Duration>? _posSub;
+  Duration? _lastPosition; // F3.3g: última posição do player local
   bool _routeListenerAdded = false; // F3.2: listener de mudança de audioRoute
 
   // Palco: sessão GLOBAL (StageSession) — o player projeta no mesmo
@@ -74,6 +75,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     StageSession.instance.addListener(_onAudioRouteChanged);
     _routeListenerAdded = true;
     _posSub = widget.player.positionStream.listen((pos) {
+      _lastPosition = pos; // F3.3g
       if (!mounted || _noAudio) return;
       final idx = _slides.indexAt(pos, instrumental: widget.instrumental);
       if (idx != _index) {
@@ -127,8 +129,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     stage.playHymnAudio(widget.audioSource!,
         title: widget.detail.title ?? '',
         subtitle: widget.instrumental ? 'Instrumental' : null,
-        cover: widget.detail.imageUrl);
+        cover: widget.detail.imageUrl,
+        position: widget.audioIsLocal ? null : _currentLocalPosition());
   }
+
+  /// F3.3g: posição corrente do player local (para sincronizar a TV no
+  /// play de tela no meio da faixa). Null quando não dá pra saber.
+  Duration? _currentLocalPosition() => _lastPosition;
 
   void _pauseAudioEverywhere() {
     widget.player.pause();

@@ -47,13 +47,16 @@ class PalcoMessage {
         if (background != null) 'background': background,
       });
 
-  /// Áudio com now-playing opcional.
+  /// Áudio com now-playing opcional. [positionMs] sincroniza a TV com a
+  /// posição do player local (F3.3g — play de tela no meio da faixa não
+  /// pode recomeçar do zero na TV).
   static PalcoMessage audio(
     String url, {
     String action = 'play',
     String? title,
     String? subtitle,
     String? cover,
+    int? positionMs,
   }) =>
       PalcoMessage(type: 'audio', fields: {
         'url': url,
@@ -61,6 +64,7 @@ class PalcoMessage {
         if (title != null) 'title': title,
         if (subtitle != null) 'subtitle': subtitle,
         if (cover != null) 'cover': cover,
+        if (positionMs != null) 'positionMs': positionMs,
       });
 
   static PalcoMessage video(String url, {String action = 'play'}) =>

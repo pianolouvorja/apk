@@ -91,7 +91,7 @@ class StageSession extends ChangeNotifier {
   /// Fonte LOCAL (hino baixado, path /data/...) não é alcançável pela TV:
   /// os bytes são servidos via /media do sender e a URL substituída.
   PalcoAudioRoute playHymnAudio(String url,
-      {String? title, String? subtitle, String? cover}) {
+      {String? title, String? subtitle, String? cover, Duration? position}) {
     _currentAudioUrl = url;
     _currentAudioTitle = title;
     _currentAudioSubtitle = subtitle;
@@ -109,7 +109,8 @@ class StageSession extends ChangeNotifier {
         debugPrint('[PALCO] ERRO: fonte local inexistente roteada: $url');
       }
     }
-    _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover);
+    _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover,
+        position: position);
     return audioRoute;
   }
 

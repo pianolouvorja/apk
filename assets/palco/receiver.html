@@ -293,6 +293,12 @@ function handle(m){
       const a=$('audio');
       if(m.url){
         a.src=proxyUrl(m.url);
+        // F3.3g: sincroniza com o player local — seek ANTES do play
+        // (metadata pode não estar carregada: aplicar no loadedmetadata).
+        if(typeof m.positionMs==='number'&&m.positionMs>0){
+          const apply=()=>{try{a.currentTime=m.positionMs/1000}catch(e){}};
+          if(a.readyState>=1)apply();else a.addEventListener('loadedmetadata',apply,{once:true});
+        }
         // ao terminar a música, volta pro palco em espera
         a.onended=()=>{hideNp();showIdle('Aguardando conteúdo…')};
         // now playing (só se audio for o conteúdo principal)
