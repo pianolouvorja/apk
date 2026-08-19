@@ -84,16 +84,7 @@ class _BibleViewState extends State<_BibleView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('bible.title'.tr()),
-        actions: [
-          const StageCastButton(),
-          const BibleDownloadButton(),
-          // F3.3p: limpa a projeção — volta ao idle sem desligar o palco.
-          IconButton(
-            tooltip: 'Limpar projeção (voltar ao idle)',
-            icon: const Icon(TablerIcons.castOff),
-            onPressed: () => StageSession.instance.clearContent(),
-          ),
-        ],
+        actions: const [StageCastButton(), BibleDownloadButton()],
       ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {

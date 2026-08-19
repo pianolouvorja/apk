@@ -230,6 +230,17 @@ class _StageCastButtonState extends State<StageCastButton> {
                   await session.turnOff();
                 },
               ),
+              // F3.3p: volta ao idle SEM desligar o palco — libera a tela
+              // (ex: passagem projetada acabou) mantendo a sessão viva.
+              ListTile(
+                leading: const Icon(TablerIcons.screenShareOff),
+                title: const Text('Limpar projeção'),
+                subtitle: const Text('Volta ao idle sem desligar o Palco'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  session.clearContent();
+                },
+              ),
               const SizedBox(height: 8),
             ],
           ),
