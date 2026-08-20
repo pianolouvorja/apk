@@ -2,6 +2,7 @@ library;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -24,6 +25,74 @@ class StageSection extends StatefulWidget {
 }
 
 class _StageSectionState extends State<StageSection> {
+  static const _backgrounds = [
+    'assets/backgrounds/bg-01.png',
+    'assets/backgrounds/bg-02.png',
+    'assets/backgrounds/bg-03.png',
+    'assets/backgrounds/bg-04.png',
+    'assets/backgrounds/bg-05.png',
+    'assets/backgrounds/bg-06.png',
+    'assets/backgrounds/bg-07.png',
+    'assets/backgrounds/bg-08.png',
+    'assets/backgrounds/bg-09.png',
+    'assets/backgrounds/bg-10.png',
+  ];
+
+  Future<void> _chooseOfficialBackground() async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Galeria de fundos',
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: MediaQuery.of(sheetContext).size.height * .55,
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 16 / 9,
+                  ),
+                  itemCount: _backgrounds.length,
+                  itemBuilder: (_, index) => InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () =>
+                        Navigator.pop(sheetContext, _backgrounds[index]),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        _backgrounds[index],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    final data = await rootBundle.load(chosen);
+    await StageSession.instance.setBackgroundBytes(data.buffer.asUint8List());
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fundo do Palco atualizado')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -84,24 +153,34 @@ class _StageSectionState extends State<StageSection> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    icon: const Icon(TablerIcons.upload),
-                    label: const Text('Escolher da galeria'),
-                    onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 90,
-                      );
-                      if (picked == null) return;
-                      await session.setBackgroundFromFile(picked.path);
-                      if (mounted) {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text('stage.backgroundUpdated'.tr()),
-                          ),
-                        );
-                      }
-                    },
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        icon: const Icon(TablerIcons.layoutGrid),
+                        label: const Text('Fundos oficiais'),
+                        onPressed: _chooseOfficialBackground,
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(TablerIcons.upload),
+                        label: const Text('Imagem do aparelho'),
+                        onPressed: () async {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 90,
+                          );
+                          if (picked == null) return;
+                          await session.setBackgroundFromFile(picked.path);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('stage.backgroundUpdated'.tr()),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

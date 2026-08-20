@@ -48,7 +48,8 @@ class StageSession extends ChangeNotifier {
   ui.Image? _backgroundImage;
 
   bool get isOn => _cast.isConnected || isPalcoMode;
-  String? get rendererName => isPalcoMode ? _palco!.target?.name : _cast.rendererName;
+  String? get rendererName =>
+      isPalcoMode ? _palco!.target?.name : _cast.rendererName;
 
   /// F3.3x: IP real da TV conectada (via socket WS) — nulo até conectar.
   /// Diferente do target (IP do próprio celular): este é o DA TV.
@@ -86,7 +87,9 @@ class StageSession extends ChangeNotifier {
         final url = p.serveMedia('palco_bg.png', bytes);
         if (url != null) p.setPalcoBackground(url);
       }
-    } catch (_) {/* sem BG salvo: segue */}
+    } catch (_) {
+      /* sem BG salvo: segue */
+    }
     // F3.3u: wakelock — CPU sleep com tela apagada derruba o WS mesmo com
     // foreground service em alguns aparelhos (One UI agressivo).
     try {
@@ -144,17 +147,21 @@ class StageSession extends ChangeNotifier {
   String? _currentAudioSubtitle;
   String? _currentAudioCover;
 
-  bool get _routesToTv =>
-      isPalcoMode && audioRoute != PalcoAudioRoute.local;
+  bool get _routesToTv => isPalcoMode && audioRoute != PalcoAudioRoute.local;
 
   /// Toca faixa no destino configurado. Retorna o modo efetivo
   /// (local quando palco desligado, independente da config).
   ///
   /// Fonte LOCAL (hino baixado, path /data/...) não é alcançável pela TV:
   /// os bytes são servidos via /media do sender e a URL substituída.
-  PalcoAudioRoute playHymnAudio(String url,
-      {String? title, String? subtitle, String? cover, String? background,
-       Duration? position}) {
+  PalcoAudioRoute playHymnAudio(
+    String url, {
+    String? title,
+    String? subtitle,
+    String? cover,
+    String? background,
+    Duration? position,
+  }) {
     _currentAudioUrl = url;
     _currentAudioTitle = title;
     _currentAudioSubtitle = subtitle;
@@ -164,16 +171,24 @@ class StageSession extends ChangeNotifier {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       final file = File(url);
       if (file.existsSync()) {
-        final name = 'hymn_${file.uri.pathSegments.last}'
-            .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+        final name = 'hymn_${file.uri.pathSegments.last}'.replaceAll(
+          RegExp(r'[^A-Za-z0-9._-]'),
+          '_',
+        );
         playable = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
         debugPrint('[PALCO] midia local servida: $playable');
       } else {
         debugPrint('[PALCO] ERRO: fonte local inexistente roteada: $url');
       }
     }
-    _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover,
-        background: background, position: position);
+    _palco!.playAudio(
+      playable,
+      title: title,
+      subtitle: subtitle,
+      cover: cover,
+      background: background,
+      position: position,
+    );
     return audioRoute;
   }
 
@@ -189,18 +204,22 @@ class StageSession extends ChangeNotifier {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       final file = File(url);
       if (file.existsSync()) {
-        final name = 'hymn_${file.uri.pathSegments.last}'
-            .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+        final name = 'hymn_${file.uri.pathSegments.last}'.replaceAll(
+          RegExp(r'[^A-Za-z0-9._-]'),
+          '_',
+        );
         url = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
         debugPrint('[PALCO] reroute: local served as $url');
       } else {
         debugPrint('[PALCO] reroute ERROR: local not found: $url');
       }
     }
-    _palco!.playAudio(url,
-        title: _currentAudioTitle,
-        subtitle: _currentAudioSubtitle,
-        cover: _currentAudioCover);
+    _palco!.playAudio(
+      url,
+      title: _currentAudioTitle,
+      subtitle: _currentAudioSubtitle,
+      cover: _currentAudioCover,
+    );
   }
 
   void pauseHymnAudio() {
@@ -230,8 +249,7 @@ class StageSession extends ChangeNotifier {
   void _projectSlide(int index) {
     if (index < 0 || index >= _slideUrls.length) return;
     _slideIndex = index;
-    _palco?.project(
-        text: '', footer: '', background: _slideUrls[index]);
+    _palco?.project(text: '', footer: '', background: _slideUrls[index]);
   }
 
   /// Carrega e projeta a 1a imagem de slides extraídos de um .pptx.
@@ -240,9 +258,12 @@ class StageSession extends ChangeNotifier {
     final slides = PptxSlideExtractor.extract(pptxPath);
     if (slides.isEmpty || _palco == null) return 0;
     _slideUrls = slides
-        .map((s) => _palco!.serveMedia(
+        .map(
+          (s) => _palco!.serveMedia(
             'slide_${s.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}',
-            s.bytes))
+            s.bytes,
+          ),
+        )
         .whereType<String>()
         .toList();
     _projectSlide(0);
@@ -283,8 +304,10 @@ class StageSession extends ChangeNotifier {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       final file = File(url);
       if (!file.existsSync()) return false;
-      final name = 'video_${file.uri.pathSegments.last}'
-          .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+      final name = 'video_${file.uri.pathSegments.last}'.replaceAll(
+        RegExp(r'[^A-Za-z0-9._-]'),
+        '_',
+      );
       final served = _palco!.serveMedia(name, file.readAsBytesSync());
       if (served == null) return false;
       url = served;
@@ -319,8 +342,10 @@ class StageSession extends ChangeNotifier {
       await _loadBackground();
       await _projectIdle();
     } catch (e, st) {
-      debugPrint('[DLNA] turnOn(): falha em loadBackground/projectIdle: '
-          '$e\n$st');
+      debugPrint(
+        '[DLNA] turnOn(): falha em loadBackground/projectIdle: '
+        '$e\n$st',
+      );
     }
     notifyListeners();
     return true;
@@ -372,11 +397,31 @@ class StageSession extends ChangeNotifier {
       if (bytes != null && _palco != null) {
         final ext = path.split('.').last.toLowerCase();
         final url = _palco!.serveMedia(
-            'palco_bg.${ext == 'jpg' ? 'jpg' : 'png'}', bytes);
+          'palco_bg.${ext == 'jpg' ? 'jpg' : 'png'}',
+          bytes,
+        );
         if (url != null) {
           _palco!.setPalcoBackground(url);
           return; // bgPalco aplicado; idle já mostra por trás
         }
+      }
+    }
+    await refresh();
+  }
+
+  /// Define BG vindo da galeria oficial empacotada.
+  Future<void> setBackgroundBytes(Uint8List bytes) async {
+    final saved = await _settingsRepo.saveBackgroundBytes(bytes);
+    if (saved == null) return;
+    await _loadBackground();
+    if (isPalcoMode) {
+      final loaded = await _settingsRepo.loadBackgroundImage();
+      final url = loaded == null
+          ? null
+          : _palco?.serveMedia('palco_bg.png', loaded);
+      if (url != null) {
+        _palco!.setPalcoBackground(url);
+        return;
       }
     }
     await refresh();
@@ -417,21 +462,26 @@ class StageSession extends ChangeNotifier {
     _lastContent = content;
     if (isPalcoMode) {
       // Palco WS: texto nativo (body com \n vira <br> no receiver).
-      final text = [title, body].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
+      final text = [
+        title,
+        body,
+      ].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
       // F3.3m/o: estilos da letra (sombra/caixinha) e footer destacado.
       // Bíblia tem tipografia PRÓPRIA (tamanho/peso/cor) — diferente da música.
       final s = settings;
       final fSize = isBible ? s.bibleFontSize : s.fontSize;
-      final fWeight =
-          isBible ? s.bibleFontWeight : s.fontWeight.value;
+      final fWeight = isBible ? s.bibleFontWeight : s.fontWeight.value;
       _palco!.project(
         text: _colorize(text, isBible ? s.bibleTextColor : s.textColor),
         footer: footer ?? '',
         background: background,
         footerRef: footerRef,
-        footerColor: '#${s.footerRefColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+        footerColor:
+            '#${s.footerRefColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
         footerWeight: s.footerRefWeight,
-        footerVersion: (s.showBibleVersion && footerVersion != null) ? footerVersion : null,
+        footerVersion: (s.showBibleVersion && footerVersion != null)
+            ? footerVersion
+            : null,
         textShadow: s.textShadow,
         shadowBlur: s.shadowBlur,
         shadowIntensity: s.shadowIntensity,
@@ -450,8 +500,7 @@ class StageSession extends ChangeNotifier {
 
   /// Envolve o texto em <span style="color"> preservando <br>.
   String _colorize(String text, Color c) {
-    final hex =
-        '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    final hex = '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
     return '<span style="color:$hex">$text</span>';
   }
 

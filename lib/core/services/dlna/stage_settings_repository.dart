@@ -25,7 +25,10 @@ class StageSettingsRepository {
         backgroundColor: Color(j['bg'] as int? ?? 0xFF0A0E1A),
         textColor: Color(j['fg'] as int? ?? 0xFFFFFFFF),
         fontSize: (j['size'] as num?)?.toDouble() ?? 96,
-        fontWeight: FontWeight.values.firstWhere((w) => w.value == (j['weight'] as int? ?? 5), orElse: () => FontWeight.w600),
+        fontWeight: FontWeight.values.firstWhere(
+          (w) => w.value == (j['weight'] as int? ?? 5),
+          orElse: () => FontWeight.w600,
+        ),
         margin: (j['margin'] as num?)?.toDouble() ?? 120,
         // F3.3m
         textShadow: j['tsOn'] as bool? ?? true,
@@ -49,27 +52,29 @@ class StageSettingsRepository {
 
   Future<void> save(StageSettings s) async {
     final f = await _file();
-    await f.writeAsString(jsonEncode({
-      'bg': s.backgroundColor.toARGB32(),
-      'fg': s.textColor.toARGB32(),
-      'size': s.fontSize,
-      'weight': s.fontWeight.value,
-      'margin': s.margin,
-      // F3.3m
-      'tsOn': s.textShadow,
-      'tsBlur': s.shadowBlur,
-      'tsInt': s.shadowIntensity,
-      'boxOn': s.textBox,
-      'boxBg': s.boxOpacity,
-      'boxBorder': s.boxBorder,
-      'refColor': s.footerRefColor.toARGB32(),
-      'refWeight': s.footerRefWeight,
-      'showVer': s.showBibleVersion,
-      // F3.3o
-      'bSize': s.bibleFontSize,
-      'bWeight': s.bibleFontWeight,
-      'bFg': s.bibleTextColor.toARGB32(),
-    }));
+    await f.writeAsString(
+      jsonEncode({
+        'bg': s.backgroundColor.toARGB32(),
+        'fg': s.textColor.toARGB32(),
+        'size': s.fontSize,
+        'weight': s.fontWeight.value,
+        'margin': s.margin,
+        // F3.3m
+        'tsOn': s.textShadow,
+        'tsBlur': s.shadowBlur,
+        'tsInt': s.shadowIntensity,
+        'boxOn': s.textBox,
+        'boxBg': s.boxOpacity,
+        'boxBorder': s.boxBorder,
+        'refColor': s.footerRefColor.toARGB32(),
+        'refWeight': s.footerRefWeight,
+        'showVer': s.showBibleVersion,
+        // F3.3o
+        'bSize': s.bibleFontSize,
+        'bWeight': s.bibleFontWeight,
+        'bFg': s.bibleTextColor.toARGB32(),
+      }),
+    );
   }
 
   /// Imagem de fundo personalizada copiada pro dir do app.
@@ -78,6 +83,22 @@ class StageSettingsRepository {
       final dir = await getApplicationDocumentsDirectory();
       final dest = File('${dir.path}/stage_bg.${sourcePath.split('.').last}');
       await File(sourcePath).copy(dest.path);
+      return dest.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Salva bytes de um BG empacotado (galeria oficial) no mesmo local do BG
+  /// escolhido pelo usuário. Assim o resto do Palco continua agnóstico da fonte.
+  Future<String?> saveBackgroundBytes(
+    Uint8List bytes, {
+    String ext = 'png',
+  }) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final dest = File('${dir.path}/stage_bg.$ext');
+      await dest.writeAsBytes(bytes, flush: true);
       return dest.path;
     } catch (_) {
       return null;

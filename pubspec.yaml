@@ -1,7 +1,7 @@
 name: louvorja_piano_mobile
 description: "LouvorJA PIANO Mobile — App Flutter para gerenciamento de cultos adventistas"
 publish_to: "none"
-version: 0.1.59+2060
+version: 0.1.60+2061
 
 environment:
   sdk: ^3.8.0
@@ -124,6 +124,7 @@ flutter:
 
   assets:
     - assets/palco/
+    - assets/backgrounds/
     - assets/translations/
     - assets/images/
     - assets/images/library/hymnal.jpeg

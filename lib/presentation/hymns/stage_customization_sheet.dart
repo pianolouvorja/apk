@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -34,6 +35,19 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
 
   /// BG atual (imagem salva do usuário); null = usa bg-fallback do Palco.
   Uint8List? _bgBytes;
+
+  static const _officialBackgrounds = [
+    'assets/backgrounds/bg-01.png',
+    'assets/backgrounds/bg-02.png',
+    'assets/backgrounds/bg-03.png',
+    'assets/backgrounds/bg-04.png',
+    'assets/backgrounds/bg-05.png',
+    'assets/backgrounds/bg-06.png',
+    'assets/backgrounds/bg-07.png',
+    'assets/backgrounds/bg-08.png',
+    'assets/backgrounds/bg-09.png',
+    'assets/backgrounds/bg-10.png',
+  ];
 
   static const _bgPresets = [
     (0xFF0A0E1A, 'Azul-noite'),
@@ -68,6 +82,59 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
     final bytes = await _repo.loadBackgroundImage();
     if (!mounted) return;
     setState(() => _bgBytes = bytes);
+  }
+
+  Future<void> _chooseOfficialBackground() async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Galeria de fundos',
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: MediaQuery.of(sheetContext).size.height * .55,
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 16 / 9,
+                  ),
+                  itemCount: _officialBackgrounds.length,
+                  itemBuilder: (_, index) => InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => Navigator.pop(
+                      sheetContext,
+                      _officialBackgrounds[index],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        _officialBackgrounds[index],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    final data = await rootBundle.load(chosen);
+    await StageSession.instance.setBackgroundBytes(data.buffer.asUint8List());
+    await _loadBgPreview();
   }
 
   @override
@@ -119,19 +186,23 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                           // (rgba preto com opacidade configurável).
                           decoration: _s.textBox
                               ? BoxDecoration(
-                                  color: Colors.black
-                                      .withValues(alpha: _s.boxOpacity),
+                                  color: Colors.black.withValues(
+                                    alpha: _s.boxOpacity,
+                                  ),
                                   border: _s.boxBorder
                                       ? Border.all(
                                           color: Colors.white.withValues(
-                                              alpha: 0.25),
+                                            alpha: 0.25,
+                                          ),
                                         )
                                       : null,
                                 )
                               : null,
                           padding: _s.textBox
                               ? const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 16)
+                                  horizontal: 24,
+                                  vertical: 16,
+                                )
                               : EdgeInsets.zero,
                           child: Text(
                             'O nosso sol\nVeio iluminar',
@@ -150,14 +221,15 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                                   ? [
                                       Shadow(
                                         color: Colors.black.withValues(
-                                            alpha: _s.shadowIntensity),
+                                          alpha: _s.shadowIntensity,
+                                        ),
                                         blurRadius:
                                             _s.shadowBlur *
-                                                ((MediaQuery.of(context)
-                                                            .size
-                                                            .width -
-                                                        64) /
-                                                    1920),
+                                            ((MediaQuery.of(
+                                                      context,
+                                                    ).size.width -
+                                                    64) /
+                                                1920),
                                       ),
                                     ]
                                   : null,
@@ -193,32 +265,33 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
             // tudo visual do palco mora aqui no Personalizar).
             Text('Imagem de fundo', style: theme.textTheme.labelLarge),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(TablerIcons.photo),
-                    label: const Text('Escolher da galeria'),
-                    onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 90,
-                      );
-                      if (picked == null) return;
-                      await StageSession.instance.setBackgroundFromFile(
-                        picked.path,
-                      );
-                      // Preview reage na hora: recarrega o BG recém-salvo.
-                      await _loadBgPreview();
-                      if (mounted) {
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text('stage.backgroundUpdated'.tr()),
-                          ),
-                        );
-                      }
-                    },
-                  ),
+                FilledButton.icon(
+                  icon: const Icon(TablerIcons.layoutGrid),
+                  label: const Text('Fundos oficiais'),
+                  onPressed: _chooseOfficialBackground,
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(TablerIcons.upload),
+                  label: const Text('Imagem do aparelho'),
+                  onPressed: () async {
+                    final picked = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 90,
+                    );
+                    if (picked == null) return;
+                    await StageSession.instance.setBackgroundFromFile(
+                      picked.path,
+                    );
+                    await _loadBgPreview();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text('stage.backgroundUpdated'.tr())),
+                    );
+                  },
                 ),
               ],
             ),
