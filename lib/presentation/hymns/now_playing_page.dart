@@ -6,12 +6,12 @@ import 'package:easy_localization/easy_localization.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../core/services/now_playing.dart';
 import '../../core/services/dlna/stage_session.dart';
 import '../../core/services/palco/palco_controller.dart' show PalcoAudioRoute;
-import '../shared/widgets/stage_cast_button.dart';
 import '../shared/widgets/stage_stop_video_button.dart';
 import '../../domain/entities/hymn.dart';
 import '../../domain/entities/lyric_slides.dart';
@@ -28,6 +28,8 @@ import '../shared/widgets/player_timeline.dart';
 class NowPlayingPage extends StatefulWidget {
   final Hymn detail;
   final bool instrumental;
+  /// Cover do álbum (para o quadradinho now-playing no Palco).
+  final String? albumCoverUrl;
   final HymnPlayerLike player;
   final String filesUrl;
   final VoidCallback? onClose;
@@ -40,6 +42,7 @@ class NowPlayingPage extends StatefulWidget {
     super.key,
     required this.detail,
     required this.instrumental,
+    this.albumCoverUrl,
     required this.player,
     required this.filesUrl,
     this.onClose,
@@ -127,11 +130,41 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     } else {
       widget.player.setVolume(1);
     }
-    stage.playHymnAudio(widget.audioSource!,
-        title: widget.detail.title ?? '',
-        subtitle: widget.instrumental ? 'Instrumental' : null,
-        cover: widget.detail.imageUrl,
-        position: widget.audioIsLocal ? null : _currentLocalPosition());
+    _resolveCoverForPalco().then((cover) {
+      stage.playHymnAudio(widget.audioSource!,
+          title: widget.detail.title ?? '',
+          subtitle: widget.instrumental ? 'Instrumental' : null,
+          // Quadradinho na TV = cover do ALBUM (nao a imagem da música/slide).
+          cover: cover,
+          // BG do slide atual atrás do now-playing (senão caía no fallback).
+          background: _bgUrl,
+          position: widget.audioIsLocal ? null : _currentLocalPosition());
+    });
+  }
+
+  /// Cover do álbum resolvido pra uma URL que a TV alcança.
+  ///
+  /// Hinários têm capa LOCAL (`asset:hymnal.jpeg`) — não vem da API. O
+  /// receiver não resolve `asset:` (caía no logo default). Aqui o asset é
+  /// lido do bundle e servido via /media do sender, virando http://.
+  /// Capas de coletâneas (caminho relativo da API) viram URL absoluta.
+  Future<String?> _resolveCoverForPalco() async {
+    final raw = widget.albumCoverUrl ?? widget.detail.imageUrl;
+    if (raw == null || raw.isEmpty) return null;
+    if (raw.startsWith('asset:')) {
+      try {
+        final stage = StageSession.instance;
+        final assetPath = raw.substring('asset:'.length);
+        final bytes = await rootBundle.load(assetPath);
+        return stage.palco?.serveMedia(
+            'album_cover_${assetPath.split('/').last}', bytes.buffer.asUint8List());
+      } catch (_) {
+        return null;
+      }
+    }
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    // Caminho relativo da API (coletâneas): resolve pro endpoint de files.
+    return '${widget.filesUrl}/$raw';
   }
 
   /// F3.3g: posição corrente do player local (para sincronizar a TV no
@@ -239,7 +272,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                     ),
                     const StageStopVideoButton(),
-                    const StageCastButton(),
+                    // Cast só no AppBar (hinos/sub-módulos) — nunca abaixo.
+                    // Configura uma vez; cada hino não repete o controle.
                     if (widget.detail.hasInstrumental)
                       IconButton(
                         tooltip: widget.instrumental ? 'Cantado' : 'Instrumental',

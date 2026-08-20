@@ -236,6 +236,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         builder: (_) => NowPlayingPage(
           detail: detail,
           instrumental: instrumental,
+          // Cover do ALBUM pro now-playing do Palco (quadradinho na TV).
+          albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
           player: HymnPlayerAdapter(_player),
           filesUrl: 'https://api.louvorja.com.br/file',
           audioSource: source, // F3.2: roteamento de áudio no Palco

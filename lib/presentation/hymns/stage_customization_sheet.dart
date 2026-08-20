@@ -1,10 +1,15 @@
 library;
 
+import 'dart:typed_data';
+
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../../core/services/dlna/stage_slide_painter.dart';
 import '../../../core/services/dlna/stage_settings_repository.dart';
+import '../../../core/services/dlna/stage_session.dart';
 
 /// Personalização do Palco: cores, fonte, tamanho — com preview ao vivo
 /// (proporção 16:9 da TV). Persiste em disco ao salvar.
@@ -26,6 +31,9 @@ class StageCustomizationSheet extends StatefulWidget {
 class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
   late StageSettings _s;
   final _repo = StageSettingsRepository();
+
+  /// BG atual (imagem salva do usuário); null = usa bg-fallback do Palco.
+  Uint8List? _bgBytes;
 
   static const _bgPresets = [
     (0xFF0A0E1A, 'Azul-noite'),
@@ -52,6 +60,14 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
   void initState() {
     super.initState();
     _s = widget.initial;
+    _loadBgPreview();
+  }
+
+  /// Carrega o BG salvo pro preview. Sem imagem → bg-fallback (asset oficial).
+  Future<void> _loadBgPreview() async {
+    final bytes = await _repo.loadBackgroundImage();
+    if (!mounted) return;
+    setState(() => _bgBytes = bytes);
   }
 
   @override
@@ -59,7 +75,9 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
     final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(
-        left: 16, right: 16, top: 16,
+        left: 16,
+        right: 16,
+        top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       child: SingleChildScrollView(
@@ -70,7 +88,8 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
             Text('Personalizar Palco', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
 
-            // Preview 16:9 com texto de amostra
+            // Preview 16:9 com texto de amostra — mostra o BG REAL (imagem
+            // salva ou bg-fallback oficial) por trás, como a TV renderiza.
             AspectRatio(
               aspectRatio: 16 / 9,
               child: Container(
@@ -80,19 +99,36 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 alignment: Alignment.center,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'O nosso sol\nVeio iluminar',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      // escala preview: 96px em 1920 → ~proporcional
-                      fontSize: (_s.fontSize / 1920) *
-                          (MediaQuery.of(context).size.width - 64),
-                      fontWeight: _s.fontWeight,
-                      color: _s.textColor,
-                      height: 1.35,
-                    ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // BG real: imagem do usuário (cover) ou fallback oficial.
+                      if (_bgBytes != null)
+                        Image.memory(_bgBytes!, fit: BoxFit.cover)
+                      else
+                        Image.asset(
+                          'assets/palco/bg-fallback.png',
+                          fit: BoxFit.cover,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'O nosso sol\nVeio iluminar',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            // escala preview: 96px em 1920 → ~proporcional
+                            fontSize:
+                                (_s.fontSize / 1920) *
+                                (MediaQuery.of(context).size.width - 64),
+                            fontWeight: _s.fontWeight,
+                            color: _s.textColor,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -105,8 +141,48 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
               spacing: 8,
               children: [
                 for (final (c, label) in _bgPresets)
-                  _colorChip(theme, Color(c), label, _s.backgroundColor,
-                      (v) => setState(() => _s = _s.copyWith(backgroundColor: v))),
+                  _colorChip(
+                    theme,
+                    Color(c),
+                    label,
+                    _s.backgroundColor,
+                    (v) => setState(() => _s = _s.copyWith(backgroundColor: v)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Imagem de fundo (movida do menu do caster — menos é mais:
+            // tudo visual do palco mora aqui no Personalizar).
+            Text('Imagem de fundo', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(TablerIcons.photo),
+                    label: const Text('Escolher da galeria'),
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 90,
+                      );
+                      if (picked == null) return;
+                      await StageSession.instance.setBackgroundFromFile(
+                        picked.path,
+                      );
+                      // Preview reage na hora: recarrega o BG recém-salvo.
+                      await _loadBgPreview();
+                      if (mounted) {
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            content: Text('stage.backgroundUpdated'.tr()),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -117,14 +193,21 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
               spacing: 8,
               children: [
                 for (final (c, label) in _fgPresets)
-                  _colorChip(theme, Color(c), label, _s.textColor,
-                      (v) => setState(() => _s = _s.copyWith(textColor: v))),
+                  _colorChip(
+                    theme,
+                    Color(c),
+                    label,
+                    _s.textColor,
+                    (v) => setState(() => _s = _s.copyWith(textColor: v)),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
 
-            Text('Tamanho da fonte: ${_s.fontSize.round()} px',
-                style: theme.textTheme.labelLarge),
+            Text(
+              'Tamanho da fonte: ${_s.fontSize.round()} px',
+              style: theme.textTheme.labelLarge,
+            ),
             Slider(
               min: 60,
               max: 160,
@@ -148,8 +231,10 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
 
             // ===== F3.3o: Bíblia — tipografia própria =====
             const Divider(),
-            Text('Bíblia — aparência própria',
-                style: theme.textTheme.titleSmall),
+            Text(
+              'Bíblia — aparência própria',
+              style: theme.textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
 
             Text('Cor do texto (Bíblia)', style: theme.textTheme.labelLarge),
@@ -158,14 +243,21 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
               spacing: 8,
               children: [
                 for (final (c, label) in _fgPresets)
-                  _colorChip(theme, Color(c), label, _s.bibleTextColor,
-                      (v) => setState(() => _s = _s.copyWith(bibleTextColor: v))),
+                  _colorChip(
+                    theme,
+                    Color(c),
+                    label,
+                    _s.bibleTextColor,
+                    (v) => setState(() => _s = _s.copyWith(bibleTextColor: v)),
+                  ),
               ],
             ),
             const SizedBox(height: 16),
 
-            Text('Tamanho da fonte: ${_s.bibleFontSize.round()} px',
-                style: theme.textTheme.labelLarge),
+            Text(
+              'Tamanho da fonte: ${_s.bibleFontSize.round()} px',
+              style: theme.textTheme.labelLarge,
+            ),
             Slider(
               min: 50,
               max: 140,
@@ -183,8 +275,8 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                 ButtonSegment(value: 700, label: Text('Forte')),
               ],
               selected: {_s.bibleFontWeight},
-              onSelectionChanged: (sel) => setState(
-                  () => _s = _s.copyWith(bibleFontWeight: sel.first)),
+              onSelectionChanged: (sel) =>
+                  setState(() => _s = _s.copyWith(bibleFontWeight: sel.first)),
             ),
             const SizedBox(height: 12),
 
@@ -196,15 +288,22 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                   setState(() => _s = _s.copyWith(showBibleVersion: v)),
             ),
 
-            Text('Cor da referência (rodapé)',
-                style: theme.textTheme.labelLarge),
+            Text(
+              'Cor da referência (rodapé)',
+              style: theme.textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
                 for (final (c, label) in _refPresets)
-                  _colorChip(theme, Color(c), label, _s.footerRefColor,
-                      (v) => setState(() => _s = _s.copyWith(footerRefColor: v))),
+                  _colorChip(
+                    theme,
+                    Color(c),
+                    label,
+                    _s.footerRefColor,
+                    (v) => setState(() => _s = _s.copyWith(footerRefColor: v)),
+                  ),
               ],
             ),
             const SizedBox(height: 20),
@@ -217,8 +316,7 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Sombra na letra'),
               value: _s.textShadow,
-              onChanged: (v) =>
-                  setState(() => _s = _s.copyWith(textShadow: v)),
+              onChanged: (v) => setState(() => _s = _s.copyWith(textShadow: v)),
             ),
             if (_s.textShadow) ...[
               Text('Intensidade da sombra', style: theme.textTheme.labelLarge),
@@ -269,8 +367,7 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                   child: OutlinedButton.icon(
                     icon: const Icon(TablerIcons.rotate),
                     label: const Text('Redefinir'),
-                    onPressed: () =>
-                        setState(() => _s = const StageSettings()),
+                    onPressed: () => setState(() => _s = const StageSettings()),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -293,8 +390,13 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
     );
   }
 
-  Widget _colorChip(ThemeData theme, Color c, String label, Color selected,
-      ValueChanged<Color> onTap) {
+  Widget _colorChip(
+    ThemeData theme,
+    Color c,
+    String label,
+    Color selected,
+    ValueChanged<Color> onTap,
+  ) {
     final isSel = selected.toARGB32() == c.toARGB32();
     return InputChip(
       avatar: CircleAvatar(backgroundColor: c, radius: 9),

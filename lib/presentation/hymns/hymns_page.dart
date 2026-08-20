@@ -22,6 +22,7 @@ import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
 import 'bloc/hymns_bloc.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 const _apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
@@ -255,6 +256,9 @@ class _HymnsViewState extends State<_HymnsView> {
               });
             },
           ),
+          // Cast no AppBar dos hinos: operador configura o Palco (TV,
+          // rota de áudio, BG) ANTES de projetar o culto.
+          const StageCastButton(),
         ],
       ),
       body: BlocBuilder<HymnsBloc, HymnsState>(

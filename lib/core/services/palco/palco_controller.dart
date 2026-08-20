@@ -132,14 +132,15 @@ class PalcoController extends ChangeNotifier {
   }
 
   void playAudio(String url,
-      {String? title, String? subtitle, String? cover, Duration? position}) {
+      {String? title, String? subtitle, String? cover, String? background,
+       Duration? position}) {
     // Paths locais (file path do celular) NÃO vão ao proxy — o receiver
     // não os alcança. O chamador (StageSession) deve ter convertido via
     // serveMedia; se chegou aqui, é bug: não manda URL quebrada.
     final isHttp = url.startsWith('http://') || url.startsWith('https://');
     final target = isHttp ? proxyUrl(url) : url;
     _sender.send(PalcoMessage.audio(target,
-        title: title, subtitle: subtitle, cover: cover,
+        title: title, subtitle: subtitle, cover: cover, background: background,
         positionMs: position?.inMilliseconds));
   }
 

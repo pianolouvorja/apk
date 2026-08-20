@@ -83,6 +83,7 @@ class PalcoMessage {
     String? title,
     String? subtitle,
     String? cover,
+    String? background,
     int? positionMs,
   }) =>
       PalcoMessage(type: 'audio', fields: {
@@ -91,6 +92,7 @@ class PalcoMessage {
         if (title != null) 'title': title,
         if (subtitle != null) 'subtitle': subtitle,
         if (cover != null) 'cover': cover,
+        if (background != null) 'background': background,
         if (positionMs != null) 'positionMs': positionMs,
       });
 

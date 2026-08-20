@@ -153,7 +153,8 @@ class StageSession extends ChangeNotifier {
   /// Fonte LOCAL (hino baixado, path /data/...) não é alcançável pela TV:
   /// os bytes são servidos via /media do sender e a URL substituída.
   PalcoAudioRoute playHymnAudio(String url,
-      {String? title, String? subtitle, String? cover, Duration? position}) {
+      {String? title, String? subtitle, String? cover, String? background,
+       Duration? position}) {
     _currentAudioUrl = url;
     _currentAudioTitle = title;
     _currentAudioSubtitle = subtitle;
@@ -172,7 +173,7 @@ class StageSession extends ChangeNotifier {
       }
     }
     _palco!.playAudio(playable, title: title, subtitle: subtitle, cover: cover,
-        position: position);
+        background: background, position: position);
     return audioRoute;
   }
 
