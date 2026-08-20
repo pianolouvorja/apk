@@ -6,7 +6,6 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../../core/services/dlna/slide_http_server.dart';
 import '../../../core/services/dlna/stage_session.dart';
-import '../../../core/services/palco/palco_controller.dart';
 import 'palco_auto_connect_sheet.dart';
 import '../../hymns/stage_customization_sheet.dart';
 
@@ -131,38 +130,8 @@ class _StageCastButtonState extends State<StageCastButton> {
                     },
                   ),
                 ),
-                // F3.2: roteamento de áudio (só em modo Palco WS).
-                if (session.isPalcoMode)
-                  StatefulBuilder(
-                    builder: (ctx2, setSheet) => ListTile(
-                      leading: const Icon(TablerIcons.volume),
-                      title: const Text('Áudio'),
-                      // Sem subtítulo: as opções já estão no SegmentedButton.
-                      trailing: SegmentedButton<PalcoAudioRoute>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(
-                            value: PalcoAudioRoute.local,
-                            label: Text('Celular'),
-                          ),
-                          ButtonSegment(
-                            value: PalcoAudioRoute.tv,
-                            label: Text('TV'),
-                          ),
-                          ButtonSegment(
-                            value: PalcoAudioRoute.mirror,
-                            label: Text('Ambos'),
-                          ),
-                        ],
-                        selected: {session.audioRoute},
-                        onSelectionChanged: (sel) {
-                          setSheet(() => session.audioRoute = sel.first);
-                          // F3.2: re-roteia a faixa corrente com o modo novo.
-                          session.rerouteCurrentAudio();
-                        },
-                      ),
-                    ),
-                  ),
+                // RF-01 (spec palco-v2): roteamento de áudio mudou pra
+                // Configurações → Palco. Menu do caster fica só sessão.
                 // Imagem de fundo moveu pro "Personalizar" — menos é mais.
                 ListTile(
                   leading: const Icon(TablerIcons.adjustments),

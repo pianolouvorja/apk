@@ -114,17 +114,54 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                         ),
                       Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'O nosso sol\nVeio iluminar',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            // escala preview: 96px em 1920 → ~proporcional
-                            fontSize:
-                                (_s.fontSize / 1920) *
-                                (MediaQuery.of(context).size.width - 64),
-                            fontWeight: _s.fontWeight,
-                            color: _s.textColor,
-                            height: 1.35,
+                        child: Container(
+                          // Caixinha atrás da letra — igual o receiver
+                          // (rgba preto com opacidade configurável).
+                          decoration: _s.textBox
+                              ? BoxDecoration(
+                                  color: Colors.black
+                                      .withValues(alpha: _s.boxOpacity),
+                                  border: _s.boxBorder
+                                      ? Border.all(
+                                          color: Colors.white.withValues(
+                                              alpha: 0.25),
+                                        )
+                                      : null,
+                                )
+                              : null,
+                          padding: _s.textBox
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 16)
+                              : EdgeInsets.zero,
+                          child: Text(
+                            'O nosso sol\nVeio iluminar',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              // escala preview: 96px em 1920 → ~proporcional
+                              fontSize:
+                                  (_s.fontSize / 1920) *
+                                  (MediaQuery.of(context).size.width - 64),
+                              fontWeight: _s.fontWeight,
+                              color: _s.textColor,
+                              height: 1.35,
+                              // Sombra da letra — igual o receiver
+                              // (blur e intensidade configuráveis).
+                              shadows: _s.textShadow
+                                  ? [
+                                      Shadow(
+                                        color: Colors.black.withValues(
+                                            alpha: _s.shadowIntensity),
+                                        blurRadius:
+                                            _s.shadowBlur *
+                                                ((MediaQuery.of(context)
+                                                            .size
+                                                            .width -
+                                                        64) /
+                                                    1920),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
                           ),
                         ),
                       ),
