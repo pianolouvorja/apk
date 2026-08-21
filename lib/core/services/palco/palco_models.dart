@@ -149,6 +149,23 @@ class PalcoMessage {
 
   static const PalcoMessage idleRequest = PalcoMessage(type: 'idle');
 
+  // ---- Controle remoto (desktop/web receiver) ----
+
+  /// remote.command: play|pause|stop|volume|seek enviado a um receiver
+  /// com role 'desktop'/'web'. `id` correlaciona o ack.
+  static PalcoMessage remoteCommand(
+    String command, {
+    String? id,
+    double? value,
+  }) => PalcoMessage(
+    type: 'remote.command',
+    fields: {
+      'command': command,
+      if (id != null) 'id': id,
+      if (value != null) 'value': value,
+    },
+  );
+
   // ---- Accessors receiver→sender ----
 
   /// remote-key: setas/OK do controle da TV ('next' | 'prev').
@@ -156,4 +173,17 @@ class PalcoMessage {
 
   /// ended: audio|video terminou.
   String? get endedMedia => fields['media'] as String?;
+
+  /// hello: role do receiver ('tv' | 'desktop' | 'web').
+  String? get helloRole => fields['role'] as String?;
+
+  /// remote.ack: id do comando confirmado.
+  String? get remoteAckId => fields['id'] as String?;
+
+  /// remote.ack: sucesso do comando.
+  bool get remoteAckOk => fields['ok'] == true;
+
+  /// remote.state: snapshot do player do receiver (estado de playback).
+  Map<String, dynamic> get remoteState =>
+      Map<String, dynamic>.from(fields['state'] as Map? ?? const {});
 }
