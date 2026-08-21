@@ -9,6 +9,8 @@ import '../../../core/services/dlna/stage_session.dart';
 import '../../../core/services/dlna/stage_settings_repository.dart';
 import 'palco_auto_connect_sheet.dart';
 import '../../hymns/stage_customization_sheet.dart';
+import 'slot_selector.dart';
+import 'slot_management_sheet.dart';
 
 /// Botão Palco compartilhado: liga/desliga o cast global.
 ///
@@ -105,6 +107,8 @@ class _StageCastButtonState extends State<StageCastButton> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Multi-palco: seletor de slot ativo (só aparece com 2+ slots)
+                const SlotSelector(),
                 ListTile(
                   leading: Icon(
                     TablerIcons.deviceTv,
@@ -163,6 +167,19 @@ class _StageCastButtonState extends State<StageCastButton> {
                           await session.refresh();
                         },
                       ),
+                    );
+                  },
+                ),
+                // Multi-palco: gerenciar telas (adicionar/remover/espelhar)
+                ListTile(
+                  leading: const Icon(TablerIcons.layoutList),
+                  title: const Text('Gerenciar Telas'),
+                  subtitle: const Text('Adicionar telas extras, espelhar'),
+                  onTap: () async {
+                    await showModalBottomSheet<void>(
+                      context: ctx,
+                      isScrollControlled: true,
+                      builder: (_) => const SlotManagementSheet(),
                     );
                   },
                 ),

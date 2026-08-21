@@ -17,6 +17,7 @@ import 'cast_controller.dart';
 import 'stage_slide_painter.dart';
 import 'stage_settings_repository.dart';
 import '../palco/palco_controller.dart';
+import '../palco/palco_orchestrator.dart';
 import '../palco/palco_models.dart' show PalcoMessage;
 import '../palco/pptx_slide_extractor.dart';
 import '../palco/palco_foreground.dart';
@@ -60,6 +61,13 @@ class StageSession extends ChangeNotifier {
   /// Liga o palco no modo Palco WS (receiver LouvorJA na TV).
   /// A TV conecta no sender do celular ao abrir o app dela.
   Future<bool> turnOnPalco(PalcoTarget tv) async {
+    // Multi-palco: garante slot "principal" no orchestrator. A TV conecta
+    // no sender do StageSession (fluxo atual); o slot registra a existência
+    // da tela para o seletor multi-TV e futuras conexões independentes.
+    final orch = PalcoOrchestrator.instance;
+    if (orch.slot('principal') == null) {
+      orch.addSlot(id: 'principal', label: 'Principal');
+    }
     final p = PalcoController();
     final ok = await p.connect(tv);
     if (!ok) return false;
