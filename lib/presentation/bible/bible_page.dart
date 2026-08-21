@@ -2,16 +2,21 @@
 // UI de Biblia -- nao testavel em unit tests (depende de BLoC + widget tree)
 library;
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
+import 'package:louvorja_piano_mobile/core/services/bible_search_index.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
@@ -621,6 +626,57 @@ class _VerseList extends StatefulWidget {
 }
 
 class _VerseListState extends State<_VerseList> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  BibleSearchIndex? _searchIndex;
+  List<BibleGlobalSearchResult> _globalResults = const [];
+  bool _globalSearching = false;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _initIndex();
+  }
+
+  Future<void> _initIndex() async {
+    if (kIsWeb) return; // Web: cache é no-op, sem busca global em disco.
+    final dir = await getApplicationDocumentsDirectory();
+    if (!mounted) return;
+    setState(() => _searchIndex = BibleSearchIndex(CatalogCache(dir)));
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query.trim());
+    _debounce?.cancel();
+    final index = _searchIndex;
+    if (index == null || _searchQuery.length < 3) {
+      setState(() => _globalResults = const []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      setState(() => _globalSearching = true);
+      final results = await index.search(
+        _searchQuery,
+        widget.state.selectedVersionId,
+        widget.state.books,
+      );
+      if (mounted) {
+        setState(() {
+          _globalResults = results;
+          _globalSearching = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(covariant _VerseList oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -667,15 +723,6 @@ class _VerseListState extends State<_VerseList> {
       isBible: true, // F3.3o: tipografia própria da Bíblia
       module: 'bible',
     );
-  }
-
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
@@ -757,10 +804,74 @@ class _VerseListState extends State<_VerseList> {
               ),
               border: OutlineInputBorder(borderRadius: AppRadius.sm),
             ),
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            onChanged: _onSearchChanged,
           ),
         ),
         const SizedBox(height: AppSpacing.s2),
+        // Resultados globais (busca em toda a Bíblia em cache)
+        if (_globalSearching || _globalResults.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _globalSearching
+                        ? 'bible.globalSearching'.tr()
+                        : 'bible.globalResults'.tr(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_globalResults.length}',
+                  style: theme.textTheme.labelSmall,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: _globalResults.isEmpty ? 0 : 132,
+            child: _globalResults.isEmpty
+                ? const SizedBox.shrink()
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s4,
+                    ),
+                    itemCount: _globalResults.length,
+                    itemBuilder: (context, index) {
+                      final r = _globalResults[index];
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          r.reference,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          r.snippet,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                          context.read<BibleBloc>()
+                            ..add(BibleSelectBook(r.bookId))
+                            ..add(BibleSelectChapter(r.chapter))
+                            ..add(BibleSelectVerse(r.verse));
+                        },
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+        ],
         // Versiculos
         Expanded(
           child: entries.isEmpty

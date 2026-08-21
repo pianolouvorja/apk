@@ -168,7 +168,9 @@
     "referenceHint": "Ex: gn 1:1-3 ou genesis 2:3,5",
     "referenceInvalid": "Referência inválida",
     "bookNotFound": "Livro não encontrado",
-    "filterVersesHint": "Filtrar texto ou versos: amor, 3, 1-3, 1,3-5"
+    "filterVersesHint": "Filtrar texto ou versos: amor, 3, 1-3, 1,3-5",
+    "globalResults": "Resultados na Bíblia",
+    "globalSearching": "Buscando na Bíblia…"
   },
   "settings": {
     "title": "Configurações",
