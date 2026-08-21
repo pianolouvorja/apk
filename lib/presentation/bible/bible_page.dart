@@ -64,6 +64,20 @@ class BiblePage extends StatelessWidget {
 /// Painel que pode estar expandido ou colapsado.
 enum NavPanel { books, chapters, verses }
 
+/// Repassa a busca rápida do AppBar para o [_VerseList] disparar a busca
+/// global (texto livre). Referências são resolvidas direto no AppBar.
+class QuickSearchNotifier extends InheritedNotifier<ValueNotifier<String?>> {
+  const QuickSearchNotifier({
+    super.key,
+    required super.notifier,
+    required super.child,
+  });
+
+  static ValueNotifier<String?>? of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<QuickSearchNotifier>()
+      ?.notifier;
+}
+
 class _BibleView extends StatefulWidget {
   const _BibleView();
 
@@ -78,6 +92,11 @@ class _BibleViewState extends State<_BibleView> {
   /// Verses: capitulo selecionado, lendo versiculos.
   NavPanel _activePanel = NavPanel.books;
 
+  /// Busca rápida no AppBar (padrão Hinos): referência ou texto global.
+  bool _isSearching = false;
+  final _appBarSearchController = TextEditingController();
+  final _quickSearch = ValueNotifier<String?>(null);
+
   void _onBookSelected(BuildContext context, int bookId) {
     context.read<BibleBloc>().add(BibleSelectBook(bookId));
     setState(() => _activePanel = NavPanel.chapters);
@@ -88,43 +107,152 @@ class _BibleViewState extends State<_BibleView> {
     setState(() => _activePanel = NavPanel.verses);
   }
 
+  /// Busca rápida do AppBar: tenta referência (`gn 1:1-3`); se não casar,
+  /// trata como texto e faz busca global na Bíblia em cache.
+  void _applyQuickSearch(BuildContext context) {
+    final query = _appBarSearchController.text.trim();
+    if (query.isEmpty) return;
+
+    final ref = BibleReferenceParser.parse(query);
+    if (ref != null) {
+      _openReference(context, ref);
+      return;
+    }
+    // Texto livre: encaminha para a busca global da lista de versículos.
+    setState(() => _activePanel = NavPanel.verses);
+    // O _VerseList observa via QuickSearchNotifier injetado abaixo.
+    QuickSearchNotifier.of(context)?.value = query;
+  }
+
+  void _openReference(BuildContext context, BibleReference ref) {
+    final state = context.read<BibleBloc>().state;
+    if (state is! BibleLoaded) return;
+    String normTxt(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c')
+        .trim();
+    final books = state.books;
+    final query = ref.bookQuery;
+    BibleBook? match;
+    for (final b in books) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      if (ab == query || nm == query) {
+        match = b;
+        break;
+      }
+    }
+    match ??= books.where((b) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      return ab.startsWith(query) || nm.startsWith(query);
+    }).firstOrNull;
+
+    if (match == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('bible.bookNotFound'.tr())));
+      return;
+    }
+    final bloc = context.read<BibleBloc>();
+    bloc.add(BibleSelectBook(match.id));
+    bloc.add(BibleSelectChapter(ref.chapter));
+    if (ref.verses.isNotEmpty) {
+      bloc.add(BibleSelectVerses(ref.verses));
+    }
+    setState(() {
+      _isSearching = false;
+      _appBarSearchController.clear();
+      _activePanel = NavPanel.verses;
+    });
+  }
+
+  @override
+  void dispose() {
+    _appBarSearchController.dispose();
+    _quickSearch.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('bible.title'.tr()),
-        actions: const [
-          StageClearButton(),
-          StageStopVideoButton(),
-          StageCastButton(module: StageModule.bible),
-          BibleDownloadButton(),
-        ],
-      ),
-      body: BlocBuilder<BibleBloc, BibleState>(
-        builder: (context, state) {
-          if (state is BibleLoading || state is BibleInitial) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: AppSpacing.s3),
-                  Text(
-                    'bible.loading'.tr(),
-                    style: Theme.of(context).textTheme.bodyMedium,
+    return QuickSearchNotifier(
+      notifier: _quickSearch,
+      child: Scaffold(
+        appBar: AppBar(
+          title: _isSearching
+              ? TextField(
+                  key: const Key('bible-appbar-search'),
+                  controller: _appBarSearchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'bible.quickSearchHint'.tr(),
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ],
-              ),
-            );
-          }
-          if (state is BibleError) {
-            return _ErrorView(code: state.code);
-          }
-          if (state is BibleLoaded) {
-            return _body(context, state);
-          }
-          return const SizedBox.shrink();
-        },
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  onChanged: (v) => setState(() {}),
+                  onSubmitted: (_) => _applyQuickSearch(context),
+                )
+              : Text('bible.title'.tr()),
+          actions: [
+            if (_isSearching)
+              IconButton(
+                icon: const Icon(TablerIcons.arrowRight, size: 20),
+                tooltip: 'bible.goToReference'.tr(),
+                onPressed: () => _applyQuickSearch(context),
+              )
+            else ...const [
+              StageClearButton(),
+              StageStopVideoButton(),
+              StageCastButton(module: StageModule.bible),
+              BibleDownloadButton(),
+            ],
+            IconButton(
+              key: const Key('bible-search-toggle'),
+              icon: Icon(_isSearching ? TablerIcons.x : TablerIcons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) _appBarSearchController.clear();
+                });
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<BibleBloc, BibleState>(
+          builder: (context, state) {
+            if (state is BibleLoading || state is BibleInitial) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: AppSpacing.s3),
+                    Text(
+                      'bible.loading'.tr(),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              );
+            }
+            if (state is BibleError) {
+              return _ErrorView(code: state.code);
+            }
+            if (state is BibleLoaded) {
+              return _body(context, state);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
@@ -637,6 +765,31 @@ class _VerseListState extends State<_VerseList> {
   void initState() {
     super.initState();
     _initIndex();
+    // Busca rápida do AppBar (texto livre): aplica no campo local
+    // e dispara a busca global.
+    QuickSearchNotifier.of(context)?.addListener(_onQuickSearch);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // InheritedNotifier resolve depois do primeiro build.
+    QuickSearchNotifier.of(context)?.addListener(_onQuickSearch);
+  }
+
+  void _onQuickSearch() {
+    final q = QuickSearchNotifier.of(context)?.value;
+    if (q == null) return;
+    _searchController.text = q;
+    _onSearchChanged(q);
+  }
+
+  @override
+  void dispose() {
+    QuickSearchNotifier.of(context)?.removeListener(_onQuickSearch);
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initIndex() async {
@@ -668,13 +821,6 @@ class _VerseListState extends State<_VerseList> {
         });
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
