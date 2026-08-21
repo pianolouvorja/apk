@@ -23,6 +23,7 @@ import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_she
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/bible_reference_parser.dart';
 
 class BiblePage extends StatelessWidget {
   final BibleBloc? testBloc;
@@ -324,30 +325,8 @@ class _Toolbar extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
             color: theme.colorScheme.outline,
           ),
-          // Localizacao
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'bible.location'.tr().toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0.6,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  state.locationLabel,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
+          // Localizacao / referencia direta: "gn 1:1-3" ou "genesis 2:3,5"
+          Expanded(child: _LocationReferenceField(state: state)),
         ],
       ),
     );
@@ -898,6 +877,161 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Campo de localização editável: aceita referência direta ("gn 1:1-3",
+/// "genesis 2:3,5"). Enter navega pro livro/capítulo/versículos.
+class _LocationReferenceField extends StatefulWidget {
+  final BibleLoaded state;
+
+  const _LocationReferenceField({required this.state});
+
+  @override
+  State<_LocationReferenceField> createState() =>
+      _LocationReferenceFieldState();
+}
+
+class _LocationReferenceFieldState extends State<_LocationReferenceField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focus;
+  bool _editing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _focus = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final ref = BibleReferenceParser.parse(_controller.text);
+    if (ref == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('bible.referenceInvalid'.tr())));
+      }
+      return;
+    }
+    final norm = BibleReferenceParser.parse(_controller.text)!;
+    // Casa livro por abreviação, nome (normalizados) ou prefixo.
+    String normTxt(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c')
+        .trim();
+    final books = widget.state.books;
+    final query = norm.bookQuery;
+    BibleBook? match;
+    for (final b in books) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      if (ab == query || nm == query) {
+        match = b;
+        break;
+      }
+    }
+    match ??= books.where((b) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      return ab.startsWith(query) || nm.startsWith(query);
+    }).firstOrNull;
+    if (match == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('bible.bookNotFound'.tr())));
+      }
+      return;
+    }
+    final bloc = context.read<BibleBloc>();
+    bloc.add(BibleSelectBook(match.id));
+    bloc.add(BibleSelectChapter(norm.chapter));
+    if (norm.verses.isNotEmpty) {
+      bloc.add(BibleSelectVerses(norm.verses));
+    }
+    _focus.unfocus();
+    setState(() => _editing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_editing) {
+      return TextField(
+        controller: _controller,
+        focusNode: _focus,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _apply(),
+        style: theme.textTheme.bodyMedium,
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'bible.referenceHint'.tr(),
+          hintStyle: theme.textTheme.bodySmall,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 6,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.search, size: 18),
+            onPressed: _apply,
+          ),
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () {
+        _controller.text = widget.state.locationLabel;
+        setState(() => _editing = true);
+        _focus.requestFocus();
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'bible.location'.tr().toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              letterSpacing: 0.6,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.state.locationLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.edit,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

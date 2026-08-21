@@ -165,7 +165,10 @@
       "loadChapterFailed": "No se pudo cargar el capítulo seleccionado."
     },
     "previousChapter": "Capítulo anterior",
-    "nextChapter": "Siguiente capítulo"
+    "nextChapter": "Siguiente capítulo",
+    "referenceHint": "Ej: gn 1:1-3 o genesis 2:3,5",
+    "referenceInvalid": "Referencia invalida",
+    "bookNotFound": "Libro no encontrado"
   },
   "settings": {
     "title": "Configuración",
