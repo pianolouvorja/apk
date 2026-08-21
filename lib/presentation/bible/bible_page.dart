@@ -119,9 +119,10 @@ class _BibleViewState extends State<_BibleView> {
       return;
     }
     // Texto livre: encaminha para a busca global da lista de versículos.
+    // Limpa antes para garantir notificação mesmo em busca repetida.
+    _quickSearch.value = null;
     setState(() => _activePanel = NavPanel.verses);
-    // O _VerseList observa via QuickSearchNotifier injetado abaixo.
-    QuickSearchNotifier.of(context)?.value = query;
+    _quickSearch.value = query;
   }
 
   void _openReference(BuildContext context, BibleReference ref) {
@@ -761,25 +762,36 @@ class _VerseListState extends State<_VerseList> {
   bool _globalSearching = false;
   Timer? _debounce;
 
+  bool _listeningQuickSearch = false;
+
   @override
   void initState() {
     super.initState();
     _initIndex();
-    // Busca rápida do AppBar (texto livre): aplica no campo local
-    // e dispara a busca global.
-    QuickSearchNotifier.of(context)?.addListener(_onQuickSearch);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // InheritedNotifier resolve depois do primeiro build.
-    QuickSearchNotifier.of(context)?.addListener(_onQuickSearch);
+    // Registra uma única vez; InheritedNotifier só resolve após o
+    // primeiro build, então isso não pode viver no initState.
+    final notifier = QuickSearchNotifier.of(context);
+    if (notifier != null && !_listeningQuickSearch) {
+      notifier.addListener(_onQuickSearch);
+      _listeningQuickSearch = true;
+      // Busca disparada enquanto este painel ainda não estava montado
+      // (ex.: usuário no grid de livros): consome o valor pendente.
+      final pending = notifier.value;
+      if (pending != null && pending.isNotEmpty) {
+        _searchController.text = pending;
+        _onSearchChanged(pending);
+      }
+    }
   }
 
   void _onQuickSearch() {
     final q = QuickSearchNotifier.of(context)?.value;
-    if (q == null) return;
+    if (q == null || q.isEmpty) return;
     _searchController.text = q;
     _onSearchChanged(q);
   }
