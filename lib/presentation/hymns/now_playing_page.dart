@@ -163,8 +163,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       StageSession.instance.removeListener(_onAudioRouteChanged);
     }
     _posSub?.cancel();
-    // F3.2: ao sair da tela, para o áudio também no palco (se roteado).
-    StageSession.instance.stopHymnAudio();
+    // Multi-palco: minimizar (voltar pro mini player) NÃO para a música
+    // na TV — o player singleton segue tocando e a projeção permanece.
+    // Parar de verdade é o long-press no X (_stopAudioEverywhere) ou o
+    // botão stop do mini player.
     // Palco global NÃO é desconectado aqui: sessão persiste entre telas.
     super.dispose();
   }
@@ -332,14 +334,24 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
           SafeArea(
             child: Column(
               children: [
-                // Top bar: título + modos + fechar
+                // Top bar: título + modos + minimizar + fechar
                 Row(
                   children: [
+                    // Minimizar: esconde o NowPlaying SEM parar nada —
+                    // música/projeção seguem; volta pelo mini player.
                     IconButton(
-                      icon: const Icon(TablerIcons.x, color: Colors.white),
+                      tooltip: 'Minimizar (música continua)',
+                      icon: const Icon(
+                        TablerIcons.arrowsDiagonal2,
+                        color: Colors.white,
+                      ),
                       onPressed:
                           widget.onClose ??
                           () => Navigator.of(context).maybePop(),
+                    ),
+                    IconButton(
+                      icon: const Icon(TablerIcons.x, color: Colors.white),
+                      onPressed: _stopAudioEverywhere,
                       onLongPress:
                           _stopAudioEverywhere, // F3.2: para tudo (local+TV)
                     ),

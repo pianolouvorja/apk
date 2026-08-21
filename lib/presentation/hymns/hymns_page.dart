@@ -206,6 +206,8 @@ class _HymnsViewState extends State<_HymnsView> {
         album: '',
         albumId: 0,
         durationMs: detail.durationMs,
+        detail: detail,
+        audioSource: source,
       );
       await player.playUrl(source);
 

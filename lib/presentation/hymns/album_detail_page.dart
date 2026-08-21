@@ -183,6 +183,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
         durationMs: hymn.durationMs,
+        detail: hymn,
+        instrumental: instrumental,
+        albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
+        audioSource: source,
+        audioIsLocal: local != null,
       );
       await player.playUrl(source);
     } catch (_) {
@@ -235,6 +240,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
         durationMs: hymn.durationMs,
+        detail: hymn,
+        instrumental: instrumental,
+        albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
+        audioSource: source,
+        audioIsLocal: local != null,
       );
       await _player.playUrl(source);
 

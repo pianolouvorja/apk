@@ -2,6 +2,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/entities/hymn.dart';
+
 /// Interface minima do player para o miniplayer (facilita testes).
 ///
 /// Timeline (paridade Player.vue): posição, duração e seek têm default
@@ -32,12 +34,27 @@ class NowPlayingTrack {
   final int? albumId;
   final int? durationMs;
 
+  /// Detail completo (lyric/urls) — permite REABRIR o NowPlayingPage
+  /// pelo mini player sem buscar na API de novo (multi-palco 2026-08-21).
+  final Hymn? detail;
+
+  /// Contexto da reprodução original (mesma visão do play na lista).
+  final bool instrumental;
+  final String? albumCoverUrl;
+  final String? audioSource;
+  final bool audioIsLocal;
+
   const NowPlayingTrack({
     required this.hymnId,
     required this.title,
     required this.album,
     this.albumId,
     this.durationMs,
+    this.detail,
+    this.instrumental = false,
+    this.albumCoverUrl,
+    this.audioSource,
+    this.audioIsLocal = false,
   });
 }
 
@@ -59,6 +76,11 @@ class NowPlayingNotifier extends ChangeNotifier {
     required String album,
     int? albumId,
     int? durationMs,
+    Hymn? detail,
+    bool instrumental = false,
+    String? albumCoverUrl,
+    String? audioSource,
+    bool audioIsLocal = false,
   }) {
     _track = NowPlayingTrack(
       hymnId: hymnId,
@@ -66,6 +88,11 @@ class NowPlayingNotifier extends ChangeNotifier {
       album: album,
       albumId: albumId,
       durationMs: durationMs,
+      detail: detail,
+      instrumental: instrumental,
+      albumCoverUrl: albumCoverUrl,
+      audioSource: audioSource,
+      audioIsLocal: audioIsLocal,
     );
     _playing = true;
     notifyListeners();

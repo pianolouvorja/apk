@@ -34,6 +34,7 @@ class PalcoController extends ChangeNotifier {
   String? _httpBase;
 
   bool get isConnected => _sender.clientCount > 0;
+  bool get isRunning => _sender.isRunning;
 
   /// F3.3x: IP da TV conectada (visto pelo socket WS no momento do connect).
   String? get receiverIp => _sender.receiverIp;

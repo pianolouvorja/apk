@@ -61,17 +61,21 @@ class StageSession extends ChangeNotifier {
   /// Liga o palco no modo Palco WS (receiver LouvorJA na TV).
   /// A TV conecta no sender do celular ao abrir o app dela.
   Future<bool> turnOnPalco(PalcoTarget tv) async {
-    // Multi-palco: garante slot "principal" no orchestrator. A TV conecta
-    // no sender do StageSession (fluxo atual); o slot registra a existência
-    // da tela para o seletor multi-TV e futuras conexões independentes.
+    // Multi-palco: o slot "principal" do orchestrator É o transporte desta
+    // sessão — um sender só (portas 7080/7081), estado compartilhado com o
+    // gerenciador de telas. Antes: controller paralelo deixava o slot
+    // "desconectado" no gerenciador (bug 2026-08-21).
     final orch = PalcoOrchestrator.instance;
+    await orch.loadStoredConfig();
     if (orch.slot('principal') == null) {
       orch.addSlot(id: 'principal', label: 'Principal');
     }
-    final p = PalcoController();
-    final ok = await p.connect(tv);
+    final ok = await orch.connectTv('principal', tv);
     if (!ok) return false;
+    final p = orch.slot('principal')!.controller;
     _palco = p;
+    // Senders de telas salvas ficam disponíveis para reconexão automática.
+    await orch.startStoredSenders(excludeId: 'principal');
     renderer = null;
     // F3.3: foreground service — sobrevive a background (One UI mata rede).
     unawaited(PalcoForeground.start());
@@ -175,6 +179,7 @@ class StageSession extends ChangeNotifier {
     _currentAudioSubtitle = subtitle;
     _currentAudioCover = cover;
     if (!_routesToTv) return PalcoAudioRoute.local;
+    final p = _audioTarget();
     var playable = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       final file = File(url);
@@ -183,13 +188,13 @@ class StageSession extends ChangeNotifier {
           RegExp(r'[^A-Za-z0-9._-]'),
           '_',
         );
-        playable = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
+        playable = p.serveMedia(name, file.readAsBytesSync()) ?? url;
         debugPrint('[PALCO] midia local servida: $playable');
       } else {
         debugPrint('[PALCO] ERRO: fonte local inexistente roteada: $url');
       }
     }
-    _palco!.playAudio(
+    p.playAudio(
       playable,
       title: title,
       subtitle: subtitle,
@@ -200,12 +205,20 @@ class StageSession extends ChangeNotifier {
     return audioRoute;
   }
 
+  /// Alvo de áudio: slot ATIVO (a TV que recebe o som) — multi-palco.
+  /// Áudio numa TV só (eco em várias); muda trocando o chip da tela ativa.
+  PalcoController _audioTarget() {
+    final t = _projectionTargets();
+    if (t.isNotEmpty) return t.first;
+    return _palco!;
+  }
+
   /// Re-envia a faixa corrente com o modo novo (chamado ao trocar modo).
   void rerouteCurrentAudio() {
     if (_currentAudioUrl == null) return;
     if (!_routesToTv) {
       // voltou pra local: para na TV (player local segue por conta da UI)
-      _palco?.stopAudio();
+      _audioTarget().stopAudio();
       return;
     }
     var url = _currentAudioUrl!;
@@ -216,13 +229,13 @@ class StageSession extends ChangeNotifier {
           RegExp(r'[^A-Za-z0-9._-]'),
           '_',
         );
-        url = _palco!.serveMedia(name, file.readAsBytesSync()) ?? url;
+        url = _audioTarget().serveMedia(name, file.readAsBytesSync()) ?? url;
         debugPrint('[PALCO] reroute: local served as $url');
       } else {
         debugPrint('[PALCO] reroute ERROR: local not found: $url');
       }
     }
-    _palco!.playAudio(
+    _audioTarget().playAudio(
       url,
       title: _currentAudioTitle,
       subtitle: _currentAudioSubtitle,
@@ -231,18 +244,18 @@ class StageSession extends ChangeNotifier {
   }
 
   void pauseHymnAudio() {
-    if (_routesToTv) _palco!.pauseAudio();
+    if (_routesToTv) _audioTarget().pauseAudio();
   }
 
   void stopHymnAudio() {
-    if (_routesToTv) _palco!.stopAudio();
+    if (_routesToTv) _audioTarget().stopAudio();
   }
 
   /// Seek espelhado (modo tv: a TV é o relógio; local/mirror: no-op
   /// porque o player local já é a fonte).
   void seekHymnAudio(Duration position) {
     if (audioRoute == PalcoAudioRoute.tv && isPalcoMode) {
-      _palco!.seekAudio(position.inMilliseconds / 1000.0);
+      _audioTarget().seekAudio(position.inMilliseconds / 1000.0);
     }
   }
 
@@ -257,7 +270,9 @@ class StageSession extends ChangeNotifier {
   void _projectSlide(int index) {
     if (index < 0 || index >= _slideUrls.length) return;
     _slideIndex = index;
-    _palco?.project(text: '', footer: '', background: _slideUrls[index]);
+    for (final p in _projectionTargets()) {
+      p.project(text: '', footer: '', background: _slideUrls[index]);
+    }
   }
 
   /// Carrega e projeta a 1a imagem de slides extraídos de um .pptx.
@@ -267,10 +282,12 @@ class StageSession extends ChangeNotifier {
     if (slides.isEmpty || _palco == null) return 0;
     _slideUrls = slides
         .map(
-          (s) => _palco!.serveMedia(
-            'slide_${s.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}',
-            s.bytes,
-          ),
+          (s) => _projectionTargets().isNotEmpty
+              ? _projectionTargets().first.serveMedia(
+                  'slide_${s.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}',
+                  s.bytes,
+                )
+              : null,
         )
         .whereType<String>()
         .toList();
@@ -301,7 +318,18 @@ class StageSession extends ChangeNotifier {
   void stopSlides() {
     _slideUrls = [];
     _slideIndex = -1;
-    _palco?.projectIdle();
+    for (final p in _projectionTargets()) {
+      p.projectIdle();
+    }
+  }
+
+  /// Para o cronômetro na(s) tela(s) de destino (multi-palco).
+  /// Chamado pela UI do Timer (pause/stop) — NÃO usar palco.stopTimer()
+  /// direto: isso mandaria só pro sender principal.
+  void stopTimerStage() {
+    for (final p in _projectionTargets()) {
+      p.stopTimer();
+    }
   }
 
   /// F3.3k: toca vídeo no palco. Arquivo local → serveMedia; URL externa
@@ -316,11 +344,13 @@ class StageSession extends ChangeNotifier {
         RegExp(r'[^A-Za-z0-9._-]'),
         '_',
       );
-      final served = _palco!.serveMedia(name, file.readAsBytesSync());
+      final served = _audioTarget().serveMedia(name, file.readAsBytesSync());
       if (served == null) return false;
       url = served;
     }
-    _palco!.playVideo(url);
+    for (final p in _projectionTargets()) {
+      p.playVideo(url);
+    }
     _videoOnStage = true;
     notifyListeners();
     return true;
@@ -332,7 +362,9 @@ class StageSession extends ChangeNotifier {
   void stopVideoOnStage() {
     _videoOnStage = false;
     notifyListeners();
-    _palco?.stopVideo();
+    for (final p in _projectionTargets()) {
+      p.stopVideo();
+    }
   }
 
   /// F3.3w: true enquanto um vídeo projetado pela liturgia roda na TV.
@@ -345,7 +377,9 @@ class StageSession extends ChangeNotifier {
   void toggleStageVideoPause() {
     _stageVideoPaused = !_stageVideoPaused;
     notifyListeners();
-    _palco?.toggleVideoPause();
+    for (final p in _projectionTargets()) {
+      p.toggleVideoPause();
+    }
   }
 
   /// Projeta conteúdo no palco. Sobrescreve o anterior.
@@ -359,20 +393,23 @@ class StageSession extends ChangeNotifier {
     final s =
         await StageSettingsRepository(scope: 'timer').loadOptional() ??
         settings;
-    _palco!.startTimer(
-      duration: duration,
-      mode: mode,
-      label: label,
-      color:
-          '#${s.textColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-      fontSize: s.fontSize,
-      fontWeight: s.fontWeight.value,
-      textShadow: s.textShadow,
-      shadowBlur: s.shadowBlur,
-      shadowIntensity: s.shadowIntensity,
-      textAlign: s.textAlign,
-      textVerticalAlign: s.textVerticalAlign,
-    );
+    // Multi-palco: timer vai pro(s) mesmo(s) alvo(s) da projeção.
+    for (final p in _projectionTargets()) {
+      p.startTimer(
+        duration: duration,
+        mode: mode,
+        label: label,
+        color:
+            '#${s.textColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+        fontSize: s.fontSize,
+        fontWeight: s.fontWeight.value,
+        textShadow: s.textShadow,
+        shadowBlur: s.shadowBlur,
+        shadowIntensity: s.shadowIntensity,
+        textAlign: s.textAlign,
+        textVerticalAlign: s.textVerticalAlign,
+      );
+    }
   }
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definida).
@@ -397,12 +434,12 @@ class StageSession extends ChangeNotifier {
 
   Future<void> turnOff() async {
     if (_palco != null) {
-      unawaited(PalcoForeground.stop());
-      try {
-        await WakelockPlus.disable();
-      } catch (_) {}
-      await _palco!.disconnect();
+      _remoteKeySub?.cancel();
+      _remoteKeySub = null;
       _palco = null;
+      // Multi-palco: desconexão passa pelo orchestrator (mantém slot e
+      // estado do gerenciador de telas coerentes).
+      await PalcoOrchestrator.instance.disconnectAll();
     } else {
       await _cast.disconnect();
     }
@@ -533,31 +570,88 @@ class StageSession extends ChangeNotifier {
           settings;
       final fSize = isBible ? s.bibleFontSize : s.fontSize;
       final fWeight = isBible ? s.bibleFontWeight : s.fontWeight.value;
-      _palco!.project(
-        text: _colorize(text, isBible ? s.bibleTextColor : s.textColor),
-        footer: footer ?? '',
-        background: background,
-        footerRef: footerRef,
-        footerColor:
-            '#${s.footerRefColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-        footerWeight: s.footerRefWeight,
-        footerVersion: (s.showBibleVersion && footerVersion != null)
-            ? footerVersion
-            : null,
-        textShadow: s.textShadow,
-        shadowBlur: s.shadowBlur,
-        shadowIntensity: s.shadowIntensity,
-        textBox: s.textBox,
-        boxOpacity: s.boxOpacity,
-        boxBorder: s.boxBorder
-            ? {'width': 0.4, 'color': 'rgba(255,255,255,.25)'}
-            : null,
-        fontSize: fSize,
-        fontWeight: fWeight,
-      );
-      return true;
+
+      // Multi-palco: espelho → todos do grupo; senão slot ATIVO (conteúdo
+      // diferente por tela). Fallback: transporte da sessão (principal).
+      final targets = _projectionTargets();
+      for (final p in targets) {
+        _projectToController(
+          p,
+          text: _colorize(text, isBible ? s.bibleTextColor : s.textColor),
+          footer: footer ?? '',
+          background: background,
+          footerRef: footerRef,
+          footerVersion: (s.showBibleVersion && footerVersion != null)
+              ? footerVersion
+              : null,
+          fSize: fSize,
+          fWeight: fWeight,
+          s: s,
+        );
+      }
+      return targets.isNotEmpty;
     }
     return _project(content);
+  }
+
+  /// Controllers que recebem a projeção (multi-palco).
+  List<PalcoController> _projectionTargets() {
+    final orch = PalcoOrchestrator.instance;
+    if (orch.isMirrorMode) {
+      final group = orch.mirrorGroup!;
+      debugPrint(
+        '[MULTI] espelho: slots=$group conectados='
+        '${group.map((id) => '${orch.slot(id)?.label}:${orch.slot(id)?.isConnected}')}',
+      );
+      return group
+          .map((id) => orch.slot(id)?.controller)
+          .whereType<PalcoController>()
+          .where((c) => c.isConnected)
+          .toList();
+    }
+    final activeSlot = orch.activeSlot;
+    final active = activeSlot?.controller;
+    debugPrint(
+      '[MULTI] ativo=${activeSlot?.label}(${activeSlot?.wsPort}) '
+      'connected=${activeSlot?.isConnected} '
+      'todos=${orch.slots.map((s) => '${s.label}:${s.isConnected}@${s.wsPort}')} '
+      'fallback=${_palco != null && (active == null || !active.isConnected)}',
+    );
+    if (active != null && active.isConnected) return [active];
+    return _palco != null ? [_palco!] : const [];
+  }
+
+  void _projectToController(
+    PalcoController p, {
+    required String text,
+    required String footer,
+    String? background,
+    String? footerRef,
+    String? footerVersion,
+    required double fSize,
+    required int fWeight,
+    required StageSettings s,
+  }) {
+    p.project(
+      text: text,
+      footer: footer,
+      background: background,
+      footerRef: footerRef,
+      footerColor:
+          '#${s.footerRefColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+      footerWeight: s.footerRefWeight,
+      footerVersion: footerVersion,
+      textShadow: s.textShadow,
+      shadowBlur: s.shadowBlur,
+      shadowIntensity: s.shadowIntensity,
+      textBox: s.textBox,
+      boxOpacity: s.boxOpacity,
+      boxBorder: s.boxBorder
+          ? {'width': 0.4, 'color': 'rgba(255,255,255,.25)'}
+          : null,
+      fontSize: fSize,
+      fontWeight: fWeight,
+    );
   }
 
   /// Envolve o texto em <span style="color"> preservando <br>.
@@ -575,7 +669,10 @@ class StageSession extends ChangeNotifier {
     _slideIndex = -1;
     _palco?.stopTimer();
     if (isPalcoMode) {
-      _palco!.projectIdle();
+      // Multi-palco: idle nos mesmos targets da projeção.
+      for (final p in _projectionTargets()) {
+        p.projectIdle();
+      }
       return;
     }
     await _projectIdle();

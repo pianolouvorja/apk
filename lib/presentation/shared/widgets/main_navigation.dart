@@ -9,6 +9,7 @@ import '../../../../core/services/hymn_audio_player.dart';
 import '../../../../core/services/hymn_player_adapter.dart';
 import '../../../../core/services/now_playing.dart';
 import 'mini_player_bar.dart';
+import '../../hymns/now_playing_page.dart';
 
 /// MainNavigation — bottom navigation com 5 tabs.
 ///
@@ -45,7 +46,29 @@ class MainNavigation extends StatelessWidget {
           MiniPlayerBar(
             notifier: nowPlaying,
             player: _miniPlayerAdapter,
-            onOpenPlayer: () => _onTap(1),
+            // Tap no mini = REABRIR o NowPlaying da faixa em execução
+            // (antes navegava pra aba Hinos — bug multi-palco 2026-08-21).
+            onOpenPlayer: () {
+              final track = nowPlaying.track;
+              final detail = track?.detail;
+              if (detail == null) {
+                _onTap(1); // sem detail (faixa antiga): fallback pra Hinos
+                return;
+              }
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NowPlayingPage(
+                    detail: detail,
+                    instrumental: track?.instrumental ?? false,
+                    albumCoverUrl: track?.albumCoverUrl,
+                    player: _miniPlayerAdapter,
+                    filesUrl: 'https://api.louvorja.com.br/file',
+                    audioSource: track?.audioSource,
+                    audioIsLocal: track?.audioIsLocal ?? false,
+                  ),
+                ),
+              );
+            },
           ),
           Container(
             decoration: BoxDecoration(

@@ -1,6 +1,6 @@
 library;
 
-import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
+import 'package:flutter/foundation.dart' show ChangeNotifier;
 
 import 'palco_controller.dart';
 import 'palco_sender.dart';
@@ -20,7 +20,11 @@ class PalcoSlot extends ChangeNotifier {
         wsPortFixed: _baseWsPort,
       ),
     );
-    _settingsRepo = StageSettingsRepository(scope: id);
+    _settingsRepo = StageSettingsRepository(scope: 'global');
+    // Multi-palco: estado de conexão do controller (TV conectou/saiu)
+    // precisa fluir slot -> orchestrator -> UI. Sem isso o gerenciador
+    // só atualizava fechando e abrindo (bug 2026-08-21).
+    controller.addListener(notifyListeners);
   }
 
   final String id;
@@ -41,9 +45,6 @@ class PalcoSlot extends ChangeNotifier {
 
   StageSettings settings = const StageSettings();
 
-  /// Último conteúdo projetado neste slot (para refresh).
-  _SlotContent? _lastContent;
-
   Future<bool> connect(PalcoTarget tv) async {
     settings = await _settingsRepo.load();
     final ok = await controller.connect(tv);
@@ -53,7 +54,6 @@ class PalcoSlot extends ChangeNotifier {
 
   Future<void> disconnect() async {
     await controller.disconnect();
-    _lastContent = null;
     notifyListeners();
   }
 
@@ -63,25 +63,6 @@ class PalcoSlot extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setLastContent(_SlotContent c) => _lastContent = c;
-  _SlotContent? get lastContent => _lastContent;
-
   @override
   String toString() => 'PalcoSlot($id, $label, ports $httpPort/$wsPort)';
-}
-
-/// Conteúdo projetado num slot.
-class _SlotContent {
-  final String title;
-  final String? body;
-  final String? footer;
-  final String module;
-  final bool isBible;
-  const _SlotContent({
-    required this.title,
-    this.body,
-    this.footer,
-    this.module = 'hymns',
-    this.isBible = false,
-  });
 }

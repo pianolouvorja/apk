@@ -42,7 +42,7 @@ class _TimerPageState extends State<TimerPage> {
     final stage = StageSession.instance;
     if (!stage.isOn || !stage.isPalcoMode) return;
     if (!_countdownRunning) {
-      stage.palco?.stopTimer();
+      stage.stopTimerStage();
       return;
     }
     // Timer nativo conta na TV; StageSession injeta settings do módulo.
@@ -58,7 +58,7 @@ class _TimerPageState extends State<TimerPage> {
     final stage = StageSession.instance;
     if (!stage.isOn || !stage.isPalcoMode) return;
     if (!_stopwatch.isRunning) {
-      stage.palco?.stopTimer();
+      stage.stopTimerStage();
       return;
     }
     // chrono: TV conta a partir do elapsed atual (renderer nativo).
@@ -71,7 +71,7 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   void _castStop() {
-    StageSession.instance.palco?.stopTimer();
+    StageSession.instance.stopTimerStage();
   }
 
   // Countdown
@@ -150,8 +150,6 @@ class _TimerPageState extends State<TimerPage> {
     final s = d.inSeconds.remainder(60);
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
-  String _formatChrono(Duration d) => _formatDuration(d);
 
   void _toggleStopwatch() {
     setState(() {

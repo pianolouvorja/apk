@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../../core/services/palco/palco_orchestrator.dart';
-import '../../../core/services/palco/palco_controller.dart';
+import '../../../core/services/dlna/slide_http_server.dart';
 
 /// Sheet para gerenciar slots de palco: adicionar, remover.
 class SlotManagementSheet extends StatefulWidget {
@@ -15,6 +15,31 @@ class SlotManagementSheet extends StatefulWidget {
 }
 
 class _SlotManagementSheetState extends State<SlotManagementSheet> {
+  String? _localIp;
+
+  @override
+  void initState() {
+    super.initState();
+    PalcoOrchestrator.instance.addListener(_onOrchChanged);
+    PalcoOrchestrator.instance.loadStoredConfig();
+    _resolveIp();
+  }
+
+  @override
+  void dispose() {
+    PalcoOrchestrator.instance.removeListener(_onOrchChanged);
+    super.dispose();
+  }
+
+  void _onOrchChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _resolveIp() async {
+    await SlideHttpServer.resolveLocalIp();
+    if (mounted) setState(() => _localIp = SlideHttpServer.localIp);
+  }
+
   @override
   Widget build(BuildContext context) {
     final orch = PalcoOrchestrator.instance;
@@ -34,7 +59,7 @@ class _SlotManagementSheetState extends State<SlotManagementSheet> {
             ),
             const SizedBox(height: 12),
             ...orch.slots.map(
-              (slot) => ListTile(
+              (slot) => ExpansionTile(
                 leading: Icon(
                   slot.isConnected
                       ? TablerIcons.deviceTv
@@ -50,14 +75,52 @@ class _SlotManagementSheetState extends State<SlotManagementSheet> {
                       : 'Desconectado  :${slot.wsPort}',
                   style: theme.textTheme.bodySmall,
                 ),
-                trailing: orch.slots.length > 1
-                    ? IconButton(
-                        icon: const Icon(TablerIcons.trash, size: 18),
-                        onPressed: () async {
-                          await orch.removeSlot(slot.id);
-                        },
-                      )
-                    : null,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Conectar esta tela: abra o app Palco na TV e use a '
+                          'tecla VERMELHA com o IP abaixo',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          '${_localIp ?? '…'}  (porta ${slot.wsPort})',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (slot.id != 'principal')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'URL alternativa (navegador da TV):\n'
+                              'http://${_localIp ?? '…'}:${slot.httpPort}'
+                              '/receiver.html?port=${slot.wsPort}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        if (orch.slots.length > 1)
+                          TextButton.icon(
+                            icon: const Icon(TablerIcons.trash, size: 16),
+                            label: const Text('Remover tela'),
+                            onPressed: () async {
+                              await orch.removeSlot(slot.id);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -99,7 +162,7 @@ class _SlotManagementSheetState extends State<SlotManagementSheet> {
                   RegExp(r'[^a-z0-9]'),
                   '_',
                 );
-                PalcoOrchestrator.instance.addSlot(id: id, label: name);
+                PalcoOrchestrator.instance.addSlotOnline(id: id, label: name);
               }
               Navigator.pop(ctx);
             },

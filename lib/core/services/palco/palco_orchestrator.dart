@@ -1,22 +1,20 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:easy_localization/easy_localization.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 import 'package:flutter/material.dart' show Color;
-import 'package:image/image.dart' as image;
 import 'package:wakelock_plus/wakelock_plus.dart';
-
-import 'dart:ui' as ui;
 
 import 'palco_controller.dart';
 import 'palco_slot.dart';
 import 'palco_models.dart';
 import '../dlna/stage_settings_repository.dart';
-import '../dlna/stage_slide_painter.dart';
-import '../dlna/ssdp_discovery.dart';
+import '../dlna/slide_http_server.dart';
 import '../dlna/webos_tv_dial_probe.dart';
 import '../palco/palco_foreground.dart';
 
@@ -29,6 +27,41 @@ class PalcoOrchestrator extends ChangeNotifier {
   static final PalcoOrchestrator instance = PalcoOrchestrator._();
 
   final Map<String, PalcoSlot> _slots = {};
+  static const _slotsKey = 'palco.multi.slots.v1';
+  static const _activeKey = 'palco.multi.active.v1';
+  bool _loaded = false;
+
+  /// Restaura telas salvas. Senders são ligados quando o palco abre.
+  Future<void> loadStoredConfig() async {
+    if (_loaded) return;
+    _loaded = true;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_slotsKey);
+    if (raw != null) {
+      final list = (jsonDecode(raw) as List).whereType<Map>();
+      for (final item in list) {
+        final id = item['id'] as String?;
+        final label = item['label'] as String?;
+        if (id != null && label != null)
+          addSlot(id: id, label: label, persist: false);
+      }
+    }
+    final active = prefs.getString(_activeKey);
+    if (active != null && _slots.containsKey(active)) _activeSlotId = active;
+    notifyListeners();
+  }
+
+  Future<void> _persistConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _slotsKey,
+      jsonEncode(
+        _slots.values.map((s) => {'id': s.id, 'label': s.label}).toList(),
+      ),
+    );
+    if (_activeSlotId != null)
+      await prefs.setString(_activeKey, _activeSlotId!);
+  }
 
   /// Slot ativo — onde as projeções dos módulos vão.
   String? _activeSlotId;
@@ -59,7 +92,7 @@ class PalcoOrchestrator extends ChangeNotifier {
   // ===== Gerenciamento de Slots =====
 
   /// Cria um novo slot. Retorna false se atingiu o limite.
-  bool addSlot({required String id, String? label}) {
+  bool addSlot({required String id, String? label, bool persist = true}) {
     if (_slots.length >= maxSlots) return false;
     if (_slots.containsKey(id)) return false;
     final index = _slots.length;
@@ -69,8 +102,20 @@ class PalcoOrchestrator extends ChangeNotifier {
     // Primeiro slot vira ativo automaticamente
     _activeSlotId ??= id;
     notifyListeners();
+    if (persist) unawaited(_persistConfig());
     debugPrint('[ORCH] slot criado: $id (${slot.httpPort}/${slot.wsPort})');
     return true;
+  }
+
+  /// Adiciona slot e JÁ liga o sender (TV pode conectar em seguida).
+  /// Sem isso o slot ficava "desconectado" para sempre: o sender nunca
+  /// escutava a porta do slot (bug multi-palco 2026-08-21).
+  Future<bool> addSlotOnline({required String id, String? label}) async {
+    if (!addSlot(id: id, label: label)) return false;
+    await SlideHttpServer.resolveLocalIp();
+    final localIp = SlideHttpServer.localIp;
+    if (localIp == null) return false;
+    return connectTv(id, PalcoTarget(name: label ?? id, ip: localIp));
   }
 
   /// Remove slot e desconecta a TV.
@@ -85,6 +130,7 @@ class PalcoOrchestrator extends ChangeNotifier {
       _activeSlotId = _slots.keys.firstOrNull;
     }
     if (mirrorGroup?.isEmpty ?? false) mirrorGroup = null;
+    unawaited(_persistConfig());
     notifyListeners();
     debugPrint('[ORCH] slot removido: $id');
   }
@@ -97,8 +143,13 @@ class PalcoOrchestrator extends ChangeNotifier {
 
   /// Define o slot ativo.
   void setActiveSlot(String id) {
-    if (!_slots.containsKey(id)) return;
+    if (!_slots.containsKey(id)) {
+      debugPrint('[ORCH] setActiveSlot($id): SLOT INEXISTENTE');
+      return;
+    }
     _activeSlotId = id;
+    unawaited(_persistConfig());
+    debugPrint('[ORCH] slot ativo agora: $id');
     notifyListeners();
   }
 
@@ -144,6 +195,17 @@ class PalcoOrchestrator extends ChangeNotifier {
       _setupRemoteKeys(s);
     }
     return ok;
+  }
+
+  /// Liga senders de slots salvos para TVs poderem reconectar sem reconfigurar.
+  Future<void> startStoredSenders({String? excludeId}) async {
+    await SlideHttpServer.resolveLocalIp();
+    final ip = SlideHttpServer.localIp;
+    if (ip == null) return;
+    for (final s in _slots.values) {
+      if (s.id == excludeId || s.controller.isRunning) continue;
+      await s.controller.connect(PalcoTarget(name: s.label, ip: ip));
+    }
   }
 
   /// Desconecta uma TV de um slot.
