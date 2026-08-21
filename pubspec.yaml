@@ -60,7 +60,9 @@ dependencies:
   audioplayers: ^6.8.1
 
   # Seleção de mídia local para itens da liturgia (mobile/web)
-  file_picker: ^11.0.3
+  # 10.3.9+ quebra registro Android (FilePickerPlugin ausente).
+  # ponytail: remover pin quando upstream corrigir regressão #1960.
+  file_picker: 10.3.8
 
   # Abrir URLs externas (site, video online) da liturgia
   url_launcher: ^6.3.1
