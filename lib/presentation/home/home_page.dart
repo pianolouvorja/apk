@@ -3,12 +3,15 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app/theme/app_spacing.dart';
+import '../../core/services/apk_installer.dart';
+import '../../core/services/apk_version_guard.dart';
 import '../../core/services/update_service.dart';
 import '../shared/widgets/gradient_background.dart';
 import '../shared/widgets/update_banner.dart';
@@ -38,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   bool _editingChurch = false;
 
   // Auto-update
+  late final UpdateService _updateService;
   UpdateCheckResult? _update;
   bool _checkingUpdate = false;
   bool _downloading = false;
@@ -47,6 +51,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _now = DateTime.now();
+    _updateService = UpdateService();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
@@ -55,11 +60,12 @@ class _HomePageState extends State<HomePage> {
 
   // coverage:ignore-start
   Future<void> _checkForUpdates() async {
+    // Widget tests/debug nao devem abrir requisicao real nem timer Dio.
+    // O auto-update permanece ativo em APK/Web release.
     if (!kReleaseMode || _checkingUpdate) return;
     setState(() => _checkingUpdate = true);
     try {
-      final service = UpdateService();
-      final result = await service.checkForUpdates();
+      final result = await _updateService.checkForUpdates();
       if (mounted) setState(() => _update = result);
     } finally {
       if (mounted) setState(() => _checkingUpdate = false);
@@ -68,9 +74,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   // coverage:ignore-start
+  Future<PackageInfo> _packageInfo() => // coverage:ignore-line
+      PackageInfo.fromPlatform();
+
   Future<void> _performUpdate() async {
     final update = _update;
     if (update == null || update.downloadUrl == null) return;
+
+    // Guard: APK alvo precisa AVANÇAR a versão instalada. Bloqueia o
+    // loop release-quebrada (v0.1.16 com APK 0.1.15 interno, 2026-08-16).
+    final guard = ApkVersionGuard.canInstall(
+      installed: (await _packageInfo()).version,
+      available: update.latestVersion ?? '',
+    );
+    if (!guard.allowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(guard.reason == ApkVersionRejectReason.sameVersion
+              ? 'A atualização disponível é a mesma versão instalada.'
+              : 'A atualização disponível é mais antiga que a instalada.'),
+        ));
+      }
+      return;
+    }
 
     setState(() {
       _downloading = true;
@@ -78,16 +104,33 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final service = UpdateService();
-      final path = await service.downloadApk(
+      final path = await _updateService.downloadApk(
         update.downloadUrl!,
+        expectedSha256: update.apkSha256,
         onProgress: (received, total) {
           if (mounted && total > 0) {
             setState(() => _downloadProgress = (received * 100 ~/ total));
           }
         },
       );
-      await OpenFilex.open(path);
+      // PackageInstaller.Session (nativo): imune ao congelamento do app
+      // no OneUI. needs_permission abre Settings p/ fonte desconhecida;
+      // failed cai no fallback legado (OpenFilex).
+      final outcome = await ApkInstaller.install(path);
+      if (outcome == ApkInstallOutcome.failed) {
+        await OpenFilex.open(path);
+      } else if (outcome == ApkInstallOutcome.needsPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Permita instalar apps desconhecidos para o Piano LouvorJA '
+                'e toque em Atualizar novamente.',
+              ),
+            ),
+          );
+        }
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +148,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _clockTimer?.cancel();
+    _updateService.dispose();
     _districtController.dispose();
     _churchController.dispose();
     super.dispose();
@@ -125,11 +169,13 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             // coverage:ignore-start
-            // Banner de atualizacao (APK apenas, so ativa em release)
-            if (_update != null && _update!.hasUpdate && !kIsWeb)
+            // Banner de atualizacao
+            if (_update != null && _update!.hasUpdate)
               UpdateBanner(
                 version: _update!.latestVersion ?? '',
                 apkSizeBytes: _update!.apkSize,
+                releaseNotes: _update!.releaseNotes,
+                downloadUrl: _update!.downloadUrl,
                 onUpdate: _performUpdate,
                 onDismiss: () =>
                     setState(() => _update = UpdateCheckResult.none),

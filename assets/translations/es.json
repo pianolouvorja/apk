@@ -36,7 +36,11 @@
     "start": "Iniciar",
     "pause": "Pausar",
     "stop": "Detener",
-    "reset": "Reiniciar"
+    "reset": "Reiniciar",
+    "decrease": "Diminuir",
+    "increase": "Aumentar",
+    "clearSearch": "Borrar búsqueda",
+    "back": "Volver"
   },
   "hymns": {
     "title": "Himnos",
@@ -117,7 +121,14 @@
       "scheduledFor": "Programado para"
     },
     "totalDuration": "Duracion total",
-    "setStartTime": "Definir inicio"
+    "setStartTime": "Definir inicio",
+    "clone": {
+      "action": "Clonar Liturgia"
+    },
+    "messages": {
+      "confirmDelete": "¿Eliminar este elemento?",
+      "toggleCollapse": "Expandir o contraer"
+    }
   },
   "bible": {
     "title": "Biblia",
@@ -137,7 +148,7 @@
     "searchVerse": "Buscar versículo",
     "copy": "Copiar",
     "previousVerse": "Versículo anterior",
-    "nextVerse": "Próximo versículo",
+    "nextVerse": "Siguiente versículo",
     "clearSelection": "Limpiar selección",
     "emptyCatalog": "No hay contenido bíblico disponible.",
     "emptyChapter": "No se encontraron versículos en este capítulo.",
@@ -204,5 +215,83 @@
     "bibleSubtitle": "Libros, capitulos y versiculos",
     "timer": "Cronometro",
     "timerSubtitle": "Cronometro y cuenta regresiva"
+  },
+  "search": {
+    "title": "Búsqueda",
+    "placeholder": "Buscar himnos y versículos...",
+    "hymnsGroup": "Himnos",
+    "bibleGroup": "Biblia"
+  },
+  "downloads": {
+    "trackError": "Error al descargar \"{title}\". Verifica tu conexión.",
+    "albumErrors": "{count} de {total} himnos fallaron al descargar.",
+    "downloadAll": "Descargar todas las colecciones",
+    "downloadAllProgress": "Descargando colecciones: {current}/{total}",
+    "downloading": "Descargando...",
+    "offlineEmpty": "Sin conexión y ninguna canción descargada en esta colección.",
+    "noneDownloaded": "Ninguna canción descargada en esta colección."
+  },
+  "stage": {
+      "title": "Palco — transmitir a la TV",
+      "active": "Palco activo",
+      "waiting": "LouvorJA — esperando contenido",
+      "noTvs": "No se encontraron TVs. Verifique que la TV esté en la misma red con DLNA activo.",
+      "connectFail": "No se pudo conectar a la TV.",
+      "disconnected": "TV desconectada — proyección interrumpida.",
+      "background": "Imagen de fondo",
+      "backgroundHint": "Elegir de la galería (optimizada para la TV)",
+      "backgroundUpdated": "Fondo del palco actualizado.",
+      "customize": "Personalizar",
+      "customizeHint": "Colores, fuente, tamaño",
+      "turnOff": "Apagar palco",
+      "castOn": "Palco activo",
+      "castOff": "Transmitir a la TV",
+      "yourIp": "Tu IP (ingresa en la TV)",
+      "ipHint": "Abre la app Palco en la TV → ingresa esta IP",
+      "dlnaSection": "TVs DLNA (himnos/slides)",
+      "palcoSection": "Palco LouvorJA (receiver webOS)",
+      "palcoManual": "Conectar Palco manual",
+      "palcoManualHint": "IP de la TV donde el receiver ya está abierto"
+    },
+  "sync": {
+    "sectionTitle": "Sincronización",
+    "cardTitle": "Transferir datos",
+    "hint": "Exporta tu liturgia, configuraciones y presets a otro dispositivo (web o escritorio) — o importa un paquete .louvorja.",
+    "export": "Exportar",
+    "import": "Importar",
+    "exported": "Paquete exportado.",
+    "exportCancelled": "Exportación cancelada.",
+    "imported": "Sincronizado: {applied}.",
+    "importedNone": "Nada que actualizar (local ya es más reciente).",
+    "importInvalid": "Archivo inválido o no es un paquete .louvorja.",
+    "importCancelled": "Importación cancelada."
+  },
+  "remote": {
+    "title": "Control Remoto",
+    "subtitle": "Controla Piano en el escritorio o navegador desde el móvil",
+    "mode_idle": "Desconectado",
+    "mode_desktop": "Escritorio (Electron)",
+    "mode_web": "Navegador (web)",
+    "desktop_host": "Dirección del escritorio",
+    "desktop_hint": "IP o IP:puerto (ej.: 192.168.1.50 o 192.168.1.50:7071)",
+    "token_label": "Token de emparejamiento",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "start_weblink": "Controlar el navegador",
+    "weblink_url": "Abre en el navegador del escritorio:",
+    "weblink_waiting": "Esperando que el navegador conecte…",
+    "connected_to": "Conectado a {target}",
+    "status_disconnected": "Desconectado",
+    "status_connecting": "Conectando…",
+    "status_connected": "Conectado",
+    "status_listening": "Esperando navegador",
+    "no_state": "Ningún medio en reproducción en el destino",
+    "cmd_failed": "El destino no confirmó el comando",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "stop": "Detener",
+    "volume": "Volumen"
   }
 }

@@ -1,6 +1,7 @@
 // coverage:ignore-file
 /// Player Web usando dart:html AudioElement.
 library;
+
 // ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 
 import 'dart:async';
@@ -16,6 +17,8 @@ class _WebAudioPlayer implements HymnAudioPlayer {
   bool _isPlaying = false;
 
   final _controller = StreamController<bool>.broadcast();
+  final _positions = StreamController<Duration>.broadcast();
+  final _durations = StreamController<Duration>.broadcast();
 
   @override
   String? get currentUrl => _currentUrl;
@@ -25,6 +28,24 @@ class _WebAudioPlayer implements HymnAudioPlayer {
 
   @override
   Stream<bool> get playingStream => _controller.stream;
+
+  @override
+  Stream<Duration> get positionStream => _positions.stream;
+
+  @override
+  Stream<Duration> get durationStream => _durations.stream;
+
+  @override
+  Future<void> seek(Duration position) async {
+    _ensure();
+    if (_audio != null) _audio!.currentTime = position.inMilliseconds / 1000.0;
+  }
+
+  @override
+  Future<void> setVolume(double v) async {
+    _ensure();
+    if (_audio != null) _audio!.volume = v;
+  }
 
   void _ensure() {
     _audio ??= AudioElement()
@@ -44,6 +65,23 @@ class _WebAudioPlayer implements HymnAudioPlayer {
         _isPlaying = false;
         _controller.add(false);
       });
+
+    // Timeline: emite posicao (1x/s do browser) e duracao quando conhecida.
+    // Cache + replay da duracao (broadcast sem replay = slider em 0).
+    Duration? cachedDur;
+    Timer.periodic(const Duration(seconds: 1), (_) {
+      final a = _audio;
+      if (a == null) return;
+      _positions.add(Duration(milliseconds: a.currentTime * 1000 ~/ 1));
+      final d = a.duration;
+      if (d.isFinite && d > 0) {
+        cachedDur = Duration(milliseconds: (d * 1000).toInt());
+        _durations.add(cachedDur!);
+      }
+    });
+    _durations.onListen = () {
+      if (cachedDur != null) _durations.add(cachedDur!);
+    };
   }
 
   @override
@@ -88,3 +126,5 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     _controller.close();
   }
 }
+
+// volume: no-op em web

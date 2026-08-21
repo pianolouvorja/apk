@@ -36,7 +36,11 @@
     "start": "Iniciar",
     "pause": "Pausar",
     "stop": "Parar",
-    "reset": "Zerar"
+    "reset": "Zerar",
+    "decrease": "Diminuir",
+    "increase": "Aumentar",
+    "clearSearch": "Limpar busca",
+    "back": "Voltar"
   },
   "hymns": {
     "title": "Hinos",
@@ -92,7 +96,8 @@
       "collapse": "Recolher"
     },
     "messages": {
-      "confirmDelete": "Deseja remover este item?"
+      "confirmDelete": "Deseja remover este item?",
+      "toggleCollapse": "Expandir ou recolher"
     },
     "dialog": {
       "itemType": "Tipo de Item",
@@ -209,5 +214,83 @@
     "bibleSubtitle": "Livros, capitulos e versiculos",
     "timer": "Cronometro",
     "timerSubtitle": "Stopwatch e contagem regressiva"
+  },
+  "search": {
+    "title": "Busca",
+    "placeholder": "Buscar hinos e versículos...",
+    "hymnsGroup": "Hinos",
+    "bibleGroup": "Bíblia"
+  },
+  "downloads": {
+    "trackError": "Erro ao baixar \"{title}\". Verifique sua conexão.",
+    "albumErrors": "{count} de {total} hinos falharam ao baixar.",
+    "downloadAll": "Baixar todas as coletâneas",
+    "downloadAllProgress": "Baixando coletâneas: {current}/{total}",
+    "downloading": "Baixando...",
+    "offlineEmpty": "Sem conexão e nenhuma música baixada nesta coletânea.",
+    "noneDownloaded": "Nenhuma música baixada nesta coletânea."
+  },
+  "stage": {
+    "title": "Palco — transmitir para TV",
+    "active": "Palco ativo",
+    "waiting": "LouvorJA — aguardando conteúdo",
+    "noTvs": "Nenhuma TV encontrada. Verifique a TV na mesma rede com DLNA ativo.",
+    "connectFail": "Não foi possível conectar à TV.",
+    "disconnected": "TV desconectou — projeção interrompida.",
+    "background": "Imagem de fundo",
+    "backgroundHint": "Escolher da galeria (otimizada para a TV)",
+    "backgroundUpdated": "Fundo do palco atualizado.",
+    "customize": "Personalizar",
+    "customizeHint": "Cores, fonte, tamanho",
+    "turnOff": "Desligar palco",
+    "castOn": "Palco ativo",
+    "castOff": "Transmitir para TV",
+    "yourIp": "Seu IP (digite na TV)",
+    "ipHint": "Abra o app Palco na TV → digite este IP",
+    "dlnaSection": "TVs DLNA (hinos/slides)",
+    "palcoSection": "Palco LouvorJA (receiver webOS)",
+    "palcoManual": "Conectar Palco manual",
+    "palcoManualHint": "IP da TV onde o receiver já está aberto"
+  },
+  "sync": {
+    "sectionTitle": "Sincronização",
+    "cardTitle": "Transferir dados",
+    "hint": "Exporte sua liturgia, configurações e presets para outro dispositivo (web ou desktop) — ou importe um pacote .louvorja.",
+    "export": "Exportar",
+    "import": "Importar",
+    "exported": "Pacote exportado.",
+    "exportCancelled": "Exportação cancelada.",
+    "imported": "Sincronizado: {applied}.",
+    "importedNone": "Nada a atualizar (local já é mais recente).",
+    "importInvalid": "Arquivo inválido ou não é um pacote .louvorja.",
+    "importCancelled": "Importação cancelada."
+  },
+  "remote": {
+    "title": "Controle Remoto",
+    "subtitle": "Controle o Piano no desktop ou no navegador pelo celular",
+    "mode_idle": "Desconectado",
+    "mode_desktop": "Desktop (Electron)",
+    "mode_web": "Navegador (web)",
+    "desktop_host": "Endereço do desktop",
+    "desktop_hint": "IP ou IP:porta (ex.: 192.168.1.50 ou 192.168.1.50:7071)",
+    "token_label": "Token de emparelhamento",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "start_weblink": "Controlar o navegador",
+    "weblink_url": "Abra no navegador do desktop:",
+    "weblink_waiting": "Aguardando o navegador conectar…",
+    "connected_to": "Conectado a {target}",
+    "status_disconnected": "Desconectado",
+    "status_connecting": "Conectando…",
+    "status_connected": "Conectado",
+    "status_listening": "Aguardando navegador",
+    "no_state": "Nenhuma mídia em execução no alvo",
+    "cmd_failed": "O alvo não confirmou o comando",
+    "play": "Tocar",
+    "pause": "Pausar",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "stop": "Parar",
+    "volume": "Volume"
   }
 }

@@ -27,3 +27,6 @@ coverage/
 *.freezed.dart
 *.g.dart
 *.mocks.dart
+
+# Diretórios locais
+.planning/

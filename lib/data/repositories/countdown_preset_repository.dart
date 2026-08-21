@@ -1,8 +1,10 @@
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:louvorja_piano_mobile/core/services/sync/sync_timestamps.dart';
 
 import '../../domain/entities/countdown_preset.dart';
 
@@ -40,5 +42,6 @@ class CountdownPresetRepository {
       _storageKey,
       jsonEncode(presets.map((preset) => preset.toJson()).toList()),
     );
+    unawaited(SyncTimestamps.touch('timerPresets'));
   }
 }

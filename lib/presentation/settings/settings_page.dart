@@ -1,16 +1,22 @@
 library;
 
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/app_accents.dart';
 import '../../core/constants/app_version.dart';
 import '../../core/services/settings_controller.dart';
+import '../../core/services/sync/sync_file_service.dart';
 import '../../core/services/update_service.dart';
+import 'widgets/remote/remote_section.dart';
+import 'widgets/stage_section.dart';
+import 'widgets/sync_section.dart';
 
 /// SettingsPage — tela de configuracoes (tab "Mais").
 ///
@@ -31,6 +37,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _checkingUpdate = false;
   String? _updateStatus;
   bool _isClearing = false;
+  bool _syncBusy = false;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +153,15 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 32),
 
+            // --- Palco (cast) — RF-01/02 spec palco-v2 ---
+            _SectionHeader(
+              icon: TablerIcons.cast,
+              title: 'Palco',
+            ),
+            const SizedBox(height: 12),
+            const StageSection(),
+            const SizedBox(height: 32),
+
             // --- Geral ---
             _SectionHeader(
               icon: TablerIcons.adjustments,
@@ -171,6 +187,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   _ChoiceChip(
                     label: 'settings.languageEnglish'.tr(),
                     selected: locale == const Locale('en'),
+                    // API nao possui catalogo em ingles (apenas PT e ES).
                     enabled: false,
                     onTap: null,
                   ),
@@ -284,6 +301,18 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 24),
 
+            // --- Sincronizacao (pacote .louvorja) ---
+            SyncSection(
+              busy: _syncBusy,
+              onExport: _handleSyncExport,
+              onImport: _handleSyncImport,
+            ),
+            const SizedBox(height: 24),
+
+            // --- Controle remoto (APK → Desktop/Web) ---
+            const RemoteSection(),
+            const SizedBox(height: 24),
+
             // Termos e Privacidade (link)
             ListTile(
               leading: Icon(
@@ -300,6 +329,51 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _handleSyncExport() async {
+    setState(() => _syncBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final path = await SyncFileService().export();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(path != null
+            ? 'sync.exported'.tr()
+            : 'sync.exportCancelled'.tr()),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Falha ao exportar.')));
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
+  }
+
+  Future<void> _handleSyncImport() async {
+    setState(() => _syncBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final r = await SyncFileService().import();
+      if (!mounted) return;
+      if (r == null) {
+        messenger.showSnackBar(
+            SnackBar(content: Text('sync.importInvalid'.tr())));
+      } else if (r.applied.isEmpty) {
+        messenger.showSnackBar(
+            SnackBar(content: Text('sync.importedNone'.tr())));
+      } else {
+        messenger.showSnackBar(SnackBar(
+          content: Text('sync.imported'.tr(
+              namedArgs: {'applied': r.applied.join(', ')})),
+        ));
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Falha ao importar.')));
+    } finally {
+      if (mounted) setState(() => _syncBusy = false);
+    }
+  }
+
   // coverage:ignore-start
   Future<void> _handleCheckUpdate() async {
     setState(() {
@@ -311,12 +385,39 @@ class _SettingsPageState extends State<SettingsPage> {
       final result = await service.checkForUpdates();
       if (!mounted) return;
       if (result.hasUpdate && result.downloadUrl != null) {
+        if (kIsWeb) {
+          // coverage:ignore-line
+          setState(() {
+            _updateStatus =
+                'Versão ${result.latestVersion} disponível!';
+          });
+          await launchUrl(
+            Uri.parse(result.downloadUrl!),
+            webOnlyWindowName: '_blank',
+          );
+        } else {
+          setState(() {
+            _updateStatus =
+                'Versão ${result.latestVersion} disponível. Baixando...';
+          });
+          final path = await service.downloadApk(
+            result.downloadUrl!,
+            expectedSha256: result.apkSha256,
+          );
+          await OpenFilex.open(path);
+        }
+      } else if (result.isUnavailable) {
+        // A consulta FALHOU (404 repo privado sem token, rede etc.) —
+        // dizer "voce esta atualizado" aqui seria mentira.
         setState(() {
-          _updateStatus =
-              'Versão ${result.latestVersion} disponível. Baixando...';
+          _updateStatus = switch (result.failure) {
+            UpdateCheckFailure.unauthorized =>
+              'Não foi possível verificar: repositório privado. Aguarde '
+                  'uma decisão de acesso (repo público ou proxy).',
+            _ => 'Não foi possível verificar atualizações. Verifique sua '
+                'conexão e tente novamente.',
+          };
         });
-        final path = await service.downloadApk(result.downloadUrl!);
-        await OpenFilex.open(path);
       } else {
         setState(() {
           _updateStatus = 'Você já está usando a versão mais recente.';

@@ -16,6 +16,11 @@ class Hymn {
   final String? urlMusic;
   final String? urlInstrumental;
   final String? lyric;
+  /// Lyric estruturado (endpoint music_{id}): slides com times e imagens.
+  /// Catálogo (lista) não traz — null nesse caso.
+  final List<Map<String, dynamic>>? lyricRaw;
+  /// Imagem de capa da música (url_image do detail).
+  final String? imageUrl;
 
   const Hymn({
     required this.id,
@@ -26,6 +31,8 @@ class Hymn {
     this.urlMusic,
     this.urlInstrumental,
     this.lyric,
+    this.lyricRaw,
+    this.imageUrl,
   });
 
   factory Hymn.fromJson(Map<String, dynamic> json) {
@@ -38,6 +45,13 @@ class Hymn {
       urlMusic: json['url_music'] as String?,
       urlInstrumental: json['url_instrumental_music'] as String?,
       lyric: _parseLyric(json['lyric']),
+      lyricRaw: json['lyric'] is List
+          ? (json['lyric'] as List)
+              .whereType<Map>()
+              .map((e) => e.cast<String, dynamic>())
+              .toList()
+          : null,
+      imageUrl: json['url_image'] as String?,
     );
   }
 

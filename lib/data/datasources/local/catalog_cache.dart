@@ -41,6 +41,22 @@ class CatalogCache {
     }
   }
 
+  /// Lê o cache IGNORANDO o TTL — última instância quando a API está fora.
+  ///
+  /// Catálogo religioso muda raramente (novo hinário/CD por ano): melhor
+  /// servir dados de ontem do que tela de erro. Usado apenas como fallback
+  /// no catch de falha de rede, nunca como fonte primária.
+  dynamic readStale(String key) {
+    final f = _file(key);
+    if (f == null || !f.existsSync()) return null;
+
+    try {
+      return jsonDecode(f.readAsStringSync());
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Escreve JSON no cache.
   void write(String key, dynamic data) {
     final f = _file(key);

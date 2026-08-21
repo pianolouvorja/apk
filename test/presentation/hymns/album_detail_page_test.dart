@@ -6,6 +6,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart' show ProgressCallback;
+import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_version.dart';
@@ -26,8 +28,14 @@ class _MockApi implements LouvorjaApiClient {
   final List<Hymn> hymns;
   final Hymn? detail;
   final bool fail;
+  final bool failDetail;
 
-  _MockApi({this.hymns = const [], this.detail, this.fail = false});
+  _MockApi({
+    this.hymns = const [],
+    this.detail,
+    this.fail = false,
+    this.failDetail = false,
+  });
 
   @override
   Future<List<Hymn>> fetchAlbumHymns(int albumId) async {
@@ -37,7 +45,7 @@ class _MockApi implements LouvorjaApiClient {
 
   @override
   Future<Hymn> fetchMusic(int musicId) async {
-    if (fail) throw Exception('network');
+    if (fail || failDetail) throw Exception('network');
     return detail ??
         Hymn(id: musicId, title: 'Test', urlMusic: '/musics/test.mp3');
   }
@@ -63,6 +71,18 @@ class _MockApi implements LouvorjaApiClient {
 }
 
 class _FakePlayer implements HymnAudioPlayer {
+  @override
+  Stream<Duration> get positionStream => const Stream.empty();
+
+  @override
+  Stream<Duration> get durationStream => const Stream.empty();
+
+  @override
+  Future<void> seek(Duration position) async {}
+
+  @override
+  Future<void> setVolume(double v) async {}
+
   final _stream = StreamController<bool>.broadcast();
   bool paused = false;
   String? playedUrl;
@@ -112,9 +132,15 @@ void main() {
     );
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
-    // Antes do pumpAndSettle, deve ter loading
+    await tester.pumpWidget(_wrap(
+      bloc,
+      AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+    ));
+    // Primeiro frame: loading visível antes de qualquer dado chegar.
+    await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Consome os timeouts do fluxo offline (timers não podem pendurar).
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('AlbumDetailPage mostra lista de hinos', (tester) async {
@@ -127,7 +153,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.text('Hino A'), findsOneWidget);
@@ -140,7 +166,7 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(hymns: []), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playlist), findsOneWidget);
@@ -150,7 +176,7 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(fail: true), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.alertCircle), findsOneWidget);
@@ -161,7 +187,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.search), findsOneWidget);
@@ -179,7 +205,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     // Botao play
@@ -199,7 +225,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
@@ -215,12 +241,18 @@ void main() {
     final bloc = HymnsBloc(HymnRepositoryImpl(api, CatalogCache.noop()));
 
     await tester.pumpWidget(
-      _wrap(bloc, AlbumDetailPage(albumId: 100, audioPlayer: player)),
+      _wrap(
+        bloc,
+        AlbumDetailPage(
+          albumId: 100,
+          audioPlayer: player,
+          offlineService: _FakeOfflinePort(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Reproduzir'));
-    // Duas fronteiras async: fallback offline Web e detalhe remoto do hino.
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(const Duration(milliseconds: 50));
     expect(player.playedUrl, contains('/musics/test.mp3'));
@@ -246,7 +278,7 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, const AlbumDetailPage(albumId: 100)));
+    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
     expect(find.text('Primeira linha\nSegunda linha'), findsNothing);
@@ -257,5 +289,131 @@ void main() {
     await tester.tap(find.text('Hino com letra'));
     await tester.pump();
     expect(find.text('Primeira linha\nSegunda linha'), findsNothing);
+  });
+
+  _offlineGroup();
+  _onlineFullListGroup();
+}
+
+// ===== Testes do modo offline (downloads persistidos + playback local) =====
+
+class _FakeOfflinePort implements OfflineMusicPort {
+  final Set<int> local = {};
+  final bool supported;
+
+  _FakeOfflinePort({this.supported = true});
+
+  @override
+  bool get isSupported => supported;
+
+  @override
+  Future<String?> localPathFor(int musicId, {bool instrumental = false}) async {
+    if (!supported) return null;
+    return local.contains(musicId) ? '/local/$musicId.mp3' : null;
+  }
+
+  @override
+  Future<String> download({
+    required int musicId,
+    required String url,
+    bool instrumental = false,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    local.add(musicId);
+    return '/local/$musicId.mp3';
+  }
+
+  @override
+  Future<void> remove(int musicId, {bool instrumental = false}) async {
+    local.remove(musicId);
+  }
+}
+
+void _offlineGroup() {
+  group('AlbumDetailPage offline', () {
+    testWidgets('faixa baixada toca do arquivo local (sem API)', (tester) async {
+      final offline = _FakeOfflinePort();
+      offline.local.add(1);
+      final player = _FakePlayer();
+
+      // Lista serve do cache/mock; detalhe falha (simula offline no play).
+      final api = _MockApi(
+        hymns: [const Hymn(id: 1, title: 'Hino Baixado', number: 1)],
+        failDetail: true,
+      );
+      final repo = HymnRepositoryImpl(api, CatalogCache.noop());
+      final bloc = HymnsBloc(repo);
+
+      await tester.pumpWidget(_wrap(
+        bloc,
+        AlbumDetailPage(
+          albumId: 100,
+          audioPlayer: player,
+          offlineService: offline,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Reproduzir'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(player.playedUrl, '/local/1.mp3',
+          reason: 'baixado deve tocar do disco sem consultar a API');
+    });
+
+    testWidgets('icone de baixado aparece ao abrir pagina com faixa no disco',
+        (tester) async {
+      final offline = _FakeOfflinePort();
+      offline.local.add(1);
+
+      final api = _MockApi(
+          hymns: [const Hymn(id: 1, title: 'Hino Salvo', number: 1)]);
+      final repo = HymnRepositoryImpl(api, CatalogCache.noop());
+      final bloc = HymnsBloc(repo);
+
+      await tester.pumpWidget(_wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: offline),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(TablerIcons.checks), findsOneWidget,
+          reason: 'faixa baixada deve exibir check de baixado');
+    });
+  });
+}
+
+// ===== Regressão 2026-08-16: online mostra TODAS as faixas =====
+// Bug: o filtro offline rodava também ONLINE e escondia as não baixadas.
+void _onlineFullListGroup() {
+  group('AlbumDetailPage online (regressão)', () {
+    testWidgets('online com downloads ainda lista faixas NÃO baixadas',
+        (tester) async {
+      final offline = _FakeOfflinePort();
+      offline.local.add(1); // só a faixa 1 está no disco
+
+      // Catálogo tem 1 (baixada) e 2 (NÃO baixada).
+      final api = _MockApi(hymns: const [
+        Hymn(id: 1, title: 'Hino Baixado', number: 1),
+        Hymn(id: 2, title: 'Hino Só Online', number: 2),
+      ]);
+      final repo = HymnRepositoryImpl(api, CatalogCache.noop());
+      final bloc = HymnsBloc(repo);
+
+      await tester.pumpWidget(_wrap(
+        bloc,
+        AlbumDetailPage(
+          albumId: 100,
+          offlineService: offline,
+          audioPlayer: _FakePlayer(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hino Baixado'), findsOneWidget);
+      expect(find.text('Hino Só Online'), findsOneWidget,
+          reason: 'online deve listar tudo, não só o que está no disco');
+    });
   });
 }

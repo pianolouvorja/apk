@@ -1,5 +1,6 @@
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -17,15 +18,6 @@ import 'package:louvorja_piano_mobile/core/utils/scripture_format.dart';
 ///
 /// [code] mapeia para uma chave de tradução i18n.
 /// [detail] mantém o erro técnico original para log.
-class LouvorjaApiException implements Exception {
-  final String code;
-  final String detail;
-
-  const LouvorjaApiException(this.code, this.detail);
-
-  @override
-  String toString() => 'LouvorjaApiException($code): $detail';
-}
 
 /// Implementação de [LouvorjaApiClient] usando Dio com retry e cache-buster.
 class LouvorjaApiImpl implements LouvorjaApiClient {

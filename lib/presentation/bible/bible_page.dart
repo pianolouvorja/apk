@@ -11,7 +11,17 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
+import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
+import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/book_colors.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/bible_download_button.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_sheet.dart'
+    show StageModule;
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 
 class BiblePage extends StatelessWidget {
@@ -75,7 +85,15 @@ class _BibleViewState extends State<_BibleView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('bible.title'.tr())),
+      appBar: AppBar(
+        title: Text('bible.title'.tr()),
+        actions: const [
+          StageClearButton(),
+          StageStopVideoButton(),
+          StageCastButton(module: StageModule.bible),
+          BibleDownloadButton(),
+        ],
+      ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {
           if (state is BibleLoading || state is BibleInitial) {
@@ -85,8 +103,10 @@ class _BibleViewState extends State<_BibleView> {
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: AppSpacing.s3),
-                  Text('bible.loading'.tr(),
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'bible.loading'.tr(),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ],
               ),
             );
@@ -120,8 +140,7 @@ class _BibleViewState extends State<_BibleView> {
           subtitle: hasBook ? book.name : null,
           icon: TablerIcons.books,
           isExpanded: _activePanel == NavPanel.books,
-          onTap: () => setState(
-              () => _activePanel = NavPanel.books),
+          onTap: () => setState(() => _activePanel = NavPanel.books),
           child: _BookGrid(
             state: state,
             theme: theme,
@@ -133,13 +152,10 @@ class _BibleViewState extends State<_BibleView> {
         if (hasBook)
           _CollapsibleSection(
             title: 'bible.chapters'.tr(),
-            subtitle: hasChapter
-                ? '${state.selectedChapter}'
-                : null,
+            subtitle: hasChapter ? '${state.selectedChapter}' : null,
             icon: TablerIcons.listNumbers,
             isExpanded: _activePanel == NavPanel.chapters,
-            onTap: () => setState(
-                () => _activePanel = NavPanel.chapters),
+            onTap: () => setState(() => _activePanel = NavPanel.chapters),
             child: _ChapterGridSection(
               state: state,
               theme: theme,
@@ -189,34 +205,41 @@ class _CollapsibleSection extends StatelessWidget {
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+              horizontal: AppSpacing.s4,
+              vertical: AppSpacing.s2,
+            ),
             decoration: BoxDecoration(
               color: isExpanded
                   ? theme.colorScheme.surfaceContainer
                   : theme.colorScheme.surface,
               border: Border(
-                  bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+                bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
             ),
             child: Row(
               children: [
                 Icon(icon, size: 18, color: theme.colorScheme.primary),
                 const SizedBox(width: AppSpacing.s2),
-                Text(title.toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: theme.colorScheme.primary)),
+                Text(
+                  title.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(width: AppSpacing.s2),
-                  Text(subtitle!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    subtitle!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
                 const Spacer(),
                 Icon(
-                  isExpanded
-                      ? TablerIcons.chevronUp
-                      : TablerIcons.chevronDown,
+                  isExpanded ? TablerIcons.chevronUp : TablerIcons.chevronDown,
                   size: 18,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -249,16 +272,22 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final versionLanguage = context.locale.languageCode == 'es' ? 'es' : 'pt';
-    final visibleVersions = state.versions
+    final langVersions = state.versions
         .where((version) => version.languageId == versionLanguage)
         .toList();
+    // Offline: só versões com download completo no disco (marcadas pelo
+    // BibleDownloadButton). Pedido Rafael 2026-08-16.
+    final visibleVersions = BibleOfflineVersions.filter(langVersions);
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s2,
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         border: Border(
-            bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         children: [
@@ -267,15 +296,21 @@ class _Toolbar extends StatelessWidget {
             value: state.selectedVersionId,
             underline: const SizedBox(),
             isDense: true,
-            style: theme.textTheme.labelLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
             items: visibleVersions
-                .map((v) => DropdownMenuItem(
-                      value: v.id,
-                      child: Text(v.abbreviation,
-                          style: theme.textTheme.labelMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                    ))
+                .map(
+                  (v) => DropdownMenuItem(
+                    value: v.id,
+                    child: Text(
+                      v.abbreviation,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (id) {
               if (id != null) {
@@ -284,25 +319,30 @@ class _Toolbar extends StatelessWidget {
             },
           ),
           Container(
-              width: 1,
-              height: 32,
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
-              color: theme.colorScheme.outline),
+            width: 1,
+            height: 32,
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
+            color: theme.colorScheme.outline,
+          ),
           // Localizacao
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('bible.location'.tr().toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
-                        letterSpacing: 0.6,
-                        color: theme.colorScheme.onSurfaceVariant)),
+                Text(
+                  'bible.location'.tr().toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    letterSpacing: 0.6,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 Text(
                   state.locationLabel,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -337,13 +377,16 @@ class _BookGridState extends State<_BookGrid> {
   @override
   Widget build(BuildContext context) {
     final allBooks = widget.state.books;
-    final otBooks =
-        allBooks.where((b) => b.testament == BibleTestament.ot).toList();
-    final ntBooks =
-        allBooks.where((b) => b.testament == BibleTestament.nt).toList();
+    final otBooks = allBooks
+        .where((b) => b.testament == BibleTestament.ot)
+        .toList();
+    final ntBooks = allBooks
+        .where((b) => b.testament == BibleTestament.nt)
+        .toList();
 
     // Se o livro selecionado e do NT, mostra NT por padrao
-    final selectedIsNt = widget.state.selectedBook?.testament == BibleTestament.nt;
+    final selectedIsNt =
+        widget.state.selectedBook?.testament == BibleTestament.nt;
     final effectiveShowNt = _showNt || (selectedIsNt && !_userToggled);
     final view = effectiveShowNt ? ntBooks : otBooks;
 
@@ -358,14 +401,20 @@ class _BookGridState extends State<_BookGrid> {
               _TabButton(
                 label: 'bible.testamentOld'.tr(),
                 active: !effectiveShowNt,
-                onTap: () => setState(() { _showNt = false; _userToggled = true; }),
+                onTap: () => setState(() {
+                  _showNt = false;
+                  _userToggled = true;
+                }),
                 theme: widget.theme,
               ),
               const SizedBox(width: 4),
               _TabButton(
                 label: 'bible.testamentNew'.tr(),
                 active: effectiveShowNt,
-                onTap: () => setState(() { _showNt = true; _userToggled = true; }),
+                onTap: () => setState(() {
+                  _showNt = true;
+                  _userToggled = true;
+                }),
                 theme: widget.theme,
               ),
             ],
@@ -424,19 +473,25 @@ class _TabButton extends StatelessWidget {
           color: active
               ? theme.colorScheme.primary
               : isLight
-                  ? theme.colorScheme.surfaceContainerHigh
-                  : null,
-          border: active ? null : Border.all(color: theme.colorScheme.outlineVariant),
+              ? theme.colorScheme.surfaceContainerHigh
+              : null,
+          border: active
+              ? null
+              : Border.all(color: theme.colorScheme.outlineVariant),
           borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(6), bottomRight: Radius.circular(6)),
+            topLeft: Radius.circular(6),
+            bottomRight: Radius.circular(6),
+          ),
         ),
-        child: Text(label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: active
-                  ? theme.colorScheme.onPrimary
-                  : theme.colorScheme.onSurface,
-            )),
+        child: Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: active
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }
@@ -455,54 +510,10 @@ class _BookTile extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _parseHex(String value) {
-    final hex = value.replaceFirst('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
-  }
+  Color get _toneColor => BookColors.tone(book, theme, selected: isSelected);
 
-  Color get _toneColor {
-    final isLight = theme.brightness == Brightness.light;
-    if (isSelected) return isLight ? const Color(0xFF78350F) : const Color(0xFFFEF08A);
-    if (book.color != null && isLight) {
-      return _parseHex(book.color!);
-    }
-    switch (book.tone) {
-      case BibleBookTone.law:
-        return isLight ? const Color(0xFF1D4ED8) : const Color(0xFF93C5FD);
-      case BibleBookTone.history:
-        return isLight ? const Color(0xFF15803D) : const Color(0xFF86EFAC);
-      case BibleBookTone.prophets:
-        return isLight ? const Color(0xFFA16207) : const Color(0xFFFDE68A);
-      case BibleBookTone.gospels:
-        return isLight ? const Color(0xFF7E22CE) : const Color(0xFFD8B4FE);
-      case BibleBookTone.letters:
-      case BibleBookTone.neutral:
-        return theme.colorScheme.onSurface;
-    }
-  }
-
-  Color get _bgColor {
-    final isLight = theme.brightness == Brightness.light;
-    if (isSelected) return const Color(0xFFCA8A04).withValues(alpha: isLight ? 0.25 : 0.4);
-    if (book.color != null && isLight) {
-      return _parseHex(book.color!).withValues(alpha: 0.16);
-    }
-    switch (book.tone) {
-      case BibleBookTone.law:
-        return const Color(0xFF3B82F6).withValues(alpha: isLight ? 0.15 : 0.18);
-      case BibleBookTone.history:
-        return const Color(0xFF22C55E).withValues(alpha: isLight ? 0.15 : 0.12);
-      case BibleBookTone.prophets:
-        return const Color(0xFFCA8A04).withValues(alpha: isLight ? 0.18 : 0.14);
-      case BibleBookTone.gospels:
-        return const Color(0xFFA855F7).withValues(alpha: isLight ? 0.15 : 0.12);
-      case BibleBookTone.letters:
-      case BibleBookTone.neutral:
-        return isLight
-            ? theme.colorScheme.surfaceContainerHigh
-            : theme.colorScheme.surfaceContainerHighest;
-    }
-  }
+  Color get _bgColor =>
+      BookColors.background(book, theme, selected: isSelected);
 
   @override
   Widget build(BuildContext context) {
@@ -516,23 +527,29 @@ class _BookTile extends StatelessWidget {
               ? Border.all(color: const Color(0xFFEAB308))
               : Border.all(color: Colors.transparent),
           borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+            topLeft: Radius.circular(8),
+            bottomRight: Radius.circular(8),
+          ),
         ),
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(book.abbreviation,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: _toneColor,
-                )),
+            Text(
+              book.abbreviation,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: _toneColor,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(book.name,
-                style: TextStyle(fontSize: 8, color: _toneColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Text(
+              book.name,
+              style: TextStyle(fontSize: 8, color: _toneColor),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -580,24 +597,25 @@ class _ChapterGridSection extends StatelessWidget {
                 color: isSelected
                     ? theme.colorScheme.tertiaryContainer
                     : isLight
-                        ? theme.colorScheme.surfaceContainerHigh
-                        : theme.colorScheme.surfaceContainerHighest,
+                    ? theme.colorScheme.surfaceContainerHigh
+                    : theme.colorScheme.surfaceContainerHighest,
                 borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    bottomRight: Radius.circular(8)),
+                  topLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
                 border: isSelected
                     ? Border.all(color: theme.colorScheme.tertiary, width: 1.5)
                     : Border.all(
                         color: isLight
                             ? theme.colorScheme.outline
-                            : theme.colorScheme.outlineVariant),
+                            : theme.colorScheme.outlineVariant,
+                      ),
               ),
               alignment: Alignment.center,
               child: Text(
                 '$chapter',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
                       ? theme.colorScheme.onTertiaryContainer
                       : theme.colorScheme.onSurface,
@@ -613,51 +631,111 @@ class _ChapterGridSection extends StatelessWidget {
 
 // --- Verse List ---
 
-class _VerseList extends StatelessWidget {
+class _VerseList extends StatefulWidget {
   final BibleLoaded state;
   final ThemeData theme;
 
   const _VerseList({required this.state, required this.theme});
 
   @override
+  State<_VerseList> createState() => _VerseListState();
+}
+
+class _VerseListState extends State<_VerseList> {
+  /// Palco: projeta os versículos selecionados na TV (se ligado).
+  Future<void> _projectSelectedVerses(
+    BibleLoaded state,
+    int toggledVerse,
+  ) async {
+    final stage = StageSession.instance;
+    if (!stage.isOn) return;
+    final selected = [...state.selectedVerses]..sort();
+    final versesToShow = selected.contains(toggledVerse)
+        ? selected
+        : [toggledVerse];
+    final text = versesToShow
+        .map((n) => state.verses[n.toString()] ?? '')
+        .join(' ');
+    final book = state.books
+        .where((b) => b.id == state.selectedBookId)
+        .firstOrNull;
+    // F3.3m: referência destacada (cor/ peso próprios) + versão ao lado.
+    final version = state.versions
+        .where((v) => v.id == state.selectedVersionId)
+        .firstOrNull;
+    await stage.project(
+      title: text,
+      footer:
+          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footerRef:
+          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footerVersion: version?.abbreviation,
+      isBible: true, // F3.3o: tipografia própria da Bíblia
+      module: 'bible',
+    );
+  }
+
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final theme = widget.theme;
     final book = state.selectedBook;
     final title = book != null
         ? '${book.name} ${state.selectedChapter}'
         : 'bible.title'.tr();
 
-    final entries = state.verses.entries
-        .map((e) => MapEntry(int.tryParse(e.key) ?? 0, e.value))
-        .where((e) => e.key > 0)
-        .toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    // Busca local com normalizacao de acentos (mesma logica da global).
+    final visibleVerses = _searchQuery.isEmpty
+        ? state.verses
+        : GlobalSearchService.filterVerses(state.verses, _searchQuery);
+
+    final entries =
+        visibleVerses.entries
+            .map((e) => MapEntry(int.tryParse(e.key) ?? 0, e.value))
+            .where((e) => e.key > 0)
+            .toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
 
     return Column(
       children: [
         // Header
         Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+            horizontal: AppSpacing.s4,
+            vertical: AppSpacing.s2,
+          ),
           child: Row(
             children: [
               Expanded(
-                child: Text(title,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               if (state.selectedVerses.isNotEmpty) ...[
                 IconButton(
                   icon: const Icon(TablerIcons.chevronLeft, size: 20),
-                  onPressed: () => context
-                      .read<BibleBloc>()
-                      .add(const BibleNavigateVerse(-1)),
+                  onPressed: () => context.read<BibleBloc>().add(
+                    const BibleNavigateVerse(-1),
+                  ),
                   tooltip: 'bible.previousVerse'.tr(),
                 ),
                 IconButton(
                   icon: const Icon(TablerIcons.chevronRight, size: 20),
-                  onPressed: () => context
-                      .read<BibleBloc>()
-                      .add(const BibleNavigateVerse(1)),
+                  onPressed: () => context.read<BibleBloc>().add(
+                    const BibleNavigateVerse(1),
+                  ),
                   tooltip: 'bible.nextVerse'.tr(),
                 ),
                 IconButton(
@@ -670,36 +748,63 @@ class _VerseList extends StatelessWidget {
             ],
           ),
         ),
+        // Busca no capitulo (numero ou texto, com normalizacao)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'search.placeholder'.tr(),
+              prefixIcon: const Icon(TablerIcons.search, size: 18),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              border: OutlineInputBorder(borderRadius: AppRadius.sm),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s2),
         // Versiculos
         Expanded(
           child: entries.isEmpty
               ? Center(
-                  child: Text('bible.emptyChapter'.tr(),
-                      style: theme.textTheme.bodyMedium))
+                  child: Text(
+                    'bible.emptyChapter'.tr(),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+                    horizontal: AppSpacing.s4,
+                    vertical: AppSpacing.s2,
+                  ),
                   itemCount: entries.length,
                   itemBuilder: (context, index) {
                     final verseNum = entries[index].key;
                     final verseText = entries[index].value;
-                    final isSelected =
-                        state.selectedVerses.contains(verseNum);
+                    final isSelected = state.selectedVerses.contains(verseNum);
 
                     return GestureDetector(
                       onTap: () {
-                        context.read<BibleBloc>()
-                            .add(BibleSelectVerse(verseNum));
+                        context.read<BibleBloc>().add(
+                          BibleSelectVerse(verseNum),
+                        );
+                        _projectSelectedVerses(state, verseNum);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.s2,
-                            horizontal: AppSpacing.s3),
+                          vertical: AppSpacing.s2,
+                          horizontal: AppSpacing.s3,
+                        ),
                         margin: const EdgeInsets.only(bottom: 2),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? theme.colorScheme.primary
-                                  .withValues(alpha: 0.12)
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                )
                               : Colors.transparent,
                           border: Border(
                             left: BorderSide(
@@ -710,8 +815,9 @@ class _VerseList extends StatelessWidget {
                             ),
                           ),
                           borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(4),
-                              bottomRight: Radius.circular(4)),
+                            topLeft: Radius.circular(4),
+                            bottomRight: Radius.circular(4),
+                          ),
                         ),
                         child: Opacity(
                           opacity: isSelected ? 1.0 : 0.65,
@@ -720,19 +826,19 @@ class _VerseList extends StatelessWidget {
                             children: [
                               SizedBox(
                                 width: 28,
-                                child: Text('$verseNum',
-                                    style: theme.textTheme.labelSmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: theme
-                                                .colorScheme.primary)),
+                                child: Text(
+                                  '$verseNum',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: AppSpacing.s2),
                               Expanded(
                                 child: Text(
                                   verseText,
-                                  style: theme.textTheme.bodyMedium
-                                      ?.copyWith(
+                                  style: theme.textTheme.bodyMedium?.copyWith(
                                     height: 1.7,
                                     fontSize: isSelected ? 16 : 15,
                                     fontWeight: isSelected
@@ -773,16 +879,20 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(TablerIcons.alertCircle,
-                size: 48, color: theme.colorScheme.error),
+            Icon(
+              TablerIcons.alertCircle,
+              size: 48,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: AppSpacing.s4),
-            Text(code.tr(),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge),
+            Text(
+              code.tr(),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
+            ),
             const SizedBox(height: AppSpacing.s4),
             FilledButton.icon(
-              onPressed: () =>
-                  context.read<BibleBloc>().add(BibleBootstrap()),
+              onPressed: () => context.read<BibleBloc>().add(BibleBootstrap()),
               icon: const Icon(TablerIcons.refresh, size: 18),
               label: Text('common.retry'.tr()),
             ),
