@@ -307,7 +307,7 @@ void showLiturgyItemDialog(
                     _FileSelectorCard(
                       filePath: filePathCtrl,
                       onPick: () async {
-                        final result = await FilePicker.platform.pickFiles(
+                        final result = await FilePicker().pickFiles(
                           type: type.value == LiturgyItemType.images
                               ? FileType.image
                               : type.value == LiturgyItemType.video
