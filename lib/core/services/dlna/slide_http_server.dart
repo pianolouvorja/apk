@@ -55,9 +55,11 @@ class SlideHttpServer {
   }
 
   Future<void> _handle(HttpRequest req) async {
-    debugPrint('[DLNA] server ${req.method} ${req.uri.path}'
-        '${req.uri.query.isNotEmpty ? '?${req.uri.query}' : ''} de '
-        '${req.connectionInfo?.remoteAddress.address}');
+    debugPrint(
+      '[DLNA] server ${req.method} ${req.uri.path}'
+      '${req.uri.query.isNotEmpty ? '?${req.uri.query}' : ''} de '
+      '${req.connectionInfo?.remoteAddress.address}',
+    );
     final res = req.response;
     final bytes = _currentSlide;
     if (bytes == null) {
@@ -65,8 +67,9 @@ class SlideHttpServer {
       await res.close();
       return;
     }
-    res.headers.contentType =
-        ContentType.parse(_jpegMode ? 'image/jpeg' : 'image/png');
+    res.headers.contentType = ContentType.parse(
+      _jpegMode ? 'image/jpeg' : 'image/png',
+    );
     res.headers.set('Content-Length', bytes.length);
     if (req.method == 'HEAD') {
       await res.close();

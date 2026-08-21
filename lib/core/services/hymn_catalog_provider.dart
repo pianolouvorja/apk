@@ -30,9 +30,18 @@ class HymnCatalogProvider {
   /// coletanea ele veio sem consulta adicional.
   String? albumNameByHymnId(int hymnId) => _albumNameByHymnId[hymnId];
 
-  /// Cover (url_image) do album [albumId] — usado no quadradinho do
-  /// now-playing do Palco (cover do ALBUM, nao da musica/slide).
-  String? albumCoverById(int albumId) => _albumCoverByAlbumId[albumId];
+  /// Cover do album [albumId] — usado no quadradinho do now-playing
+  /// do Palco (cover do ALBUM, nao da musica/slide).
+  ///
+  /// Hinarios locais (ids negativos) nao vem da API com coverUrl —
+  /// o provider resolve o asset embutido (capa do hinario).
+  static const _hymnalCovers = {
+    -1: 'asset:assets/images/library/hymnal.jpeg',
+    -2: 'asset:assets/images/library/hymnal_1996.jpeg',
+  };
+
+  String? albumCoverById(int albumId) =>
+      _hymnalCovers[albumId] ?? _albumCoverByAlbumId[albumId];
 
   /// Carrega categorias + hinos de cada album via [hymnLoader].
   ///

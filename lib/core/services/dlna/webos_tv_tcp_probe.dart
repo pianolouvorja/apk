@@ -36,19 +36,20 @@ class WebosTvTcpProbe {
       while (pending < concurrency && next <= 254 && !found.isCompleted) {
         final i = next++;
         pending++;
-        Socket.connect('$prefix.$i', 3001,
-                timeout: timeout)
+        Socket.connect('$prefix.$i', 3001, timeout: timeout)
             .then((s) {
-          debugPrint('[WEBOS-PROBE] $prefix.$i:3001 ABERTA — TV webOS!');
-          s.destroy();
-          if (!found.isCompleted) found.complete('$prefix.$i');
-        }).catchError((_) {}).whenComplete(() {
-          pending--;
-          if (pending == 0 && next > 254 && !found.isCompleted) {
-            found.complete(null);
-          }
-          checkNext();
-        });
+              debugPrint('[WEBOS-PROBE] $prefix.$i:3001 ABERTA — TV webOS!');
+              s.destroy();
+              if (!found.isCompleted) found.complete('$prefix.$i');
+            })
+            .catchError((_) {})
+            .whenComplete(() {
+              pending--;
+              if (pending == 0 && next > 254 && !found.isCompleted) {
+                found.complete(null);
+              }
+              checkNext();
+            });
       }
     }
 

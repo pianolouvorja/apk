@@ -98,7 +98,11 @@ class _MiniPlayerBarState extends State<MiniPlayerBar> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(
             children: [
-              Icon(TablerIcons.music, size: 20, color: theme.colorScheme.primary),
+              Icon(
+                TablerIcons.music,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -130,6 +134,9 @@ class _MiniPlayerBarState extends State<MiniPlayerBar> {
                         positionStream: widget.player.positionStream,
                         durationStream: widget.player.durationStream,
                         onSeek: widget.player.seek,
+                        fallbackDuration: Duration(
+                          milliseconds: track.durationMs ?? 0,
+                        ),
                       ),
                     ),
                   ],

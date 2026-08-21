@@ -53,8 +53,10 @@ class PalcoController extends ChangeNotifier {
     _eventsSub?.cancel();
     // F3.3x: qualquer evento do receiver notifica — isConnected/receiverIp
     // mudam quando a TV conecta, e a UI precisa reagir.
-    _eventsSub = _sender.events.listen((_) => notifyListeners(),
-        onError: (_) {});
+    _eventsSub = _sender.events.listen(
+      (_) => notifyListeners(),
+      onError: (_) {},
+    );
     debugPrint('[PALCO] conectado (sender ativo, TV=$tv.ip)');
     notifyListeners();
     return true;
@@ -102,10 +104,13 @@ class PalcoController extends ChangeNotifier {
     bool? textBox,
     double? boxOpacity,
     Map<String, dynamic>? boxBorder,
+    String? textAlign,
+    String? textVerticalAlign,
     double? fontSize,
     int? fontWeight,
   }) {
-    _sender.send(PalcoMessage.projection(
+    _sender.send(
+      PalcoMessage.projection(
         text: text,
         footer: footer,
         background: background,
@@ -119,8 +124,12 @@ class PalcoController extends ChangeNotifier {
         textBox: textBox,
         boxOpacity: boxOpacity,
         boxBorder: boxBorder,
+        textAlign: textAlign,
+        textVerticalAlign: textVerticalAlign,
         fontSize: fontSize,
-        fontWeight: fontWeight));
+        fontWeight: fontWeight,
+      ),
+    );
   }
 
   void projectIdle() {
@@ -131,45 +140,99 @@ class PalcoController extends ChangeNotifier {
     _sender.send(PalcoMessage.bgPalco(url));
   }
 
-  void playAudio(String url,
-      {String? title, String? subtitle, String? cover, String? background,
-       Duration? position}) {
+  void playAudio(
+    String url, {
+    String? title,
+    String? subtitle,
+    String? cover,
+    String? background,
+    Duration? position,
+  }) {
     // Paths locais (file path do celular) NÃO vão ao proxy — o receiver
     // não os alcança. O chamador (StageSession) deve ter convertido via
     // serveMedia; se chegou aqui, é bug: não manda URL quebrada.
     final isHttp = url.startsWith('http://') || url.startsWith('https://');
     final target = isHttp ? proxyUrl(url) : url;
-    _sender.send(PalcoMessage.audio(target,
-        title: title, subtitle: subtitle, cover: cover, background: background,
-        positionMs: position?.inMilliseconds));
+    _sender.send(
+      PalcoMessage.audio(
+        target,
+        title: title,
+        subtitle: subtitle,
+        cover: cover,
+        background: background,
+        positionMs: position?.inMilliseconds,
+      ),
+    );
   }
 
-  void pauseAudio() => _sender.send(const PalcoMessage(
-      type: 'audio', fields: {'action': 'pause'}));
+  void pauseAudio() => _sender.send(
+    const PalcoMessage(type: 'audio', fields: {'action': 'pause'}),
+  );
 
-  void resumeAudio() => _sender.send(const PalcoMessage(
-      type: 'audio', fields: {'action': 'play'}));
+  void resumeAudio() => _sender.send(
+    const PalcoMessage(type: 'audio', fields: {'action': 'play'}),
+  );
 
-  void stopAudio() => _sender.send(const PalcoMessage(
-      type: 'audio', fields: {'action': 'stop'}));
+  void stopAudio() => _sender.send(
+    const PalcoMessage(type: 'audio', fields: {'action': 'stop'}),
+  );
 
   /// Seek no receiver (segundos). F3.3: modo tv usa a TV como relógio.
-  void seekAudio(double seconds) => _sender.send(PalcoMessage(
-      type: 'audio', fields: {'action': 'seek', 'position': seconds}));
+  void seekAudio(double seconds) => _sender.send(
+    PalcoMessage(
+      type: 'audio',
+      fields: {'action': 'seek', 'position': seconds},
+    ),
+  );
 
-  void playVideo(String url) =>
-      _sender.send(PalcoMessage.video(proxyUrl(url)));
+  /// Vídeo: URL já servida pelo sender (/media) NÃO passa pelo proxy;
+  /// externa (http/https de fora) é envelopada. Bug duplo-wrap quebrava
+  /// o play de .mp4 local (URL triplamente embrulhada → 404 no receiver).
+  void playVideo(String url) {
+    final isSenderMedia = _httpBase != null && url.startsWith(_httpBase!);
+    _sender.send(PalcoMessage.video(isSenderMedia ? url : proxyUrl(url)));
+  }
 
-  void stopVideo() => _sender.send(const PalcoMessage(
-      type: 'video', fields: {'action': 'stop'}));
+  void stopVideo() => _sender.send(
+    const PalcoMessage(type: 'video', fields: {'action': 'stop'}),
+  );
 
-  void startTimer({required int duration, String mode = 'countdown', String label = ''}) =>
-      _sender.send(PalcoMessage.timer(
-          action: 'start', duration: duration, mode: mode, label: label));
+  /// Pausa/continua o vídeo na TV (toggle — mesmo comportamento da
+  /// tecla OK do controle remoto da TV).
+  void toggleVideoPause() => _sender.send(
+    const PalcoMessage(type: 'video', fields: {'action': 'pause'}),
+  );
 
-  void stopTimer() =>
-      _sender.send(PalcoMessage.timer(action: 'stop'));
+  void startTimer({
+    required int duration,
+    String mode = 'countdown',
+    String label = '',
+    String? color,
+    double? fontSize,
+    int? fontWeight,
+    bool? textShadow,
+    double? shadowBlur,
+    double? shadowIntensity,
+    String? textAlign,
+    String? textVerticalAlign,
+  }) => _sender.send(
+    PalcoMessage.timer(
+      action: 'start',
+      duration: duration,
+      mode: mode,
+      label: label,
+      color: color,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      textShadow: textShadow,
+      shadowBlur: shadowBlur,
+      shadowIntensity: shadowIntensity,
+      textAlign: textAlign,
+      textVerticalAlign: textVerticalAlign,
+    ),
+  );
 
+  void stopTimer() => _sender.send(PalcoMessage.timer(action: 'stop'));
 }
 
 /// Destino do áudio quando o Palco está ativo (F3.2).

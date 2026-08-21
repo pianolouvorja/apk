@@ -108,7 +108,9 @@ class LiturgyItemExecutor {
   }
 
   static Future<String> _executeMusic(
-      BuildContext context, LiturgyItem item) async {
+    BuildContext context,
+    LiturgyItem item,
+  ) async {
     if (item.musicId == null) {
       return 'Hino nao vinculado';
     }
@@ -125,8 +127,11 @@ class LiturgyItemExecutor {
       // comporta-se como antes (toggle local).
       final stage = StageSession.instance;
       if (stage.isOn && stage.audioRoute != PalcoAudioRoute.local) {
-        stage.playHymnAudio(url,
-            title: hymn.title ?? item.name, cover: hymn.imageUrl);
+        stage.playHymnAudio(
+          url,
+          title: hymn.title ?? item.name,
+          cover: hymn.imageUrl,
+        );
         return 'Tocando na TV: ${hymn.title ?? item.name}';
       }
       await HymnAudioPlayer.instance.toggleUrl(url);
@@ -137,7 +142,9 @@ class LiturgyItemExecutor {
   }
 
   static Future<String> _executeUrl(
-      BuildContext context, LiturgyItem item) async {
+    BuildContext context,
+    LiturgyItem item,
+  ) async {
     final url = item.url;
     if (url == null || url.trim().isEmpty) {
       return 'URL nao definida';
@@ -155,7 +162,9 @@ class LiturgyItemExecutor {
   }
 
   static Future<String> _executeFile(
-      BuildContext context, LiturgyItem item) async {
+    BuildContext context,
+    LiturgyItem item,
+  ) async {
     final path = item.filePath;
     if (path == null || path.trim().isEmpty) {
       return 'Arquivo nao selecionado';

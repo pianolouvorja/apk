@@ -8,8 +8,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/services/now_playing.dart';
+import '../../core/services/palco/palco_foreground.dart';
+import '../../core/services/pip_controller.dart';
+import '../../core/services/media_session.dart';
 import '../../core/services/dlna/stage_session.dart';
 import '../../core/services/palco/palco_controller.dart' show PalcoAudioRoute;
 import '../shared/widgets/stage_stop_video_button.dart';
@@ -28,6 +32,7 @@ import '../shared/widgets/player_timeline.dart';
 class NowPlayingPage extends StatefulWidget {
   final Hymn detail;
   final bool instrumental;
+
   /// Cover do álbum (para o quadradinho now-playing no Palco).
   final String? albumCoverUrl;
   final HymnPlayerLike player;
@@ -37,6 +42,10 @@ class NowPlayingPage extends StatefulWidget {
   // para rotear o som pro Palco quando audioRoute != local.
   final String? audioSource;
   final bool audioIsLocal;
+
+  /// Duração vinda da lista do álbum. Hinários trazem este campo mesmo
+  /// quando decoder Android não fornece metadata do MP3.
+  final int? catalogDurationMs;
 
   const NowPlayingPage({
     super.key,
@@ -48,6 +57,7 @@ class NowPlayingPage extends StatefulWidget {
     this.onClose,
     this.audioSource,
     this.audioIsLocal = false,
+    this.catalogDurationMs,
   });
 
   @override
@@ -58,6 +68,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   late LyricSlides _slides;
   int _index = 0;
   bool _noAudio = false;
+  DateTime? _manualSlideUntil;
   StreamSubscription<Duration>? _posSub;
   Duration? _lastPosition; // F3.3g: última posição do player local
   bool _routeListenerAdded = false; // F3.2: listener de mudança de audioRoute
@@ -81,11 +92,46 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     _posSub = widget.player.positionStream.listen((pos) {
       _lastPosition = pos; // F3.3g
       if (!mounted || _noAudio) return;
+      // Evita evento com posição antiga desfazer um toque no chevron antes
+      // de Android concluir seek (mais visível nos MP3s do hinário).
+      if (_manualSlideUntil?.isAfter(DateTime.now()) ?? false) return;
       final idx = _slides.indexAt(pos, instrumental: widget.instrumental);
       if (idx != _index) {
         setState(() => _index = idx);
         _projectCurrentSlide();
       }
+    });
+    // Player nativo já usa AudioContext stayAwake em background. Esta tela
+    // segura tela ativa durante operação; não depende do notifier do adapter.
+    WakelockPlus.enable();
+    // Serviço mantém áudio/clock/sender vivos fora do app. É compartilhado
+    // com Palco e não pode ser parado ao entrar em PiP.
+    PalcoForeground.start();
+    PipController.setEnabled(true);
+    // MediaSession: notificação de mídia + lock screen + ações PiP.
+    MediaSession.onPlayPause = (play) {
+      if (!mounted) return;
+      if (play) {
+        if (StageSession.instance.audioRoute == PalcoAudioRoute.tv) {
+          StageSession.instance.palco?.resumeAudio();
+        } else {
+          widget.player.resume();
+        }
+      } else {
+        _pauseAudioEverywhere();
+      }
+      if (mounted) setState(() {});
+    };
+    MediaSession.onPrev = () => _goToSlide(_index - 1);
+    MediaSession.onNext = () => _goToSlide(_index + 1);
+    MediaSession.init().then((_) {
+      if (!mounted) return;
+      MediaSession.setMetadata(
+        title: widget.detail.title ?? '',
+        album: nowPlaying.track?.album ?? '',
+        artUrl: widget.detail.imageUrl,
+        durationMs: widget.catalogDurationMs ?? widget.detail.durationMs ?? 0,
+      );
     });
     // F3.2: roteia áudio pro palco (se ativo e modo != local).
     WidgetsBinding.instance.addPostFrameCallback((_) => _routeAudio());
@@ -107,6 +153,12 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
 
   @override
   void dispose() {
+    PipController.setEnabled(false);
+    MediaSession.release();
+    if (!StageSession.instance.isOn) {
+      WakelockPlus.disable();
+      PalcoForeground.stop();
+    }
     if (_routeListenerAdded) {
       StageSession.instance.removeListener(_onAudioRouteChanged);
     }
@@ -131,14 +183,16 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       widget.player.setVolume(1);
     }
     _resolveCoverForPalco().then((cover) {
-      stage.playHymnAudio(widget.audioSource!,
-          title: widget.detail.title ?? '',
-          subtitle: widget.instrumental ? 'Instrumental' : null,
-          // Quadradinho na TV = cover do ALBUM (nao a imagem da música/slide).
-          cover: cover,
-          // BG do slide atual atrás do now-playing (senão caía no fallback).
-          background: _bgUrl,
-          position: widget.audioIsLocal ? null : _currentLocalPosition());
+      stage.playHymnAudio(
+        widget.audioSource!,
+        title: widget.detail.title ?? '',
+        subtitle: widget.instrumental ? 'Instrumental' : null,
+        // Quadradinho na TV = cover do ALBUM (nao a imagem da música/slide).
+        cover: cover,
+        // BG do slide atual atrás do now-playing (senão caía no fallback).
+        background: _bgUrl,
+        position: widget.audioIsLocal ? null : _currentLocalPosition(),
+      );
     });
   }
 
@@ -157,7 +211,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
         final assetPath = raw.substring('asset:'.length);
         final bytes = await rootBundle.load(assetPath);
         return stage.palco?.serveMedia(
-            'album_cover_${assetPath.split('/').last}', bytes.buffer.asUint8List());
+          'album_cover_${assetPath.split('/').last}',
+          bytes.buffer.asUint8List(),
+        );
       } catch (_) {
         return null;
       }
@@ -182,27 +238,47 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   }
 
   /// Projeta o slide ATUAL do hino no palco global (se ligado).
-  /// Mesma sessão da Liturgia/Bíblia — um palco só.
+  /// Mesma sessao da Liturgia/Biblia — um palco so.
   Future<void> _projectCurrentSlide() async {
     final stage = StageSession.instance;
     if (!stage.isOn) return;
     final slide = _slides.slides.isEmpty ? null : _slides.slides[_index];
     if (slide == null) return;
+    // Resolve BG: asset local (hinario) -> serve via /media;
+    // URL relativa da API -> ja e alcancavel pelo receiver;
+    // null -> receiver usa bg-fallback.
+    String? bg;
+    if (_bgUrl != null) {
+      if (_bgUrl!.startsWith('asset:')) {
+        try {
+          final assetPath = _bgUrl!.substring('asset:'.length);
+          final bytes = await rootBundle.load(assetPath);
+          bg = stage.palco?.serveMedia(
+            'slide_bg_${assetPath.split('/').last}',
+            bytes.buffer.asUint8List(),
+          );
+        } catch (_) {}
+      } else {
+        bg = _bgUrl;
+      }
+    }
     final ok = await stage.project(
       title: slide.text,
       footer: widget.detail.title,
-      background: _bgUrl, // F3.2: BG do slide atrás do texto
+      background: bg,
+      module: 'hymns',
     );
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('stage.disconnected'.tr())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('stage.disconnected'.tr())));
     }
   }
-
 
   void _goToSlide(int index) {
     if (index < 0 || index >= _slides.slides.length) return;
     setState(() => _index = index);
+    _manualSlideUntil = DateTime.now().add(const Duration(milliseconds: 800));
     _projectCurrentSlide();
     if (!_noAudio) {
       final t = widget.instrumental
@@ -222,6 +298,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
   String? get _bgUrl {
     final img = _slides.slides.isEmpty ? null : _slides.slides[_index].imageUrl;
     if (img == null || img.isEmpty) return null;
+    // asset: (capa de hinario local) — devolve cru, o chamador trata.
+    if (img.startsWith('asset:')) return img;
     return '${widget.filesUrl}/$img'.replaceAll('//images', '/images');
   }
 
@@ -236,13 +314,18 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Fundo do slide
+          // Fundo do slide — asset local (hinario) ou URL da API.
           if (_bgUrl != null)
-            CachedNetworkImage(
-              imageUrl: _bgUrl!,
-              fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => const SizedBox.shrink(),
-            ),
+            _bgUrl!.startsWith('asset:')
+                ? Image.asset(
+                    _bgUrl!.substring('asset:'.length),
+                    fit: BoxFit.cover,
+                  )
+                : CachedNetworkImage(
+                    imageUrl: _bgUrl!,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                  ),
           Container(color: Colors.black54),
 
           // Conteúdo
@@ -254,8 +337,11 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   children: [
                     IconButton(
                       icon: const Icon(TablerIcons.x, color: Colors.white),
-                      onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
-                      onLongPress: _stopAudioEverywhere, // F3.2: para tudo (local+TV)
+                      onPressed:
+                          widget.onClose ??
+                          () => Navigator.of(context).maybePop(),
+                      onLongPress:
+                          _stopAudioEverywhere, // F3.2: para tudo (local+TV)
                     ),
                     Expanded(
                       child: Column(
@@ -263,8 +349,10 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         children: [
                           Text(
                             widget.detail.title ?? '',
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -276,9 +364,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     // Configura uma vez; cada hino não repete o controle.
                     if (widget.detail.hasInstrumental)
                       IconButton(
-                        tooltip: widget.instrumental ? 'Cantado' : 'Instrumental',
+                        tooltip: widget.instrumental
+                            ? 'Cantado'
+                            : 'Instrumental',
                         icon: Icon(
-                          widget.instrumental ? TablerIcons.microphone : TablerIcons.piano,
+                          widget.instrumental
+                              ? TablerIcons.microphone
+                              : TablerIcons.piano,
                           color: Colors.white,
                         ),
                         onPressed: () => setState(() {
@@ -299,7 +391,7 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                 // Estrofe (área central): swipe troca slide
                 Expanded(
                   child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
+                    behavior: HitTestBehavior.opaque,
                     onHorizontalDragEnd: (d) {
                       if (d.primaryVelocity == null) return;
                       if (d.primaryVelocity! < 0) _goToSlide(_index + 1);
@@ -328,7 +420,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       '${_index + 1} / ${_slides.slides.length}',
-                      style: theme.textTheme.labelSmall?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white70,
+                      ),
                     ),
                   ),
 
@@ -338,24 +432,41 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     positionStream: widget.player.positionStream,
                     durationStream: widget.player.durationStream,
                     onSeek: widget.player.seek,
+                    fallbackDuration: Duration(
+                      // Lista do hinário é a fonte estável. Detail pode
+                      // não trazer duração em cache legado.
+                      milliseconds:
+                          widget.catalogDurationMs ??
+                          widget.detail.durationMs ??
+                          0,
+                    ),
                   ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(TablerIcons.chevronLeft, color: Colors.white),
+                      icon: const Icon(
+                        TablerIcons.chevronLeft,
+                        color: Colors.white,
+                      ),
                       onPressed: () => _goToSlide(_index - 1),
                     ),
                     const SizedBox(width: 24),
                     IconButton(
                       iconSize: 56,
                       icon: Icon(
-                        playing ? TablerIcons.playerPause : TablerIcons.playerPlay,
+                        playing
+                            ? TablerIcons.playerPause
+                            : TablerIcons.playerPlay,
                         color: Colors.white,
                       ),
                       onPressed: () async {
                         if (widget.player.isPlaying) {
                           _pauseAudioEverywhere();
+                          MediaSession.setPlaybackState(
+                            isPlaying: false,
+                            positionMs: _lastPosition?.inMilliseconds ?? 0,
+                          );
                         } else if (StageSession.instance.audioRoute ==
                             PalcoAudioRoute.tv) {
                           // só-TV: retoma SÓ no palco; player local nunca
@@ -364,13 +475,20 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                         } else {
                           await widget.player.resume();
                           _routeAudio();
+                          MediaSession.setPlaybackState(
+                            isPlaying: true,
+                            positionMs: _lastPosition?.inMilliseconds ?? 0,
+                          );
                         }
                         if (mounted) setState(() {});
                       },
                     ),
                     const SizedBox(width: 24),
                     IconButton(
-                      icon: const Icon(TablerIcons.chevronRight, color: Colors.white),
+                      icon: const Icon(
+                        TablerIcons.chevronRight,
+                        color: Colors.white,
+                      ),
                       onPressed: () => _goToSlide(_index + 1),
                     ),
                   ],

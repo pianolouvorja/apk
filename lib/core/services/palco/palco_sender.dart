@@ -46,9 +46,11 @@ class PalcoSender {
   static const int httpPort = 7080;
   static const int wsPort = 7081;
 
-  PalcoSender(
-      {this.httpPortFixed = httpPort, this.wsPortFixed = wsPort, Uint8List? receiverPage})
-      : _receiverPage = receiverPage;
+  PalcoSender({
+    this.httpPortFixed = httpPort,
+    this.wsPortFixed = wsPort,
+    Uint8List? receiverPage,
+  }) : _receiverPage = receiverPage;
 
   /// Receiver embutido (F3.4): carregado uma vez do asset
   /// assets/palco/receiver.html — servido em / e /receiver.html.
@@ -71,15 +73,23 @@ class PalcoSender {
       return null;
     }
     try {
-      _http = await HttpServer.bind(InternetAddress.anyIPv4, httpPortFixed,
-          shared: true);
+      _http = await HttpServer.bind(
+        InternetAddress.anyIPv4,
+        httpPortFixed,
+        shared: true,
+      );
       _http!.listen(_handleHttp, onError: (_) {});
 
-      _ws = await HttpServer.bind(InternetAddress.anyIPv4, wsPortFixed,
-          shared: true);
+      _ws = await HttpServer.bind(
+        InternetAddress.anyIPv4,
+        wsPortFixed,
+        shared: true,
+      );
       _ws!.listen(_handleWsUpgrade, onError: (_) {});
 
-      debugPrint('[PALCO] sender em http://$ip:$effectiveHttpPort + ws://$ip:$effectiveWsPort');
+      debugPrint(
+        '[PALCO] sender em http://$ip:$effectiveHttpPort + ws://$ip:$effectiveWsPort',
+      );
       return 'http://$ip:$effectiveHttpPort';
     } catch (e) {
       debugPrint('[PALCO] start() FALHOU: $e (portas em uso?)');
@@ -103,43 +113,52 @@ class PalcoSender {
 
   void _handleWsUpgrade(HttpRequest req) {
     if (req.uri.path == '/palco') {
-      WebSocketTransformer.upgrade(req).then((ws) {
-        _clients.add(ws);
-        // F3.3x: IP do receiver (visto pelo socket) — exibido no app e
-        // na TV pra debug/ares sem precisar de scan reverso.
-        final remoteIp = req.connectionInfo?.remoteAddress.address;
-        if (remoteIp != null && remoteIp != _receiverIp) {
-          _receiverIp = remoteIp;
-          debugPrint('[PALCO] receiver IP: $remoteIp');
-        }
-        debugPrint('[PALCO] receiver conectado (${_clients.length})');
-        // F3.3x: diz à TV qual o IP DELA (visto pelo socket) — o receiver
-        // exibe discretamente no idle (debug/ares).
-        if (remoteIp != null) {
-          try {
-            ws.add(jsonEncode(PalcoMessage(
-                type: 'youare', fields: {'ip': remoteIp}).toJson()));
-          } catch (_) {}
-        }
-        ws.listen(
-          (data) {
-            try {
-              final m = PalcoMessage.fromJson(
-                  jsonDecode(data as String) as Map<String, dynamic>);
-              _events.add(m);
-            } catch (_) {}
-          },
-          onDone: () {
-            _clients.remove(ws);
-            debugPrint('[PALCO] receiver saiu (${_clients.length})');
-          },
-          onError: (_) {
-            _clients.remove(ws);
-          },
-          // SEM ping: webOS 4.x não responde (lição do spike).
-          cancelOnError: false,
-        );
-      }).catchError((_) {});
+      WebSocketTransformer.upgrade(req)
+          .then((ws) {
+            _clients.add(ws);
+            // F3.3x: IP do receiver (visto pelo socket) — exibido no app e
+            // na TV pra debug/ares sem precisar de scan reverso.
+            final remoteIp = req.connectionInfo?.remoteAddress.address;
+            if (remoteIp != null && remoteIp != _receiverIp) {
+              _receiverIp = remoteIp;
+              debugPrint('[PALCO] receiver IP: $remoteIp');
+            }
+            debugPrint('[PALCO] receiver conectado (${_clients.length})');
+            // F3.3x: diz à TV qual o IP DELA (visto pelo socket) — o receiver
+            // exibe discretamente no idle (debug/ares).
+            if (remoteIp != null) {
+              try {
+                ws.add(
+                  jsonEncode(
+                    PalcoMessage(
+                      type: 'youare',
+                      fields: {'ip': remoteIp},
+                    ).toJson(),
+                  ),
+                );
+              } catch (_) {}
+            }
+            ws.listen(
+              (data) {
+                try {
+                  final m = PalcoMessage.fromJson(
+                    jsonDecode(data as String) as Map<String, dynamic>,
+                  );
+                  _events.add(m);
+                } catch (_) {}
+              },
+              onDone: () {
+                _clients.remove(ws);
+                debugPrint('[PALCO] receiver saiu (${_clients.length})');
+              },
+              onError: (_) {
+                _clients.remove(ws);
+              },
+              // SEM ping: webOS 4.x não responde (lição do spike).
+              cancelOnError: false,
+            );
+          })
+          .catchError((_) {});
     } else {
       req.response.statusCode = 404;
       req.response.close();
@@ -175,9 +194,9 @@ class PalcoSender {
     try {
       final path = req.uri.path;
       if (path == '/' || path == '/receiver.html' || path == '/index.html') {
-        _receiverPage ??= (await rootBundle.load('assets/palco/receiver.html'))
-            .buffer
-            .asUint8List();
+        _receiverPage ??= (await rootBundle.load(
+          'assets/palco/receiver.html',
+        )).buffer.asUint8List();
         res.headers.contentType = ContentType.html;
         res.headers.set('Access-Control-Allow-Origin', '*');
         res.add(_receiverPage!);
@@ -186,9 +205,9 @@ class PalcoSender {
         // Fallback de cover (F3.3e): logo da org quando o item de audio
         // nao tem capa ou a capa falha no load.
         try {
-          final png = (await rootBundle.load('assets/palco/logo-piano-louvorja.png'))
-              .buffer
-              .asUint8List();
+          final png = (await rootBundle.load(
+            'assets/palco/logo-piano-louvorja.png',
+          )).buffer.asUint8List();
           res.headers.contentType = ContentType.parse('image/png');
           res.headers.set('Access-Control-Allow-Origin', '*');
           res.add(png);
@@ -199,9 +218,9 @@ class PalcoSender {
       } else if (path == '/bg-fallback.png') {
         // F3.3j: BG padrao do palco quando o audio nao tem imagem de fundo.
         try {
-          final png = (await rootBundle.load('assets/palco/bg-fallback.png'))
-              .buffer
-              .asUint8List();
+          final png = (await rootBundle.load(
+            'assets/palco/bg-fallback.png',
+          )).buffer.asUint8List();
           res.headers.contentType = ContentType.parse('image/png');
           res.headers.set('Access-Control-Allow-Origin', '*');
           res.add(png);
@@ -212,9 +231,9 @@ class PalcoSender {
       } else if (path == '/splash-palco.png') {
         // F3.3j: splash screen do receiver (exibida ao carregar).
         try {
-          final png = (await rootBundle.load('assets/palco/splash-palco.png'))
-              .buffer
-              .asUint8List();
+          final png = (await rootBundle.load(
+            'assets/palco/splash-palco.png',
+          )).buffer.asUint8List();
           res.headers.contentType = ContentType.parse('image/png');
           res.headers.set('Access-Control-Allow-Origin', '*');
           res.add(png);
@@ -224,9 +243,9 @@ class PalcoSender {
         await res.close();
       } else if (path == '/logo-louvor-ja.svg') {
         try {
-          final svg = (await rootBundle.load('assets/palco/logo-louvor-ja.svg'))
-              .buffer
-              .asUint8List();
+          final svg = (await rootBundle.load(
+            'assets/palco/logo-louvor-ja.svg',
+          )).buffer.asUint8List();
           res.headers.contentType = ContentType.parse('image/svg+xml');
           res.add(svg);
         } catch (_) {
@@ -251,13 +270,21 @@ class PalcoSender {
         // ?url=, o _serveProxy devolvia 400/404 e a capa ficava quebrada.
         // Monta a URL da API a partir do path e proxya.
         final rel = path.substring(1); // images/... ou covers/...
-        await _serveProxy(req, overrideQuery: 'url='
-            '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}');
+        await _serveProxy(
+          req,
+          overrideQuery:
+              'url='
+              '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}',
+        );
       } else if (path.startsWith('/covers/')) {
         // covers/... (F3.3e): mesma rota — capa de album relativa.
         final rel = path.substring(1);
-        await _serveProxy(req, overrideQuery: 'url='
-            '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}');
+        await _serveProxy(
+          req,
+          overrideQuery:
+              'url='
+              '${Uri.encodeComponent('https://api.louvorja.com.br/file/$rel')}',
+        );
       } else {
         res.statusCode = 404;
         await res.close();
@@ -287,15 +314,19 @@ class PalcoSender {
     );
     _applyRangeHeaders(req, r);
     final (start, end) =
-        PalcoRangeResponse.parseRange(req.headers.value(HttpHeaders.rangeHeader), bytes.length) ??
-            (0, bytes.length - 1);
+        PalcoRangeResponse.parseRange(
+          req.headers.value(HttpHeaders.rangeHeader),
+          bytes.length,
+        ) ??
+        (0, bytes.length - 1);
     req.response.add(bytes.sublist(start, end + 1));
     await req.response.close();
   }
 
   Future<void> _serveProxy(HttpRequest req, {String? overrideQuery}) async {
-    final target =
-        PalcoProxyHeaders.unwrapFromProxy(overrideQuery ?? req.uri.query);
+    final target = PalcoProxyHeaders.unwrapFromProxy(
+      overrideQuery ?? req.uri.query,
+    );
     if (target == null) {
       req.response.statusCode = 400;
       await req.response.close();
@@ -314,14 +345,17 @@ class PalcoSender {
       // mas os headers da origem chegam intactos — repassar content-encoding
       // faz o browser tentar descomprimir duas vezes
       // (ERR_CONTENT_DECODING_FOUND, bug F3.4 2026-08-18: BG/áudio 200 mas morto).
-      const drop = {'content-encoding', 'content-length',
-          HttpHeaders.transferEncodingHeader};
+      const drop = {
+        'content-encoding',
+        'content-length',
+        HttpHeaders.transferEncodingHeader,
+      };
       fres.headers.forEach((n, v) {
         if (drop.contains(n.toLowerCase())) return;
         // Headers com não-ASCII (Content-Disposition com acento no
         // filename, ex: "É Jesus.mp3") quebram headers.set → 502
         // (bug 2026-08-18: áudio 502, imagens ok por não terem acento).
-        final flat = v.join(', ');  // List<String> multi-valor plano
+        final flat = v.join(', '); // List<String> multi-valor plano
         if (flat.codeUnits.any((c) => c > 127)) return;
         req.response.headers.set(n, v);
       });
@@ -340,10 +374,11 @@ class PalcoSender {
 
   void _applyRangeHeaders(HttpRequest req, PalcoRangeResponse r) {
     req.response.statusCode = r.status;
-    req.response.headers
-        .contentType = ContentType.parse(r.contentType);
+    req.response.headers.contentType = ContentType.parse(r.contentType);
     req.response.headers.set(
-        HttpHeaders.contentLengthHeader, r.contentLength.toString());
+      HttpHeaders.contentLengthHeader,
+      r.contentLength.toString(),
+    );
     req.response.headers.set('Accept-Ranges', 'bytes');
     req.response.headers.set('Access-Control-Allow-Origin', '*');
     if (r.contentRange != null) {

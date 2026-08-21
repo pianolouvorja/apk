@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -12,16 +13,29 @@ import '../../../core/services/dlna/stage_slide_painter.dart';
 import '../../../core/services/dlna/stage_settings_repository.dart';
 import '../../../core/services/dlna/stage_session.dart';
 
-/// Personalização do Palco: cores, fonte, tamanho — com preview ao vivo
-/// (proporção 16:9 da TV). Persiste em disco ao salvar.
+/// Origem do conteúdo — cada AppBar abre somente seu painel.
+enum StageModule { hymns, bible, liturgy, timer }
+
+extension StageModuleLabel on StageModule {
+  String get label => switch (this) {
+    StageModule.hymns => 'Hinos',
+    StageModule.bible => 'Bíblia',
+    StageModule.liturgy => 'Liturgia',
+    StageModule.timer => 'Cronômetro',
+  };
+}
+
+/// Personalização do Palco por módulo, com preview ao vivo 16:9.
 class StageCustomizationSheet extends StatefulWidget {
   final StageSettings initial;
   final ValueChanged<StageSettings> onApply;
+  final StageModule module;
 
   const StageCustomizationSheet({
     super.key,
     required this.initial,
     required this.onApply,
+    required this.module,
   });
 
   @override
@@ -79,7 +93,9 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
 
   /// Carrega o BG salvo pro preview. Sem imagem → bg-fallback (asset oficial).
   Future<void> _loadBgPreview() async {
-    final bytes = await _repo.loadBackgroundImage();
+    final bytes = await _repo.loadBackgroundImage(
+      backgroundScope: widget.module.name,
+    );
     if (!mounted) return;
     setState(() => _bgBytes = bytes);
   }
@@ -133,7 +149,10 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
     );
     if (chosen == null) return;
     final data = await rootBundle.load(chosen);
-    await StageSession.instance.setBackgroundBytes(data.buffer.asUint8List());
+    await StageSession.instance.setBackgroundBytes(
+      data.buffer.asUint8List(),
+      scope: widget.module.name,
+    );
     await _loadBgPreview();
   }
 
@@ -152,7 +171,10 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Personalizar Palco', style: theme.textTheme.titleMedium),
+            Text(
+              'Personalizar ${widget.module.label}',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
 
             // Preview 16:9 com texto de amostra — mostra o BG REAL (imagem
@@ -165,7 +187,11 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
-                alignment: Alignment.center,
+                alignment: switch (_s.textVerticalAlign) {
+                  'top' => Alignment.topCenter,
+                  'bottom' => Alignment.bottomCenter,
+                  _ => Alignment.center,
+                },
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Stack(
@@ -179,60 +205,79 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                           'assets/palco/bg-fallback.png',
                           fit: BoxFit.cover,
                         ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Container(
-                          // Caixinha atrás da letra — igual o receiver
-                          // (rgba preto com opacidade configurável).
-                          decoration: _s.textBox
-                              ? BoxDecoration(
-                                  color: Colors.black.withValues(
-                                    alpha: _s.boxOpacity,
-                                  ),
-                                  border: _s.boxBorder
-                                      ? Border.all(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.25,
+                      // StackFit.expand força filhos a preencher — o
+                      // alinhamento vertical tem que vir de um Align AQUI
+                      // dentro, senão o texto estica e o alignment do
+                      // Container externo nunca age.
+                      Align(
+                        alignment: switch (_s.textVerticalAlign) {
+                          'top' => Alignment.topCenter,
+                          'bottom' => Alignment.bottomCenter,
+                          _ => Alignment.center,
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Container(
+                            // Caixinha atrás da letra — igual o receiver
+                            // (rgba preto com opacidade configurável).
+                            decoration: _s.textBox
+                                ? BoxDecoration(
+                                    color: Colors.black.withValues(
+                                      alpha: _s.boxOpacity,
+                                    ),
+                                    border: _s.boxBorder
+                                        ? Border.all(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                          )
+                                        : null,
+                                  )
+                                : null,
+                            padding: _s.textBox
+                                ? const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  )
+                                : EdgeInsets.zero,
+                            child: Text(
+                              'O nosso sol\nVeio iluminar',
+                              textAlign: switch (_s.textAlign) {
+                                'left' => TextAlign.left,
+                                'right' => TextAlign.right,
+                                _ => TextAlign.center,
+                              },
+                              style: TextStyle(
+                                // escala preview: 96px em 1920 → ~proporcional
+                                fontSize:
+                                    (_s.fontSize / 1920) *
+                                    (MediaQuery.of(context).size.width - 64),
+                                fontWeight: _s.fontWeight,
+                                color: _s.textColor,
+                                height: 1.35,
+                                // Sombra da letra — igual o receiver
+                                // (blur e intensidade configuráveis).
+                                shadows: _s.textShadow
+                                    ? [
+                                        Shadow(
+                                          color: Colors.black.withValues(
+                                            alpha: _s.shadowIntensity,
                                           ),
-                                        )
-                                      : null,
-                                )
-                              : null,
-                          padding: _s.textBox
-                              ? const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 16,
-                                )
-                              : EdgeInsets.zero,
-                          child: Text(
-                            'O nosso sol\nVeio iluminar',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              // escala preview: 96px em 1920 → ~proporcional
-                              fontSize:
-                                  (_s.fontSize / 1920) *
-                                  (MediaQuery.of(context).size.width - 64),
-                              fontWeight: _s.fontWeight,
-                              color: _s.textColor,
-                              height: 1.35,
-                              // Sombra da letra — igual o receiver
-                              // (blur e intensidade configuráveis).
-                              shadows: _s.textShadow
-                                  ? [
-                                      Shadow(
-                                        color: Colors.black.withValues(
-                                          alpha: _s.shadowIntensity,
+                                          // Receiver usa vh. Preview mantém
+                                          // sombra legível na tela pequena.
+                                          blurRadius:
+                                              (_s.shadowBlur *
+                                                      ((MediaQuery.of(
+                                                                context,
+                                                              ).size.width -
+                                                              64) /
+                                                          192))
+                                                  .clamp(2.0, 20.0),
+                                          offset: const Offset(1.5, 1.5),
                                         ),
-                                        blurRadius:
-                                            _s.shadowBlur *
-                                            ((MediaQuery.of(
-                                                      context,
-                                                    ).size.width -
-                                                    64) /
-                                                1920),
-                                      ),
-                                    ]
-                                  : null,
+                                      ]
+                                    : null,
+                              ),
                             ),
                           ),
                         ),
@@ -257,6 +302,11 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                     _s.backgroundColor,
                     (v) => setState(() => _s = _s.copyWith(backgroundColor: v)),
                   ),
+                _moreColorsButton(
+                  theme,
+                  _s.backgroundColor,
+                  (v) => setState(() => _s = _s.copyWith(backgroundColor: v)),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -285,6 +335,7 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                     if (picked == null) return;
                     await StageSession.instance.setBackgroundFromFile(
                       picked.path,
+                      scope: widget.module.name,
                     );
                     await _loadBgPreview();
                     if (!mounted) return;
@@ -310,6 +361,11 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                     _s.textColor,
                     (v) => setState(() => _s = _s.copyWith(textColor: v)),
                   ),
+                _moreColorsButton(
+                  theme,
+                  _s.textColor,
+                  (v) => setState(() => _s = _s.copyWith(textColor: v)),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -339,84 +395,100 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
             ),
             const SizedBox(height: 20),
 
-            // ===== F3.3o: Bíblia — tipografia própria =====
-            const Divider(),
-            Text(
-              'Bíblia — aparência própria',
-              style: theme.textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
+            // Tipografia/rodapé próprios só aparecem ao personalizar Bíblia.
+            if (widget.module == StageModule.bible) ...[
+              // ===== F3.3o: Bíblia — tipografia própria =====
+              const Divider(),
+              Text(
+                'Bíblia — aparência própria',
+                style: theme.textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
 
-            Text('Cor do texto (Bíblia)', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final (c, label) in _fgPresets)
-                  _colorChip(
+              Text('Cor do texto (Bíblia)', style: theme.textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final (c, label) in _fgPresets)
+                    _colorChip(
+                      theme,
+                      Color(c),
+                      label,
+                      _s.bibleTextColor,
+                      (v) =>
+                          setState(() => _s = _s.copyWith(bibleTextColor: v)),
+                    ),
+                  _moreColorsButton(
                     theme,
-                    Color(c),
-                    label,
                     _s.bibleTextColor,
                     (v) => setState(() => _s = _s.copyWith(bibleTextColor: v)),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            Text(
-              'Tamanho da fonte: ${_s.bibleFontSize.round()} px',
-              style: theme.textTheme.labelLarge,
-            ),
-            Slider(
-              min: 50,
-              max: 140,
-              value: _s.bibleFontSize.clamp(50, 140),
-              onChanged: (v) =>
-                  setState(() => _s = _s.copyWith(bibleFontSize: v)),
-            ),
+              Text(
+                'Tamanho da fonte: ${_s.bibleFontSize.round()} px',
+                style: theme.textTheme.labelLarge,
+              ),
+              Slider(
+                min: 50,
+                max: 140,
+                value: _s.bibleFontSize.clamp(50, 140),
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(bibleFontSize: v)),
+              ),
 
-            Text('Espessura (Bíblia)', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 4),
-            SegmentedButton<int>(
-              segments: const [
-                ButtonSegment(value: 400, label: Text('Normal')),
-                ButtonSegment(value: 500, label: Text('Leve+')),
-                ButtonSegment(value: 700, label: Text('Forte')),
-              ],
-              selected: {_s.bibleFontWeight},
-              onSelectionChanged: (sel) =>
-                  setState(() => _s = _s.copyWith(bibleFontWeight: sel.first)),
-            ),
-            const SizedBox(height: 12),
+              Text('Espessura (Bíblia)', style: theme.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 400, label: Text('Normal')),
+                  ButtonSegment(value: 500, label: Text('Leve+')),
+                  ButtonSegment(value: 700, label: Text('Forte')),
+                ],
+                selected: {_s.bibleFontWeight},
+                onSelectionChanged: (sel) => setState(
+                  () => _s = _s.copyWith(bibleFontWeight: sel.first),
+                ),
+              ),
+              const SizedBox(height: 12),
 
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Mostrar versão da Bíblia no rodapé'),
-              value: _s.showBibleVersion,
-              onChanged: (v) =>
-                  setState(() => _s = _s.copyWith(showBibleVersion: v)),
-            ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Mostrar versão da Bíblia no rodapé'),
+                value: _s.showBibleVersion,
+                onChanged: (v) =>
+                    setState(() => _s = _s.copyWith(showBibleVersion: v)),
+              ),
 
-            Text(
-              'Cor da referência (rodapé)',
-              style: theme.textTheme.labelLarge,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final (c, label) in _refPresets)
-                  _colorChip(
+              Text(
+                'Cor da referência (rodapé)',
+                style: theme.textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final (c, label) in _refPresets)
+                    _colorChip(
+                      theme,
+                      Color(c),
+                      label,
+                      _s.footerRefColor,
+                      (v) =>
+                          setState(() => _s = _s.copyWith(footerRefColor: v)),
+                    ),
+                  _moreColorsButton(
                     theme,
-                    Color(c),
-                    label,
                     _s.footerRefColor,
                     (v) => setState(() => _s = _s.copyWith(footerRefColor: v)),
                   ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // ===== F3.3m: sombra e caixinha =====
             const Divider(),
@@ -469,6 +541,37 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                     setState(() => _s = _s.copyWith(boxBorder: v)),
               ),
             ],
+
+            // ===== Alinhamento do texto (horizontal + vertical) =====
+            const Divider(),
+            Text('Alinhamento do texto', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Text('Horizontal', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 4),
+            _alignSegment(
+              theme,
+              value: _s.textAlign,
+              options: const [
+                ('left', 'Esquerda', TablerIcons.alignLeft),
+                ('center', 'Centro', TablerIcons.alignCenter),
+                ('right', 'Direita', TablerIcons.alignRight),
+              ],
+              onChanged: (v) => setState(() => _s = _s.copyWith(textAlign: v)),
+            ),
+            const SizedBox(height: 12),
+            Text('Vertical', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 4),
+            _alignSegment(
+              theme,
+              value: _s.textVerticalAlign,
+              options: const [
+                ('top', 'Em cima', TablerIcons.arrowUp),
+                ('middle', 'Meio', TablerIcons.alignJustified),
+                ('bottom', 'Em baixo', TablerIcons.arrowDown),
+              ],
+              onChanged: (v) =>
+                  setState(() => _s = _s.copyWith(textVerticalAlign: v)),
+            ),
             const SizedBox(height: 20),
 
             Row(
@@ -477,7 +580,37 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
                   child: OutlinedButton.icon(
                     icon: const Icon(TablerIcons.rotate),
                     label: const Text('Redefinir'),
-                    onPressed: () => setState(() => _s = const StageSettings()),
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dctx) => AlertDialog(
+                          title: const Text('Redefinir personalização'),
+                          content: Text(
+                            'Voltar ${widget.module.label} para o padrão? '
+                            'Cores, fonte, sombra, caixinha e imagem de fundo '
+                            'deste módulo serão removidos.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dctx).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.of(dctx).pop(true),
+                              child: const Text('Redefinir'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true) return;
+                      await _repo.clear();
+                      await StageSettingsRepository(
+                        scope: widget.module.name,
+                      ).clearBackground();
+                      if (!mounted) return;
+                      setState(() => _s = const StageSettings());
+                      await _loadBgPreview();
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -517,6 +650,84 @@ class _StageCustomizationSheetState extends State<StageCustomizationSheet> {
       side: isSel
           ? BorderSide(color: theme.colorScheme.primary, width: 2)
           : null,
+    );
+  }
+
+  /// Botão "Mais cores": abre color picker com presets como atalhos.
+  Widget _moreColorsButton(
+    ThemeData theme,
+    Color current,
+    ValueChanged<Color> onChanged,
+  ) {
+    return ActionChip(
+      avatar: Icon(
+        TablerIcons.colorPicker,
+        size: 18,
+        color: theme.colorScheme.primary,
+      ),
+      label: const Text('Mais cores'),
+      onPressed: () async {
+        var picked = current;
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (dctx) => AlertDialog(
+            title: const Text('Escolher cor'),
+            contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: BlockPicker(
+                  pickerColor: current,
+                  availableColors: const [
+                    Color(0xFFFFFFFF),
+                    Color(0xFFFCCE02),
+                    Color(0xFF0A0E1A),
+                    Color(0xFF000000),
+                    Color(0xFF1E88E5),
+                    Color(0xFF43A047),
+                    Color(0xFFE53935),
+                    Color(0xFF8E24AA),
+                    Color(0xFFF4511E),
+                    Color(0xFF00ACC1),
+                    Color(0xFFD81B60),
+                    Color(0xFFC0CA33),
+                    Color(0xFF5D4037),
+                    Color(0xFF757575),
+                  ],
+                  onColorChanged: (c) => picked = c,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dctx).pop(true),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        if (ok == true) onChanged(picked);
+      },
+    );
+  }
+
+  Widget _alignSegment(
+    ThemeData theme, {
+    required String value,
+    required List<(String, String, IconData)> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    return SegmentedButton<String>(
+      segments: [
+        for (final (v, label, icon) in options)
+          ButtonSegment(value: v, label: Text(label), icon: Icon(icon)),
+      ],
+      selected: {value},
+      onSelectionChanged: (sel) => onChanged(sel.first),
     );
   }
 }

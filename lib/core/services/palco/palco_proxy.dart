@@ -14,7 +14,8 @@ abstract final class PalcoProxyHeaders {
     final lower = url.toLowerCase();
     final isAudio = lower.endsWith('.mp3') || lower.contains('/musics/');
     final isJson = lower.contains('/json_db/');
-    final isVideo = lower.endsWith('.mp4') ||
+    final isVideo =
+        lower.endsWith('.mp4') ||
         lower.endsWith('.webm') ||
         lower.contains('video');
     if (isAudio) {
@@ -50,7 +51,9 @@ abstract final class PalcoProxyHeaders {
 
   /// Codifica [url] para o parâmetro ?url= do proxy do sender.
   static String wrapForProxy(String senderBase, String url) {
-    final b = senderBase.endsWith('/') ? senderBase.substring(0, senderBase.length - 1) : senderBase;
+    final b = senderBase.endsWith('/')
+        ? senderBase.substring(0, senderBase.length - 1)
+        : senderBase;
     return '$b/proxy?url=${Uri.encodeComponent(url)}';
   }
 
@@ -78,7 +81,8 @@ abstract final class PalcoContentType {
   static String forPath(String path) {
     final dot = path.lastIndexOf('.');
     if (dot < 0) return 'application/octet-stream';
-    return _map[path.substring(dot).toLowerCase()] ?? 'application/octet-stream';
+    return _map[path.substring(dot).toLowerCase()] ??
+        'application/octet-stream';
   }
 }
 
@@ -97,12 +101,12 @@ class PalcoRangeResponse {
   final String? contentRange; // ex: bytes 0-999/2204842
 
   Map<String, String> get headers => {
-        'Content-Type': contentType,
-        'Content-Length': contentLength.toString(),
-        'Accept-Ranges': 'bytes',
-        if (contentRange != null) 'Content-Range': contentRange!,
-        'Access-Control-Allow-Origin': '*',
-      };
+    'Content-Type': contentType,
+    'Content-Length': contentLength.toString(),
+    'Accept-Ranges': 'bytes',
+    if (contentRange != null) 'Content-Range': contentRange!,
+    'Access-Control-Allow-Origin': '*',
+  };
 
   /// Interpreta um header Range (bytes=start-end | bytes=start-) contra
   /// [totalLength]. Retorna null se inválido → responder 416.
@@ -118,7 +122,11 @@ class PalcoRangeResponse {
     return (start, end.clamp(start, totalLength - 1));
   }
 
-  static PalcoRangeResponse forRange(String? rangeHeader, int totalLength, String contentType) {
+  static PalcoRangeResponse forRange(
+    String? rangeHeader,
+    int totalLength,
+    String contentType,
+  ) {
     final range = parseRange(rangeHeader, totalLength);
     if (range == null) {
       return PalcoRangeResponse(

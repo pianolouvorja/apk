@@ -54,7 +54,9 @@ class PalcoMdnsDiscovery {
 
   /// Resolve um serviço: SRV (target) + TXT (role) + A (ip).
   static Future<WebosTv?> _resolve(
-      MDnsClient client, String serviceName) async {
+    MDnsClient client,
+    String serviceName,
+  ) async {
     // TXT: filtra role=receiver (RF-004)
     var isReceiver = false;
     await for (final txt in client.lookup<TxtResourceRecord>(

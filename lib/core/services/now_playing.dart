@@ -30,12 +30,14 @@ class NowPlayingTrack {
   final String title;
   final String album;
   final int? albumId;
+  final int? durationMs;
 
   const NowPlayingTrack({
     required this.hymnId,
     required this.title,
     required this.album,
     this.albumId,
+    this.durationMs,
   });
 }
 
@@ -56,12 +58,14 @@ class NowPlayingNotifier extends ChangeNotifier {
     required String title,
     required String album,
     int? albumId,
+    int? durationMs,
   }) {
     _track = NowPlayingTrack(
       hymnId: hymnId,
       title: title,
       album: album,
       albumId: albumId,
+      durationMs: durationMs,
     );
     _playing = true;
     notifyListeners();

@@ -330,6 +330,42 @@ class StageSession extends ChangeNotifier {
   /// F3.3w: true enquanto um vídeo projetado pela liturgia roda na TV.
   bool _videoOnStage = false;
   bool get isVideoOnStage => _videoOnStage;
+  bool _stageVideoPaused = false;
+  bool get isStageVideoPaused => _stageVideoPaused;
+
+  /// Pausa/continua o vídeo da liturgia rodando na TV (via APK).
+  void toggleStageVideoPause() {
+    _stageVideoPaused = !_stageVideoPaused;
+    notifyListeners();
+    _palco?.toggleVideoPause();
+  }
+
+  /// Projeta conteúdo no palco. Sobrescreve o anterior.
+  /// Inicia cronômetro com personalização salva no módulo Timer.
+  Future<void> startTimer({
+    required int duration,
+    required String mode,
+    required String label,
+  }) async {
+    if (!isOn || !isPalcoMode || _palco == null) return;
+    final s =
+        await StageSettingsRepository(scope: 'timer').loadOptional() ??
+        settings;
+    _palco!.startTimer(
+      duration: duration,
+      mode: mode,
+      label: label,
+      color:
+          '#${s.textColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+      fontSize: s.fontSize,
+      fontWeight: s.fontWeight.value,
+      textShadow: s.textShadow,
+      shadowBlur: s.shadowBlur,
+      shadowIntensity: s.shadowIntensity,
+      textAlign: s.textAlign,
+      textVerticalAlign: s.textVerticalAlign,
+    );
+  }
 
   /// Liga o palco: conecta na TV e projeta o IDLE (background definida).
   Future<bool> turnOn(DlnaRenderer tv) async {
@@ -388,12 +424,16 @@ class StageSession extends ChangeNotifier {
   /// Define nova imagem de fundo (path escolhido pelo usuário),
   /// persiste e re-projeta se ligado. F3.3m: no modo Palco WS o BG do
   /// usuário vira o bgPalco (body do palco) servido via /media.
-  Future<void> setBackgroundFromFile(String path) async {
-    final saved = await _settingsRepo.saveBackgroundImage(path);
+  Future<void> setBackgroundFromFile(
+    String path, {
+    String scope = 'global',
+  }) async {
+    final repo = StageSettingsRepository(scope: scope);
+    final saved = await repo.saveBackgroundImage(path);
     if (saved == null) return;
     await _loadBackground();
     if (isPalcoMode) {
-      final bytes = await _settingsRepo.loadBackgroundImage();
+      final bytes = await repo.loadBackgroundImage();
       if (bytes != null && _palco != null) {
         final ext = path.split('.').last.toLowerCase();
         final url = _palco!.serveMedia(
@@ -410,12 +450,16 @@ class StageSession extends ChangeNotifier {
   }
 
   /// Define BG vindo da galeria oficial empacotada.
-  Future<void> setBackgroundBytes(Uint8List bytes) async {
-    final saved = await _settingsRepo.saveBackgroundBytes(bytes);
+  Future<void> setBackgroundBytes(
+    Uint8List bytes, {
+    String scope = 'global',
+  }) async {
+    final repo = StageSettingsRepository(scope: scope);
+    final saved = await repo.saveBackgroundBytes(bytes);
     if (saved == null) return;
     await _loadBackground();
     if (isPalcoMode) {
-      final loaded = await _settingsRepo.loadBackgroundImage();
+      final loaded = await repo.loadBackgroundImage();
       final url = loaded == null
           ? null
           : _palco?.serveMedia('palco_bg.png', loaded);
@@ -456,9 +500,16 @@ class StageSession extends ChangeNotifier {
     String? footerRef,
     String? footerVersion,
     bool isBible = false,
+    String module = 'hymns',
   }) async {
     if (!isOn) return false;
-    final content = _StageContent(title: title, body: body, footer: footer);
+    final content = _StageContent(
+      title: title,
+      body: body,
+      footer: footer,
+      module: module,
+      isBible: isBible,
+    );
     _lastContent = content;
     if (isPalcoMode) {
       // Palco WS: texto nativo (body com \n vira <br> no receiver).
@@ -468,7 +519,10 @@ class StageSession extends ChangeNotifier {
       ].whereType<String>().where((s) => s.isNotEmpty).join('<br><br>');
       // F3.3m/o: estilos da letra (sombra/caixinha) e footer destacado.
       // Bíblia tem tipografia PRÓPRIA (tamanho/peso/cor) — diferente da música.
-      final s = settings;
+      // Override do módulo vence; sem arquivo próprio, herda padrão global.
+      final s =
+          await StageSettingsRepository(scope: module).loadOptional() ??
+          settings;
       final fSize = isBible ? s.bibleFontSize : s.fontSize;
       final fWeight = isBible ? s.bibleFontWeight : s.fontWeight.value;
       _palco!.project(
@@ -566,5 +620,13 @@ class _StageContent {
   final String title;
   final String? body;
   final String? footer;
-  const _StageContent({required this.title, this.body, this.footer});
+  final String module;
+  final bool isBible;
+  const _StageContent({
+    required this.title,
+    this.body,
+    this.footer,
+    this.module = 'hymns',
+    this.isBible = false,
+  });
 }

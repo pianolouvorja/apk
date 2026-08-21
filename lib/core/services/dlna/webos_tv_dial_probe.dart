@@ -60,25 +60,24 @@ class WebosTvDialProbe {
   }
 
   /// GET / na 1926 e valida se é deviceType urn:lge:device:tv (webOS).
-  static Future<WebosTv?> _probe(
-      String ip, Duration timeout) async {
+  static Future<WebosTv?> _probe(String ip, Duration timeout) async {
     HttpClient? client;
     try {
-      client = HttpClient()
-        ..connectionTimeout = timeout;
+      client = HttpClient()..connectionTimeout = timeout;
       final req = await client
           .getUrl(Uri.parse('http://$ip:1926/'))
           .timeout(timeout);
       final res = await req.close().timeout(timeout);
       if (res.statusCode != 200) return null;
-      final body =
-          await res.transform(utf8.decoder).join().timeout(timeout);
+      final body = await res.transform(utf8.decoder).join().timeout(timeout);
       if (!body.contains('urn:lge:device:tv')) return null;
-      final m = RegExp(r'<friendlyName>([^<]+)</friendlyName>')
-          .firstMatch(body);
+      final m = RegExp(
+        r'<friendlyName>([^<]+)</friendlyName>',
+      ).firstMatch(body);
       return WebosTv(
-          ip: ip,
-          friendlyName: (m?.group(1) ?? 'LG webOS TV').trim());
+        ip: ip,
+        friendlyName: (m?.group(1) ?? 'LG webOS TV').trim(),
+      );
     } catch (_) {
       return null;
     } finally {

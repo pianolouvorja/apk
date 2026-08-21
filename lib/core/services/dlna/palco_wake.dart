@@ -14,8 +14,11 @@ class PalcoWake {
   static Future<bool> send(String ip) async {
     Socket? sock;
     try {
-      sock = await Socket.connect(ip, 7082,
-          timeout: const Duration(milliseconds: 1200));
+      sock = await Socket.connect(
+        ip,
+        7082,
+        timeout: const Duration(milliseconds: 1200),
+      );
       sock.write('WAKE\n');
       await sock.flush();
       debugPrint('[WAKE] enviado pra $ip');

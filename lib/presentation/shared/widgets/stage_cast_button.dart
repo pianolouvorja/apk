@@ -6,6 +6,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import '../../../core/services/dlna/slide_http_server.dart';
 import '../../../core/services/dlna/stage_session.dart';
+import '../../../core/services/dlna/stage_settings_repository.dart';
 import 'palco_auto_connect_sheet.dart';
 import '../../hymns/stage_customization_sheet.dart';
 
@@ -36,7 +37,9 @@ class StageClearButton extends StatelessWidget {
 }
 
 class StageCastButton extends StatefulWidget {
-  const StageCastButton({super.key});
+  final StageModule module;
+
+  const StageCastButton({super.key, this.module = StageModule.hymns});
 
   @override
   State<StageCastButton> createState() => _StageCastButtonState();
@@ -137,19 +140,28 @@ class _StageCastButtonState extends State<StageCastButton> {
                   leading: const Icon(TablerIcons.adjustments),
                   title: Text('stage.customize'.tr()),
                   subtitle: Text('stage.customizeHint'.tr()),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(ctx).pop();
-                    showModalBottomSheet<void>(
+                    final scope = widget.module.name;
+                    final moduleRepo = StageSettingsRepository(scope: scope);
+                    final initial = await moduleRepo.load();
+                    if (!mounted) return;
+                    await showModalBottomSheet<void>(
                       context: context,
                       isScrollControlled: true,
-                      // A03 (tela pequena): sheet enorme passava da altura da
-                      // tela — constraint evita overflow/fechamento brusco.
+                      // A03: constraint + scroll evita clipping do sheet.
                       constraints: BoxConstraints(
                         maxHeight: MediaQuery.of(context).size.height * 0.85,
                       ),
                       builder: (_) => StageCustomizationSheet(
-                        initial: session.settings,
-                        onApply: (s) => session.updateSettings(s),
+                        module: widget.module,
+                        initial: initial,
+                        onApply: (s) async {
+                          await moduleRepo.save(s);
+                          // Configuração é por módulo; não sobrescreve tema
+                          // global. Reprojeta conteúdo atual preservando módulo.
+                          await session.refresh();
+                        },
                       ),
                     );
                   },

@@ -9,7 +9,11 @@ library;
 /// Regra crítica: mídia SEMPRE via proxy do sender com IP da sub-rede da TV
 /// (nunca localhost) — ver PalcoProxy.
 class PalcoMessage {
-  const PalcoMessage({required this.type, this.version = 2, this.fields = const {}});
+  const PalcoMessage({
+    required this.type,
+    this.version = 2,
+    this.fields = const {},
+  });
 
   final int version;
   final String type;
@@ -29,16 +33,18 @@ class PalcoMessage {
     return PalcoMessage(
       version: v as int,
       type: type,
-      fields: Map<String, dynamic>.from(json)..remove('v')..remove('type'),
+      fields: Map<String, dynamic>.from(json)
+        ..remove('v')
+        ..remove('type'),
     );
   }
 
   // ---- Fabricadores sender→receiver ----
 
   /// Projeta texto/BG. [text] aceita <br> (quebra de linha, innerHTML no receiver).
-/// F3.3m: [footerRef]/[footerColor]/[footerWeight]/[footerVersion] — footer
-/// com referência destacada + versão (Bíblia). [textShadow]/[shadowBlur]/
-/// [shadowIntensity]/[textBox]/[boxOpacity]/[boxBorder] — estilos da letra.
+  /// F3.3m: [footerRef]/[footerColor]/[footerWeight]/[footerVersion] — footer
+  /// com referência destacada + versão (Bíblia). [textShadow]/[shadowBlur]/
+  /// [shadowIntensity]/[textBox]/[boxOpacity]/[boxBorder] — estilos da letra.
   static PalcoMessage projection({
     required String text,
     String footer = '',
@@ -53,26 +59,32 @@ class PalcoMessage {
     bool? textBox,
     double? boxOpacity,
     Map<String, dynamic>? boxBorder,
+    String? textAlign,
+    String? textVerticalAlign,
     double? fontSize,
     int? fontWeight,
-  }) =>
-      PalcoMessage(type: 'projection', fields: {
-        'text': text,
-        'footer': footer,
-        if (background != null) 'background': background,
-        if (footerRef != null) 'footerRef': footerRef,
-        if (footerColor != null) 'footerColor': footerColor,
-        if (footerWeight != null) 'footerWeight': footerWeight,
-        if (footerVersion != null) 'footerVersion': footerVersion,
-        if (textShadow != null) 'textShadow': textShadow,
-        if (shadowBlur != null) 'shadowBlur': shadowBlur,
-        if (shadowIntensity != null) 'shadowIntensity': shadowIntensity,
-        if (textBox != null) 'textBox': textBox,
-        if (boxOpacity != null) 'boxOpacity': boxOpacity,
-        if (boxBorder != null) 'boxBorder': boxBorder,
-        if (fontSize != null) 'fontSize': fontSize,
-        if (fontWeight != null) 'fontWeight': fontWeight,
-      });
+  }) => PalcoMessage(
+    type: 'projection',
+    fields: {
+      'text': text,
+      'footer': footer,
+      if (background != null) 'background': background,
+      if (footerRef != null) 'footerRef': footerRef,
+      if (footerColor != null) 'footerColor': footerColor,
+      if (footerWeight != null) 'footerWeight': footerWeight,
+      if (footerVersion != null) 'footerVersion': footerVersion,
+      if (textShadow != null) 'textShadow': textShadow,
+      if (shadowBlur != null) 'shadowBlur': shadowBlur,
+      if (shadowIntensity != null) 'shadowIntensity': shadowIntensity,
+      if (textBox != null) 'textBox': textBox,
+      if (boxOpacity != null) 'boxOpacity': boxOpacity,
+      if (boxBorder != null) 'boxBorder': boxBorder,
+      if (textAlign != null) 'textAlign': textAlign,
+      if (textVerticalAlign != null) 'textVerticalAlign': textVerticalAlign,
+      if (fontSize != null) 'fontSize': fontSize,
+      if (fontWeight != null) 'fontWeight': fontWeight,
+    },
+  );
 
   /// Áudio com now-playing opcional. [positionMs] sincroniza a TV com a
   /// posição do player local (F3.3g — play de tela no meio da faixa não
@@ -85,16 +97,18 @@ class PalcoMessage {
     String? cover,
     String? background,
     int? positionMs,
-  }) =>
-      PalcoMessage(type: 'audio', fields: {
-        'url': url,
-        'action': action,
-        if (title != null) 'title': title,
-        if (subtitle != null) 'subtitle': subtitle,
-        if (cover != null) 'cover': cover,
-        if (background != null) 'background': background,
-        if (positionMs != null) 'positionMs': positionMs,
-      });
+  }) => PalcoMessage(
+    type: 'audio',
+    fields: {
+      'url': url,
+      'action': action,
+      if (title != null) 'title': title,
+      if (subtitle != null) 'subtitle': subtitle,
+      if (cover != null) 'cover': cover,
+      if (background != null) 'background': background,
+      if (positionMs != null) 'positionMs': positionMs,
+    },
+  );
 
   static PalcoMessage video(String url, {String action = 'play'}) =>
       PalcoMessage(type: 'video', fields: {'url': url, 'action': action});
@@ -104,13 +118,31 @@ class PalcoMessage {
     int duration = 0,
     String mode = 'countdown',
     String label = '',
-  }) =>
-      PalcoMessage(type: 'timer', fields: {
-        'action': action,
-        'duration': duration,
-        'mode': mode,
-        'label': label,
-      });
+    String? color,
+    double? fontSize,
+    int? fontWeight,
+    bool? textShadow,
+    double? shadowBlur,
+    double? shadowIntensity,
+    String? textAlign,
+    String? textVerticalAlign,
+  }) => PalcoMessage(
+    type: 'timer',
+    fields: {
+      'action': action,
+      'duration': duration,
+      'mode': mode,
+      'label': label,
+      if (color != null) 'color': color,
+      if (fontSize != null) 'fontSize': fontSize,
+      if (fontWeight != null) 'fontWeight': fontWeight,
+      if (textShadow != null) 'textShadow': textShadow,
+      if (shadowBlur != null) 'shadowBlur': shadowBlur,
+      if (shadowIntensity != null) 'shadowIntensity': shadowIntensity,
+      if (textAlign != null) 'textAlign': textAlign,
+      if (textVerticalAlign != null) 'textVerticalAlign': textVerticalAlign,
+    },
+  );
 
   static PalcoMessage bgPalco(String? url) =>
       PalcoMessage(type: 'bgPalco', fields: {'url': url ?? ''});

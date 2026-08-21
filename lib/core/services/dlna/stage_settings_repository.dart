@@ -11,15 +11,33 @@ import 'stage_slide_painter.dart';
 
 /// Persistência das personalizações do Palco (disk-backed, testável).
 class StageSettingsRepository {
-  static const _fileName = 'stage_settings.json';
+  final String scope;
 
-  Future<File> _file() async =>
-      File('${(await getApplicationDocumentsDirectory()).path}/$_fileName');
+  /// `global` preserva arquivo legado. Módulos usam seus próprios arquivos.
+  StageSettingsRepository({this.scope = 'global'})
+    : assert(
+        scope == 'global' ||
+            scope == 'hymns' ||
+            scope == 'bible' ||
+            scope == 'liturgy' ||
+            scope == 'timer',
+      );
 
-  Future<StageSettings> load() async {
+  Future<File> _file() async {
+    final name = scope == 'global'
+        ? 'stage_settings.json'
+        : 'stage_settings_$scope.json';
+    return File('${(await getApplicationDocumentsDirectory()).path}/$name');
+  }
+
+  Future<StageSettings> load() async =>
+      await loadOptional() ?? const StageSettings();
+
+  /// Null = este módulo ainda não tem override e deve herdar o padrão global.
+  Future<StageSettings?> loadOptional() async {
     try {
       final f = await _file();
-      if (!await f.exists()) return const StageSettings();
+      if (!await f.exists()) return null;
       final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
       return StageSettings(
         backgroundColor: Color(j['bg'] as int? ?? 0xFF0A0E1A),
@@ -37,6 +55,8 @@ class StageSettingsRepository {
         textBox: j['boxOn'] as bool? ?? false,
         boxOpacity: (j['boxBg'] as num?)?.toDouble() ?? 0.45,
         boxBorder: j['boxBorder'] as bool? ?? true,
+        textAlign: j['tAlign'] as String? ?? 'center',
+        textVerticalAlign: j['tVAlign'] as String? ?? 'middle',
         footerRefColor: Color(j['refColor'] as int? ?? 0xFFFCCE02),
         footerRefWeight: j['refWeight'] as int? ?? 600,
         showBibleVersion: j['showVer'] as bool? ?? true,
@@ -66,6 +86,8 @@ class StageSettingsRepository {
         'boxOn': s.textBox,
         'boxBg': s.boxOpacity,
         'boxBorder': s.boxBorder,
+        'tAlign': s.textAlign,
+        'tVAlign': s.textVerticalAlign,
         'refColor': s.footerRefColor.toARGB32(),
         'refWeight': s.footerRefWeight,
         'showVer': s.showBibleVersion,
@@ -78,10 +100,17 @@ class StageSettingsRepository {
   }
 
   /// Imagem de fundo personalizada copiada pro dir do app.
-  Future<String?> saveBackgroundImage(String sourcePath) async {
+  Future<String?> saveBackgroundImage(
+    String sourcePath, {
+    String? backgroundScope,
+  }) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final dest = File('${dir.path}/stage_bg.${sourcePath.split('.').last}');
+      final ext = sourcePath.split('.').last.toLowerCase();
+      final key = backgroundScope ?? scope;
+      // Uma única fonte ativa POR escopo: JPG antigo não vence PNG oficial.
+      await _clearBackgroundFiles(dir, key);
+      final dest = File('${dir.path}/${_backgroundBase(key)}.$ext');
       await File(sourcePath).copy(dest.path);
       return dest.path;
     } catch (_) {
@@ -94,10 +123,13 @@ class StageSettingsRepository {
   Future<String?> saveBackgroundBytes(
     Uint8List bytes, {
     String ext = 'png',
+    String? backgroundScope,
   }) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final dest = File('${dir.path}/stage_bg.$ext');
+      final key = backgroundScope ?? scope;
+      await _clearBackgroundFiles(dir, key);
+      final dest = File('${dir.path}/${_backgroundBase(key)}.$ext');
       await dest.writeAsBytes(bytes, flush: true);
       return dest.path;
     } catch (_) {
@@ -105,13 +137,37 @@ class StageSettingsRepository {
     }
   }
 
-  Future<Uint8List?> loadBackgroundImage() async {
+  String _backgroundBase(String key) =>
+      key == 'global' ? 'stage_bg' : 'stage_bg_$key';
+
+  /// Apaga o JSON de settings deste escopo (override do módulo).
+  Future<void> clear() async {
+    final f = await _file();
+    if (await f.exists()) await f.delete();
+  }
+
+  /// Apaga a imagem de fundo deste escopo.
+  Future<void> clearBackground() async {
+    final dir = await getApplicationDocumentsDirectory();
+    await _clearBackgroundFiles(dir, scope);
+  }
+
+  /// Só um background pode estar ativo por módulo.
+  Future<void> _clearBackgroundFiles(Directory dir, String key) async {
+    for (final ext in ['jpg', 'jpeg', 'png']) {
+      final f = File('${dir.path}/${_backgroundBase(key)}.$ext');
+      if (await f.exists()) await f.delete();
+    }
+  }
+
+  Future<Uint8List?> loadBackgroundImage({String? backgroundScope}) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final f = File('${dir.path}/stage_bg.jpg');
-      if (await f.exists()) return await f.readAsBytes();
-      final f2 = File('${dir.path}/stage_bg.png');
-      if (await f2.exists()) return await f2.readAsBytes();
+      final key = backgroundScope ?? scope;
+      for (final ext in ['jpg', 'jpeg', 'png']) {
+        final f = File('${dir.path}/${_backgroundBase(key)}.$ext');
+        if (await f.exists()) return await f.readAsBytes();
+      }
     } catch (_) {}
     return null;
   }

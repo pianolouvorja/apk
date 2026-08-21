@@ -7,6 +7,8 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_sheet.dart'
+    show StageModule;
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:flutter/material.dart';
@@ -52,9 +54,13 @@ class LiturgyPage extends StatelessWidget {
         if (!snapshot.hasData) {
           return Scaffold(
             appBar: AppBar(
-            title: Text('liturgy.title'.tr()),
-            actions: const [StageClearButton(), StageStopVideoButton(), StageCastButton()],
-          ),
+              title: Text('liturgy.title'.tr()),
+              actions: const [
+                StageClearButton(),
+                StageStopVideoButton(),
+                StageCastButton(module: StageModule.liturgy),
+              ],
+            ),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
@@ -78,15 +84,17 @@ class _LiturgyView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-            title: Text('liturgy.title'.tr()),
-            actions: const [StageClearButton(), StageCastButton()],
-          ),
+        title: Text('liturgy.title'.tr()),
+        actions: const [
+          StageClearButton(),
+          StageCastButton(module: StageModule.liturgy),
+        ],
+      ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
           if (state is LiturgyLoaded && state.items.isNotEmpty) {
             return FloatingActionButton(
-              onPressed: () => showLiturgyItemDialog(context,
-                  isCategory: true),
+              onPressed: () => showLiturgyItemDialog(context, isCategory: true),
               child: const Icon(TablerIcons.plus, size: 24),
             );
           }
@@ -125,8 +133,8 @@ class _BodyState extends State<_Body> {
   // Tick periodico para atualizar o display em tempo real
   Timer? _tickTimer;
 
-  int get _totalDurationMs => widget.state.items
-      .fold(0, (sum, item) => sum + item.durationMs);
+  int get _totalDurationMs =>
+      widget.state.items.fold(0, (sum, item) => sum + item.durationMs);
 
   String _formatDuration(int ms) {
     final h = ms ~/ 3600000;
@@ -138,8 +146,13 @@ class _BodyState extends State<_Body> {
   Duration get _currentElapsed {
     if (_startTime != null) {
       final now = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day,
-          _startTime!.hour, _startTime!.minute);
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        _startTime!.hour,
+        _startTime!.minute,
+      );
       final diff = now.difference(start);
       return diff.isNegative ? Duration.zero : diff;
     }
@@ -240,21 +253,31 @@ class _BodyState extends State<_Body> {
                       key: const Key('cult-start-time'),
                       onTap: () => _pickStartTime(context),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: _startTime != null
-                              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                )
                               : theme.colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+                            topLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(TablerIcons.calendarTime, size: 18,
-                                color: _startTime != null
-                                    ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurfaceVariant),
+                            Icon(
+                              TablerIcons.calendarTime,
+                              size: 18,
+                              color: _startTime != null
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               _startTime != null
@@ -292,13 +315,17 @@ class _BodyState extends State<_Body> {
                       icon: Icon(
                         _startTime != null
                             ? TablerIcons.circleX
-                            : (_stopwatch.isRunning ? TablerIcons.playerPauseFilled : TablerIcons.playerPlayFilled),
+                            : (_stopwatch.isRunning
+                                  ? TablerIcons.playerPauseFilled
+                                  : TablerIcons.playerPlayFilled),
                         size: 24,
                       ),
                       color: theme.colorScheme.primary,
                       onPressed: _toggleTimer,
                     ),
-                    if (_elapsed > Duration.zero || _stopwatch.elapsed > Duration.zero || _startTime != null)
+                    if (_elapsed > Duration.zero ||
+                        _stopwatch.elapsed > Duration.zero ||
+                        _startTime != null)
                       IconButton(
                         key: const Key('cult-timer-reset'),
                         icon: const Icon(TablerIcons.refresh, size: 20),
@@ -311,7 +338,11 @@ class _BodyState extends State<_Body> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(TablerIcons.hourglass, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      TablerIcons.hourglass,
+                      size: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${'liturgy.totalDuration'.tr()}: ${_formatDuration(_totalDurationMs)}',
@@ -364,7 +395,9 @@ class _DayTabs extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s1, vertical: AppSpacing.s2),
+        horizontal: AppSpacing.s1,
+        vertical: AppSpacing.s2,
+      ),
       child: Row(
         children: liturgyDayTabOrder.map((day) {
           final isSelected = day == selectedDay;
@@ -382,15 +415,17 @@ class _DayTabs extends StatelessWidget {
                         ? theme.colorScheme.primary
                         : theme.colorScheme.surfaceContainerHighest,
                     borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomRight: Radius.circular(8)),
+                      topLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     _label(day),
                     style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: isSelected
                           ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurfaceVariant,
@@ -443,11 +478,17 @@ List<_TimelineSegment> _buildSegments(List<LiturgyItem> items) {
         children.add(_ChildEntry(item: items[i], originalIndex: i));
         i++;
       }
-      segments.add(_TimelineSegment(
-          item: item, originalIndex: catIndex, children: children));
+      segments.add(
+        _TimelineSegment(
+          item: item,
+          originalIndex: catIndex,
+          children: children,
+        ),
+      );
     } else {
-      segments
-          .add(_TimelineSegment(item: item, originalIndex: i, children: const []));
+      segments.add(
+        _TimelineSegment(item: item, originalIndex: i, children: const []),
+      );
       i++;
     }
   }
@@ -476,7 +517,8 @@ class _Timeline extends StatelessWidget {
       itemBuilder: (context, segIndex) {
         final seg = segments[segIndex];
         final isCategory = seg.item.type == LiturgyItemType.category;
-        final isCollapsed = isCategory && collapsedCategories.contains(seg.item.id);
+        final isCollapsed =
+            isCategory && collapsedCategories.contains(seg.item.id);
 
         return Column(
           key: ValueKey(seg.item.id),
@@ -516,14 +558,25 @@ class _Timeline extends StatelessWidget {
 
 class _ItemCard extends StatelessWidget {
   /// Palco: projeta o item da liturgia em execução na TV (se ligado).
+  /// Vídeo/PPTX ocupam a tela inteira — o executor cuida deles; projetar
+  /// o nome do item antes só deixava texto sobre a mídia (bug do .mp4
+  /// "exibiu só o nome").
   Future<void> _projectToStage(LiturgyItem item) async {
     final stage = StageSession.instance;
     if (!stage.isOn) return;
+    if (item.type == LiturgyItemType.video ||
+        item.type == LiturgyItemType.onlineVideo ||
+        item.type == LiturgyItemType.presentation ||
+        item.type == LiturgyItemType.images) {
+      return;
+    }
     await stage.project(
       title: item.name,
       body: item.subtitle.isEmpty ? null : item.subtitle,
+      module: 'liturgy',
     );
   }
+
   final LiturgyItem item;
   final bool isCategory;
   final ThemeData theme;
@@ -551,16 +604,19 @@ class _ItemCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.only(
-          bottom: isChild ? 2 : AppSpacing.s1,
-          top: isChild ? 0 : 0),
+        bottom: isChild ? 2 : AppSpacing.s1,
+        top: isChild ? 0 : 0,
+      ),
       color: isCategory
           ? accent.withValues(alpha: 0.10)
           : isChild
-              ? theme.colorScheme.surfaceContainerLow
-              : theme.colorScheme.surfaceContainer,
+          ? theme.colorScheme.surfaceContainerLow
+          : theme.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
+          topLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
         side: isCategory
             ? BorderSide(color: accent.withValues(alpha: 0.4), width: 1)
             : BorderSide.none,
@@ -572,23 +628,29 @@ class _ItemCard extends StatelessWidget {
                 final msg = await LiturgyItemExecutor.execute(context, item);
                 if (msg.isNotEmpty && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+                    SnackBar(
+                      content: Text(msg),
+                      duration: const Duration(seconds: 2),
+                    ),
                   );
                 }
               }
             : null,
         contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.s3, vertical: AppSpacing.s1),
+          horizontal: AppSpacing.s3,
+          vertical: AppSpacing.s1,
+        ),
         leading: Container(
           width: isChild ? 28 : 36,
           height: isChild ? 28 : 36,
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.2),
             borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+              topLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
           ),
-          child: Icon(typeMeta.icon,
-              size: isChild ? 16 : 20, color: accent),
+          child: Icon(typeMeta.icon, size: isChild ? 16 : 20, color: accent),
         ),
         title: Text(
           item.name.isEmpty
@@ -602,10 +664,12 @@ class _ItemCard extends StatelessWidget {
           ),
         ),
         subtitle: item.subtitle.isNotEmpty
-            ? Text(item.subtitle,
+            ? Text(
+                item.subtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: isChild ? 12 : null,
-                ))
+                ),
+              )
             : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -613,28 +677,31 @@ class _ItemCard extends StatelessWidget {
             if (isCategory && hasChildren && onToggleCollapse != null)
               IconButton(
                 icon: Icon(
-                  isCollapsed ? TablerIcons.chevronRight : TablerIcons.chevronDown,
+                  isCollapsed
+                      ? TablerIcons.chevronRight
+                      : TablerIcons.chevronDown,
                   size: 20,
                 ),
-                tooltip: isCollapsed ? 'liturgy.actions.expand'.tr() : 'liturgy.actions.collapse'.tr(),
+                tooltip: isCollapsed
+                    ? 'liturgy.actions.expand'.tr()
+                    : 'liturgy.actions.collapse'.tr(),
                 onPressed: onToggleCollapse,
               ),
             if (isCategory)
               IconButton(
                 icon: const Icon(TablerIcons.plus, size: 20),
                 tooltip: 'liturgy.actions.addSubItem'.tr(),
-                onPressed: () => showLiturgyItemDialog(
-                  context,
-                  parentCategoryId: item.id,
-                ),
+                onPressed: () =>
+                    showLiturgyItemDialog(context, parentCategoryId: item.id),
               ),
             if (item.durationMs > 0)
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.s1),
                 child: Text(
                   '${item.durationMs ~/ 60000}${'liturgy.durationMin'.tr()}',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             GestureDetector(
@@ -654,19 +721,27 @@ class _ItemCard extends StatelessWidget {
               itemBuilder: (ctx) => [
                 PopupMenuItem(
                   value: 'edit',
-                  child: Row(children: [
-                    const Icon(TablerIcons.pencil, size: 18),
-                    const SizedBox(width: 8),
-                    Text('liturgy.actions.edit'.tr()),
-                  ]),
+                  child: Row(
+                    children: [
+                      const Icon(TablerIcons.pencil, size: 18),
+                      const SizedBox(width: 8),
+                      Text('liturgy.actions.edit'.tr()),
+                    ],
+                  ),
                 ),
                 PopupMenuItem(
                   value: 'delete',
-                  child: Row(children: [
-                    const Icon(TablerIcons.trash, size: 18, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text('liturgy.actions.delete'.tr()),
-                  ]),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        TablerIcons.trash,
+                        size: 18,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('liturgy.actions.delete'.tr()),
+                    ],
+                  ),
                 ),
               ],
               onSelected: (value) {
@@ -707,12 +782,17 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(TablerIcons.clipboardList,
-                size: 48, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              TablerIcons.clipboardList,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: AppSpacing.s4),
-            Text('liturgy.emptyList'.tr(),
-                style: theme.textTheme.bodyLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'liturgy.emptyList'.tr(),
+              style: theme.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.s4),
             FilledButton.icon(
               onPressed: () => showLiturgyItemDialog(context, isCategory: true),
@@ -738,10 +818,14 @@ class _NotesBar extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+        horizontal: AppSpacing.s4,
+        vertical: AppSpacing.s2,
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: TextField(
         decoration: InputDecoration(
@@ -761,4 +845,3 @@ class _NotesBar extends StatelessWidget {
 }
 
 // --- Dialog de criar/editar item ---
-

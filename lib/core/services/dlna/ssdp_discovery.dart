@@ -13,7 +13,8 @@ import 'package:flutter/foundation.dart' show debugPrint;
 /// A porta/UUID do serviço MUDA entre reboots da TV — por isso o
 /// discovery é por SSDP + SCPD a cada sessão, nunca cache de controlURL.
 class SsdpDiscovery {
-  static const _msearch = 'M-SEARCH * HTTP/1.1\r\n'
+  static const _msearch =
+      'M-SEARCH * HTTP/1.1\r\n'
       'HOST: 239.255.255.250:1900\r\n'
       'MAN: "ssdp:discover"\r\n'
       'MX: 3\r\n'
@@ -37,16 +38,18 @@ class SsdpDiscovery {
       );
       socket.multicastLoopback = false;
       try {
-        socket.joinMulticast(
-          InternetAddress('239.255.255.250'),
-        );
-      } catch (_) {/* alguns Androids bloqueiam multicast join; M-SEARCH ainda sai */}
+        socket.joinMulticast(InternetAddress('239.255.255.250'));
+      } catch (_) {
+        /* alguns Androids bloqueiam multicast join; M-SEARCH ainda sai */
+      }
       socket.listen((event) {
         if (event != RawSocketEvent.read) return;
         final dg = socket?.receive();
         if (dg == null) return;
-        debugPrint('[DLNA] datagrama de ${dg.address.address}: '
-            '${utf8.decode(dg.data, allowMalformed: true).split('\r\n').first}');
+        debugPrint(
+          '[DLNA] datagrama de ${dg.address.address}: '
+          '${utf8.decode(dg.data, allowMalformed: true).split('\r\n').first}',
+        );
         _handleResponse(dg, found);
       });
 
@@ -71,17 +74,17 @@ class SsdpDiscovery {
   /// Envia M-SEARCH unicast para os 254 hosts da sub-rede local (/24).
   /// A resposta chega no mesmo socket do scan (fonte = IP da TV).
   static Future<void> _unicastSweep(
-      RawDatagramSocket socket, Map<String, DlnaRenderer> found) async {
+    RawDatagramSocket socket,
+    Map<String, DlnaRenderer> found,
+  ) async {
     final prefix = await _localSubnetPrefix();
     if (prefix == null) return;
     for (var i = 1; i <= 254; i++) {
       try {
-        socket.send(
-          utf8.encode(_msearch),
-          InternetAddress('$prefix.$i'),
-          1900,
-        );
-      } catch (_) {/* host inalcançável: ignora */}
+        socket.send(utf8.encode(_msearch), InternetAddress('$prefix.$i'), 1900);
+      } catch (_) {
+        /* host inalcançável: ignora */
+      }
       // Space out to not flood the AP (bursts de UDP são rate-limited).
       if (i % 20 == 0) {
         await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -143,7 +146,8 @@ class DlnaRenderer {
   /// AVTransport. Portas são dinâmicas — sempre resolver na sessão.
   Future<bool> resolve() async {
     try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(Uri.parse(descriptionUrl));
       final res = await req.close();
       final xml = await res.transform(utf8.decoder).join();
@@ -178,8 +182,7 @@ class DlnaRenderer {
         dotAll: true,
       ).firstMatch(xml);
       if (scpdUrlM != null) {
-        final scpdUrl =
-            _joinUrl(descriptionUrl, scpdUrlM.group(1)!.trim());
+        final scpdUrl = _joinUrl(descriptionUrl, scpdUrlM.group(1)!.trim());
         avTransportActions = await _fetchActions(scpdUrl);
       }
 
@@ -189,13 +192,14 @@ class DlnaRenderer {
         dotAll: true,
       ).firstMatch(xml);
       if (rc != null) {
-        renderingControlUrl =
-            _joinUrl(descriptionUrl, rc.group(1)!.trim());
+        renderingControlUrl = _joinUrl(descriptionUrl, rc.group(1)!.trim());
       }
 
       if (avTransportControlUrl != null) {
-        debugPrint('[DLNA] resolve OK: $friendlyName -> '
-            '$avTransportControlUrl');
+        debugPrint(
+          '[DLNA] resolve OK: $friendlyName -> '
+          '$avTransportControlUrl',
+        );
       }
       return avTransportControlUrl != null;
     } catch (e, st) {
@@ -222,15 +226,15 @@ class DlnaRenderer {
 
   static Future<Set<String>> _fetchActions(String scpdUrl) async {
     try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(Uri.parse(scpdUrl));
       final res = await req.close();
       final xml = await res.transform(utf8.decoder).join();
       client.close();
-      return RegExp(r'<action>\s*<name>([^<]+)</name>')
-          .allMatches(xml)
-          .map((m) => m.group(1)!)
-          .toSet();
+      return RegExp(
+        r'<action>\s*<name>([^<]+)</name>',
+      ).allMatches(xml).map((m) => m.group(1)!).toSet();
     } catch (_) {
       return const {};
     }
@@ -238,18 +242,21 @@ class DlnaRenderer {
 
   static Future<String> _fetchSinkProtocols(String cmControlUrl) async {
     try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 4);
       final req = await client.postUrl(Uri.parse(cmControlUrl));
       req.headers.set('Content-Type', 'text/xml; charset="utf-8"');
       req.headers.set(
         'SOAPACTION',
         '"urn:schemas-upnp-org:service:ConnectionManager:1#GetProtocolInfo"',
       );
-      req.write('<?xml version="1.0" encoding="utf-8"?>'
-          '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" '
-          's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
-          '<s:Body><u:GetProtocolInfo xmlns:u="urn:schemas-upnp-org:service:ConnectionManager:1">'
-          '</u:GetProtocolInfo></s:Body></s:Envelope>');
+      req.write(
+        '<?xml version="1.0" encoding="utf-8"?>'
+        '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" '
+        's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+        '<s:Body><u:GetProtocolInfo xmlns:u="urn:schemas-upnp-org:service:ConnectionManager:1">'
+        '</u:GetProtocolInfo></s:Body></s:Envelope>',
+      );
       final res = await req.close();
       final xml = await res.transform(utf8.decoder).join();
       client.close();
@@ -268,8 +275,10 @@ class DlnaRenderer {
   DlnaScreenCapability get screenCapability {
     final sink = sinkProtocols.toUpperCase();
     // JPEG_LRG também implica 1920x1080 (perfil mais universal).
-    if (sink.contains('PNG_LRG') || sink.contains('JPEG_LRG') ||
-        sink.contains('PNG:*') || sink.contains('IMAGE/PNG:*') ||
+    if (sink.contains('PNG_LRG') ||
+        sink.contains('JPEG_LRG') ||
+        sink.contains('PNG:*') ||
+        sink.contains('IMAGE/PNG:*') ||
         sink.contains('IMAGE/JPEG:*')) {
       return DlnaScreenCapability.fhd;
     }
@@ -288,7 +297,8 @@ class DlnaRenderer {
   StageImageFormat get preferredImageFormat {
     final sink = sinkProtocols.toUpperCase();
     // PNG wildcard ou PNG_LRG → PNG nativo.
-    if (sink.contains('PNG_LRG') || sink.contains('IMAGE/PNG:*') ||
+    if (sink.contains('PNG_LRG') ||
+        sink.contains('IMAGE/PNG:*') ||
         sink.contains('PNG:*')) {
       return StageImageFormat.png;
     }
