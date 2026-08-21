@@ -19,6 +19,17 @@
   #text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     text-align:center;width:84vw;font-size:6.5vh;font-weight:600;line-height:1.35;
     text-shadow:0 2px 12px rgba(0,0,0,.8)}
+  /* Alinhamento horizontal: desativa centralização forçada do transform */
+  #text[style*="text-align: left"],#text[style*="text-align:left"]{
+    left:8vw;transform:translate(0,-50%)}
+  #text[style*="text-align: right"],#text[style*="text-align:right"]{
+    left:auto;right:8vw;transform:translate(0,-50%)}
+  /* Alinhamento vertical — classes aplicadas no #content */
+  #content.valign-top{display:flex;align-items:flex-start;justify-content:center}
+  #content.valign-bottom{display:flex;align-items:flex-end;justify-content:center}
+  #content.valign-middle #text{top:50%}
+  #content.valign-top #text,#content.valign-bottom #text{position:relative;
+    top:auto;left:auto;right:auto;transform:none;margin:0 auto}
   /* F3.3m: estilos dinâmicos da letra (sombra/caixinha) */
   #text.shadow-on{text-shadow:var(--ts,0 3px 18px rgba(0,0,0,.8))}
   #text.box-on{background:rgba(0,0,0,var(--box-bg,.45));
@@ -68,16 +79,15 @@
     font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.8)}
   #timer small{display:block;font-size:2.8vh;font-weight:300;opacity:.7;margin-top:2vh}
   #video{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:contain;
-    background:#000;z-index:5}
+    background:transparent;z-index:5}
 </style>
 </head>
 <body>
 <!-- F3.3j: splash screen — some no WS OPEN ou 2.5s -->
-<!-- Multi-palco: splash full-bleed 16:9 (design oficial 1920x1080) —
-     object-fit:cover cobre a tela inteira, sem faixas laterais. -->
-<div id="splash" style="position:fixed;inset:0;z-index:200;background:#0A0E1A;transition:opacity .6s">
-  <img src="splash-palco-new.jpg" alt=""
-    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+<div id="splash" style="position:fixed;inset:0;z-index:200;background:#0A0E1A;
+  display:flex;align-items:center;justify-content:center;transition:opacity .6s">
+  <img src="splash.jpg" alt="Palco Piano LouvorJA" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+</div>
 </div>
 <script>
 (function(){
@@ -259,6 +269,14 @@ function retry(){
 function showIdle(msg){
   $('idleMsg').textContent=msg;
   $('idle').classList.remove('hidden');
+  // Encerramento de item (música/vídeo/timer de QUALQUER origem): idle é a
+  // autoridade de limpeza — esconde todos os camadas de conteúdo pra nunca
+  // ficarem sobrepostos ao idle (bug: hino/video encerrado ficava em cima).
+  hideNp();
+  const _v=$('video'); if(_v.style.display!=='none'){_v.pause();_v.removeAttribute('src');_v.style.display='none';_v.load();}
+  const _t=$('timer'); if(_t.style.display!=='none'){clearInterval(_t._iv||0);_t.style.display='none';}
+  const _a=$('audio'); if(!_a.paused){try{_a.pause();_a.currentTime=0;}catch(e){}}
+  $('text').style.display='';
   // volta pro BG do palco (personalizado) — música "saiu de cena"
   $('bg').removeAttribute('src');
   $('text').textContent='';$('footer').textContent='';
@@ -387,7 +405,13 @@ function closeIpEntry(){if(ipEntry){ipEntry.remove();ipEntry=null}}
 function submitIp(){
   var v=(ipEntry&&ipEntry._val)||'';
   if(!v)return;
-  host=v;localStorage.setItem('palcoHost',host);tries=0;
+  // Multi-palco: aceita IP ou IP:PORTA (ex: 192.168.1.50:7083).
+  var parts=v.split(':');
+  host=parts[0];localStorage.setItem('palcoHost',host);
+  if(parts[1]&&parseInt(parts[1],10)>0){
+    port=String(parseInt(parts[1],10));localStorage.setItem('palcoPort',port);
+  }
+  tries=0;
   closeIpEntry();
   try{if(ws)ws.close()}catch(e){}
   connect();
@@ -400,11 +424,16 @@ window.addEventListener('keydown',function(e){
     else if(k===461||k===8||k===463){                      // backspace
       ipEntry._val=ipEntry._val.slice(0,-1);renderIp()}
     else if(k>=48&&k<=57){                                  // 0-9
-      if(ipEntry._val.length<15){ipEntry._val+=String(k-48);renderIp()}}
+      if(ipEntry._val.length<21){ipEntry._val+=String(k-48);renderIp()}}
     else if(k>=96&&k<=105){                                 // numpad
-      if(ipEntry._val.length<15){ipEntry._val+=String(k-96);renderIp()}}
+      if(ipEntry._val.length<21){ipEntry._val+=String(k-96);renderIp()}}
     else if(k===46||k===190||k===110){                      // ponto
-      if(ipEntry._val.length<15){ipEntry._val+='.';renderIp()}}
+      if(ipEntry._val.length<21){ipEntry._val+='.';renderIp()}}
+    else if(k===186||k===59){                               // dois-pontos (IP:PORTA)
+      if(ipEntry._val.length<21){ipEntry._val+=':';renderIp()}}
+    else if(e.key==='.'||e.key===':'||e.key===';'){          // fallback layout-proof (Electron/Chromium): usa o caractere real
+      var ch=e.key===';'?':':e.key;                          // tecla ; com shift em ABNT = :
+      if(ipEntry._val.length<21){ipEntry._val+=ch;renderIp()}}
     else if(k===403||k===27){closeIpEntry()}                // vermelha/ESC
     return;
   }
@@ -448,6 +477,14 @@ function handle(m){
           t.style.setProperty('--box-border',
             m.boxBorder?`${m.boxBorder.width||0.4}vh solid ${m.boxBorder.color||'rgba(255,255,255,.25)'}`:'none')}
         else{t.classList.add('box-off')}
+        // Alinhamento do texto: left|center|right + top|middle|bottom
+        const root=$('content')||t.parentElement;
+        t.style.textAlign=m.textAlign||'center';
+        if(root){
+          root.classList.remove('valign-top','valign-middle','valign-bottom');
+          const va=m.textVerticalAlign||'middle';
+          root.classList.add('valign-'+(va==='top'||va==='bottom'?va:'middle'));
+        }
       }
       // F3.3m: footer com referência destacada + versão
       {const f=$('footer');
@@ -493,8 +530,8 @@ function handle(m){
       }
       if(m.action==='pause')a.pause();
       if(m.action==='stop'){a.pause();a.currentTime=0;
-        // Multi-palco: stop do app (minimizar now-playing) NÃO limpa a tela.
-        }
+        // Stop = operador parou de verdade → volta ao idle.
+        hideNp();showIdle('Aguardando conteúdo…');}
       if(m.action==='seek')a.currentTime=m.position||0;
       break}
     case 'video':{
@@ -503,6 +540,8 @@ function handle(m){
         v.load();sendEvent({v:2,type:'ended',media:'video'});break}
       if(m.url){v.src=proxyUrl(m.url);v.style.display='';
         hideIdle();hideNp();$('text').style.display='none'; // video NA FRENTE do idle desde o load
+        // BG atrás do vídeo (letterbox de vídeo vertical mostra o palco, não preto)
+        $('bg').src=bgPalco?proxyUrl(bgPalco):'bg-fallback.png';
         v.onended=()=>{v.style.display='none';v.removeAttribute('src');
           sendEvent({v:2,type:'ended',media:'video'})}}
       if(m.action==='play'){
@@ -510,12 +549,29 @@ function handle(m){
         v.play().then(()=>sendEvent({v:2,type:'unlocked'}))
                 .catch(e=>dlog('VID PLAY FAIL: '+e.name));
       }
-      if(m.action==='pause')v.pause();
+      if(m.action==='pause'){
+        // Toggle: sender não sabe o estado real — a TV decide.
+        if(v.paused)v.play().catch(function(){});else v.pause();
+      }
       break}
     case 'timer':{
       hideIdle();
+      // BG padrão pro timer: bgPalco personalizado ou fallback — nunca body puro.
+      $('bg').src=bgPalco?proxyUrl(bgPalco):'bg-fallback.png';
       const t=$('timer');
       if(m.action==='stop'){t.style.display='none';clearInterval(t._iv||0);$('text').style.display='';break}
+      // Timer tem elemento próprio: aplica o mesmo conjunto de settings
+      // do módulo Timer, recebido do sender; antes era sempre branco/centro.
+      if(m.color)t.style.color=m.color;
+      if(typeof m.fontSize==='number')t.style.fontSize=(m.fontSize/10.8)+'vh';
+      if(typeof m.fontWeight==='number')t.style.fontWeight=m.fontWeight;
+      t.style.textAlign=m.textAlign||'center';
+      const va=m.textVerticalAlign||'middle';
+      t.style.top=va==='top'?'16%':va==='bottom'?'84%':'50%';
+      t.style.transform='translate(-50%,-50%)';
+      if(m.textShadow===false)t.style.textShadow='none';
+      else if(typeof m.shadowBlur==='number')
+        t.style.textShadow=`0 ${Math.max(1,m.shadowBlur/3)}vh ${m.shadowBlur}vh rgba(0,0,0,${m.shadowIntensity!=null?m.shadowIntensity:0.8})`;
       t.style.display='';$('text').style.display='none';
       let rem=(m.duration||0)*1000; // countdown segundos
       const mode=m.mode||'countdown';

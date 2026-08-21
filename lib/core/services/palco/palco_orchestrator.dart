@@ -35,7 +35,8 @@ class PalcoOrchestrator extends ChangeNotifier {
   Future<void> loadStoredConfig() async {
     if (_loaded) return;
     _loaded = true;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
+    if (prefs == null) return;
     final raw = prefs.getString(_slotsKey);
     if (raw != null) {
       final list = (jsonDecode(raw) as List).whereType<Map>();
@@ -51,8 +52,18 @@ class PalcoOrchestrator extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// SharedPreferences best-effort: em teste (sem binding) devolve null.
+  Future<SharedPreferences?> _prefs() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _persistConfig() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs();
+    if (prefs == null) return;
     await prefs.setString(
       _slotsKey,
       jsonEncode(

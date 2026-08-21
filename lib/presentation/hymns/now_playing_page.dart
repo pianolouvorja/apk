@@ -351,9 +351,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                     ),
                     IconButton(
                       icon: const Icon(TablerIcons.x, color: Colors.white),
-                      onPressed: _stopAudioEverywhere,
-                      onLongPress:
-                          _stopAudioEverywhere, // F3.2: para tudo (local+TV)
+                      // X = para tudo (local + todas as TVs) E fecha.
+                      onPressed: () {
+                        _stopAudioEverywhere();
+                        if (mounted) {
+                          Navigator.of(context).maybePop();
+                        }
+                      },
                     ),
                     Expanded(
                       child: Column(
@@ -400,7 +404,8 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                   ],
                 ),
 
-                // Estrofe (área central): swipe troca slide
+                // Capa do álbum grande (referência 2026-08-21) + letra
+                // sobreposta; swipe na área troca slide.
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -409,19 +414,49 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       if (d.primaryVelocity! < 0) _goToSlide(_index + 1);
                       if (d.primaryVelocity! > 0) _goToSlide(_index - 1);
                     },
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          slide?.text ?? '',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        // Capa quadrada ocupando a largura útil.
+                        if (widget.albumCoverUrl != null)
+                          Expanded(
+                            flex: 5,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: CachedNetworkImage(
+                                  imageUrl: widget.albumCoverUrl!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorWidget: (_, __, ___) =>
+                                      const SizedBox.shrink(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        // Letra sincronizada abaixo da capa.
+                        Expanded(
+                          flex: 4,
+                          child: Center(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                slide?.text ?? '',
+                                textAlign: TextAlign.center,
+                                style:
+                                    theme.textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),

@@ -244,11 +244,30 @@ class StageSession extends ChangeNotifier {
   }
 
   void pauseHymnAudio() {
-    if (_routesToTv) _audioTarget().pauseAudio();
+    if (_routesToTv) {
+      for (final p in _allConnectedControllers()) {
+        p.pauseAudio();
+      }
+    }
   }
 
   void stopHymnAudio() {
-    if (_routesToTv) _audioTarget().stopAudio();
+    // Para em TODOS os slots conectados: a faixa pode ter começado em
+    // outro slot antes da troca de chip ativo (bug 2026-08-21).
+    if (_routesToTv) {
+      for (final p in _allConnectedControllers()) {
+        p.stopAudio();
+      }
+    }
+  }
+
+  /// Todos os controllers com TV conectada (qualquer slot).
+  List<PalcoController> _allConnectedControllers() {
+    final orch = PalcoOrchestrator.instance;
+    return orch.slots
+        .map((s) => s.controller)
+        .where((c) => c.isConnected)
+        .toList();
   }
 
   /// Seek espelhado (modo tv: a TV é o relógio; local/mirror: no-op

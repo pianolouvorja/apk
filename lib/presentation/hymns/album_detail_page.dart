@@ -177,13 +177,16 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           await player.setVolume(1);
         }
       }
+      // Detail completo (lyricRaw) pro reabrir via mini player —
+      // hymn do catálogo não tem letra (bug 2026-08-21).
+      final detailFull = await _repository().getHymnDetails(hymn.id);
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
         durationMs: hymn.durationMs,
-        detail: hymn,
+        detail: detailFull,
         instrumental: instrumental,
         albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
         audioSource: source,
@@ -234,13 +237,16 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       }
       final source = local ?? DownloadUrlBuilder.build(relativeUrl!);
 
+      // Detail completo (lyricRaw) pro reabrir via mini player —
+      // hymn do catálogo não tem letra (bug 2026-08-21).
+      final detailFull = await _repository().getHymnDetails(hymn.id);
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
         durationMs: hymn.durationMs,
-        detail: hymn,
+        detail: detailFull,
         instrumental: instrumental,
         albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
         audioSource: source,
