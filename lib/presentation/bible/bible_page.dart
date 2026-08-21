@@ -621,6 +621,20 @@ class _VerseList extends StatefulWidget {
 }
 
 class _VerseListState extends State<_VerseList> {
+  @override
+  void didUpdateWidget(covariant _VerseList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Chevrons e referência digitada mudam o BLoC sem passar pelo onTap.
+    // Reprojeta a seleção nova no Palco automaticamente.
+    final before = oldWidget.state.selectedVerses;
+    final after = widget.state.selectedVerses;
+    if (after.isNotEmpty && before.join(',') != after.join(',')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _projectSelectedVerses(widget.state, after.first);
+      });
+    }
+  }
+
   /// Palco: projeta os versículos selecionados na TV (se ligado).
   Future<void> _projectSelectedVerses(
     BibleLoaded state,
@@ -638,16 +652,17 @@ class _VerseListState extends State<_VerseList> {
     final book = state.books
         .where((b) => b.id == state.selectedBookId)
         .firstOrNull;
+    final verseReference = BibleReferenceParser.formatVerses(versesToShow);
+    final passageReference =
+        '${book?.name ?? ''} ${state.selectedChapter}:$verseReference';
     // F3.3m: referência destacada (cor/ peso próprios) + versão ao lado.
     final version = state.versions
         .where((v) => v.id == state.selectedVersionId)
         .firstOrNull;
     await stage.project(
       title: text,
-      footer:
-          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
-      footerRef:
-          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footer: passageReference,
+      footerRef: passageReference,
       footerVersion: version?.abbreviation,
       isBible: true, // F3.3o: tipografia própria da Bíblia
       module: 'bible',

@@ -64,5 +64,11 @@ void main() {
       expect(r, isNotNull);
       expect(r!.verses, [1, 2, 3]);
     });
+
+    test('formata referências para o footer do Palco', () {
+      expect(BibleReferenceParser.formatVerses([1, 2, 3]), '1-3');
+      expect(BibleReferenceParser.formatVerses([1, 3, 4, 5]), '1,3-5');
+      expect(BibleReferenceParser.formatVerses([5, 3, 3]), '3,5');
+    });
   });
 }

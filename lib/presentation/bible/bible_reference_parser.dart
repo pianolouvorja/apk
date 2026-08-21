@@ -64,6 +64,25 @@ class BibleReferenceParser {
       .trim();
 
   /// `1-3,5` → [1,2,3,5]; devolve vazio se nada válido.
+  /// Formata seleção: [1,2,3] → `1-3`; [1,3,4,5] → `1,3-5`.
+  static String formatVerses(Iterable<int> input) {
+    final verses = input.where((v) => v > 0).toSet().toList()..sort();
+    if (verses.isEmpty) return '';
+    final parts = <String>[];
+    var start = verses.first;
+    var previous = start;
+    for (final verse in verses.skip(1)) {
+      if (verse == previous + 1) {
+        previous = verse;
+        continue;
+      }
+      parts.add(start == previous ? '$start' : '$start-$previous');
+      start = previous = verse;
+    }
+    parts.add(start == previous ? '$start' : '$start-$previous');
+    return parts.join(',');
+  }
+
   static List<int> _parseVerses(String spec) {
     final out = <int>{};
     for (final part in spec.split(',')) {
