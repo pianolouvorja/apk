@@ -2,16 +2,21 @@
 // UI de Biblia -- nao testavel em unit tests (depende de BLoC + widget tree)
 library;
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
+import 'package:louvorja_piano_mobile/core/services/bible_search_index.dart';
 import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
@@ -23,6 +28,7 @@ import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_she
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/bible_reference_parser.dart';
 
 class BiblePage extends StatelessWidget {
   final BibleBloc? testBloc;
@@ -58,6 +64,20 @@ class BiblePage extends StatelessWidget {
 /// Painel que pode estar expandido ou colapsado.
 enum NavPanel { books, chapters, verses }
 
+/// Repassa a busca rápida do AppBar para o [_VerseList] disparar a busca
+/// global (texto livre). Referências são resolvidas direto no AppBar.
+class QuickSearchNotifier extends InheritedNotifier<ValueNotifier<String?>> {
+  const QuickSearchNotifier({
+    super.key,
+    required super.notifier,
+    required super.child,
+  });
+
+  static ValueNotifier<String?>? of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<QuickSearchNotifier>()
+      ?.notifier;
+}
+
 class _BibleView extends StatefulWidget {
   const _BibleView();
 
@@ -72,6 +92,11 @@ class _BibleViewState extends State<_BibleView> {
   /// Verses: capitulo selecionado, lendo versiculos.
   NavPanel _activePanel = NavPanel.books;
 
+  /// Busca rápida no AppBar (padrão Hinos): referência ou texto global.
+  bool _isSearching = false;
+  final _appBarSearchController = TextEditingController();
+  final _quickSearch = ValueNotifier<String?>(null);
+
   void _onBookSelected(BuildContext context, int bookId) {
     context.read<BibleBloc>().add(BibleSelectBook(bookId));
     setState(() => _activePanel = NavPanel.chapters);
@@ -82,43 +107,162 @@ class _BibleViewState extends State<_BibleView> {
     setState(() => _activePanel = NavPanel.verses);
   }
 
+  /// Busca rápida do AppBar: tenta referência (`gn 1:1-3`); se não casar,
+  /// trata como texto e faz busca global na Bíblia em cache.
+  void _applyQuickSearch(BuildContext context) {
+    final query = _appBarSearchController.text.trim();
+    if (query.isEmpty) return;
+
+    final ref = BibleReferenceParser.parse(query);
+    if (ref != null) {
+      _openReference(context, ref);
+      return;
+    }
+    // Texto livre: encaminha para a busca global da lista de versículos.
+    // Limpa antes para garantir notificação mesmo em busca repetida.
+    _quickSearch.value = null;
+    setState(() => _activePanel = NavPanel.verses);
+    _quickSearch.value = query;
+  }
+
+  void _openReference(BuildContext context, BibleReference ref) {
+    final state = context.read<BibleBloc>().state;
+    if (state is! BibleLoaded) return;
+    String normTxt(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c')
+        .trim();
+    final books = state.books;
+    final query = ref.bookQuery;
+    BibleBook? match;
+    for (final b in books) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      if (ab == query || nm == query) {
+        match = b;
+        break;
+      }
+    }
+    match ??= books.where((b) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      return ab.startsWith(query) || nm.startsWith(query);
+    }).firstOrNull;
+
+    if (match == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('bible.bookNotFound'.tr())));
+      return;
+    }
+    final bloc = context.read<BibleBloc>();
+    bloc.add(BibleSelectBook(match.id));
+    // O carregamento do capítulo ZERA selectedVerses ao concluir; a
+    // seleção precisa chegar DEPOIS, senão é apagada (corrida).
+    () async {
+      bloc.add(BibleSelectChapter(ref.chapter));
+      await bloc.stream
+          .firstWhere(
+            (s) => s is BibleLoaded && s.selectedChapter == ref.chapter,
+          )
+          .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
+      if (ref.verses.isNotEmpty) {
+        bloc.add(BibleSelectVerses(ref.verses));
+      }
+    }();
+    setState(() {
+      _isSearching = false;
+      _appBarSearchController.clear();
+      _activePanel = NavPanel.verses;
+    });
+  }
+
+  @override
+  void dispose() {
+    _appBarSearchController.dispose();
+    _quickSearch.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('bible.title'.tr()),
-        actions: const [
-          StageClearButton(),
-          StageStopVideoButton(),
-          StageCastButton(module: StageModule.bible),
-          BibleDownloadButton(),
-        ],
-      ),
-      body: BlocBuilder<BibleBloc, BibleState>(
-        builder: (context, state) {
-          if (state is BibleLoading || state is BibleInitial) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: AppSpacing.s3),
-                  Text(
-                    'bible.loading'.tr(),
-                    style: Theme.of(context).textTheme.bodyMedium,
+    return QuickSearchNotifier(
+      notifier: _quickSearch,
+      child: Scaffold(
+        appBar: AppBar(
+          title: _isSearching
+              ? TextField(
+                  key: const Key('bible-appbar-search'),
+                  controller: _appBarSearchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'bible.quickSearchHint'.tr(),
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ],
-              ),
-            );
-          }
-          if (state is BibleError) {
-            return _ErrorView(code: state.code);
-          }
-          if (state is BibleLoaded) {
-            return _body(context, state);
-          }
-          return const SizedBox.shrink();
-        },
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  onChanged: (v) => setState(() {}),
+                  onSubmitted: (_) => _applyQuickSearch(context),
+                )
+              : Text('bible.title'.tr()),
+          actions: [
+            if (_isSearching)
+              IconButton(
+                icon: const Icon(TablerIcons.arrowRight, size: 20),
+                tooltip: 'bible.goToReference'.tr(),
+                onPressed: () => _applyQuickSearch(context),
+              )
+            else ...const [
+              StageClearButton(),
+              StageStopVideoButton(),
+              StageCastButton(module: StageModule.bible),
+              BibleDownloadButton(),
+            ],
+            IconButton(
+              key: const Key('bible-search-toggle'),
+              icon: Icon(_isSearching ? TablerIcons.x : TablerIcons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) _appBarSearchController.clear();
+                });
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<BibleBloc, BibleState>(
+          builder: (context, state) {
+            if (state is BibleLoading || state is BibleInitial) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: AppSpacing.s3),
+                    Text(
+                      'bible.loading'.tr(),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              );
+            }
+            if (state is BibleError) {
+              return _ErrorView(code: state.code);
+            }
+            if (state is BibleLoaded) {
+              return _body(context, state);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
@@ -324,30 +468,8 @@ class _Toolbar extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s3),
             color: theme.colorScheme.outline,
           ),
-          // Localizacao
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'bible.location'.tr().toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    letterSpacing: 0.6,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  state.locationLabel,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
+          // Localizacao / referencia direta: "gn 1:1-3" ou "genesis 2:3,5"
+          Expanded(child: _LocationReferenceField(state: state)),
         ],
       ),
     );
@@ -642,6 +764,100 @@ class _VerseList extends StatefulWidget {
 }
 
 class _VerseListState extends State<_VerseList> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  BibleSearchIndex? _searchIndex;
+  List<BibleGlobalSearchResult> _globalResults = const [];
+  bool _globalSearching = false;
+  Timer? _debounce;
+
+  bool _listeningQuickSearch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initIndex();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Registra uma única vez; InheritedNotifier só resolve após o
+    // primeiro build, então isso não pode viver no initState.
+    final notifier = QuickSearchNotifier.of(context);
+    if (notifier != null && !_listeningQuickSearch) {
+      notifier.addListener(_onQuickSearch);
+      _listeningQuickSearch = true;
+      // Busca disparada enquanto este painel ainda não estava montado
+      // (ex.: usuário no grid de livros): consome o valor pendente.
+      final pending = notifier.value;
+      if (pending != null && pending.isNotEmpty) {
+        _searchController.text = pending;
+        _onSearchChanged(pending);
+      }
+    }
+  }
+
+  void _onQuickSearch() {
+    final q = QuickSearchNotifier.of(context)?.value;
+    if (q == null || q.isEmpty) return;
+    _searchController.text = q;
+    _onSearchChanged(q);
+  }
+
+  @override
+  void dispose() {
+    QuickSearchNotifier.of(context)?.removeListener(_onQuickSearch);
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initIndex() async {
+    if (kIsWeb) return; // Web: cache é no-op, sem busca global em disco.
+    final dir = await getApplicationDocumentsDirectory();
+    if (!mounted) return;
+    setState(() => _searchIndex = BibleSearchIndex(CatalogCache(dir)));
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query.trim());
+    _debounce?.cancel();
+    final index = _searchIndex;
+    if (index == null || _searchQuery.length < 3) {
+      setState(() => _globalResults = const []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      setState(() => _globalSearching = true);
+      final results = await index.search(
+        _searchQuery,
+        widget.state.selectedVersionId,
+        widget.state.books,
+      );
+      if (mounted) {
+        setState(() {
+          _globalResults = results;
+          _globalSearching = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _VerseList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Chevrons e referência digitada mudam o BLoC sem passar pelo onTap.
+    // Reprojeta a seleção nova no Palco automaticamente.
+    final before = oldWidget.state.selectedVerses;
+    final after = widget.state.selectedVerses;
+    if (after.isNotEmpty && before.join(',') != after.join(',')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _projectSelectedVerses(widget.state, after.first);
+      });
+    }
+  }
+
   /// Palco: projeta os versículos selecionados na TV (se ligado).
   Future<void> _projectSelectedVerses(
     BibleLoaded state,
@@ -659,29 +875,21 @@ class _VerseListState extends State<_VerseList> {
     final book = state.books
         .where((b) => b.id == state.selectedBookId)
         .firstOrNull;
+    final verseReference = BibleReferenceParser.formatVerses(versesToShow);
+    final passageReference =
+        '${book?.name ?? ''} ${state.selectedChapter}:$verseReference';
     // F3.3m: referência destacada (cor/ peso próprios) + versão ao lado.
     final version = state.versions
         .where((v) => v.id == state.selectedVersionId)
         .firstOrNull;
     await stage.project(
       title: text,
-      footer:
-          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
-      footerRef:
-          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+      footer: passageReference,
+      footerRef: passageReference,
       footerVersion: version?.abbreviation,
       isBible: true, // F3.3o: tipografia própria da Bíblia
       module: 'bible',
     );
-  }
-
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
@@ -754,7 +962,7 @@ class _VerseListState extends State<_VerseList> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'search.placeholder'.tr(),
+              hintText: 'bible.filterVersesHint'.tr(),
               prefixIcon: const Icon(TablerIcons.search, size: 18),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
@@ -763,10 +971,87 @@ class _VerseListState extends State<_VerseList> {
               ),
               border: OutlineInputBorder(borderRadius: AppRadius.sm),
             ),
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            onChanged: _onSearchChanged,
           ),
         ),
         const SizedBox(height: AppSpacing.s2),
+        // Resultados globais (busca em toda a Bíblia em cache)
+        if (_globalSearching || _globalResults.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _globalSearching
+                        ? 'bible.globalSearching'.tr()
+                        : 'bible.globalResults'.tr(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${_globalResults.length}',
+                  style: theme.textTheme.labelSmall,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: _globalResults.isEmpty ? 0 : 132,
+            child: _globalResults.isEmpty
+                ? const SizedBox.shrink()
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s4,
+                    ),
+                    itemCount: _globalResults.length,
+                    itemBuilder: (context, index) {
+                      final r = _globalResults[index];
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          r.reference,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          r.snippet,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                          final bloc = context.read<BibleBloc>();
+                          () async {
+                            bloc.add(BibleSelectBook(r.bookId));
+                            bloc.add(BibleSelectChapter(r.chapter));
+                            await bloc.stream
+                                .firstWhere(
+                                  (s) =>
+                                      s is BibleLoaded &&
+                                      s.selectedBookId == r.bookId &&
+                                      s.selectedChapter == r.chapter,
+                                )
+                                .timeout(
+                                  const Duration(seconds: 10),
+                                  onTimeout: () => bloc.state,
+                                );
+                            bloc.add(BibleSelectVerse(r.verse));
+                          }();
+                        },
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.s2),
+        ],
         // Versiculos
         Expanded(
           child: entries.isEmpty
@@ -898,6 +1183,161 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Campo de localização editável: aceita referência direta ("gn 1:1-3",
+/// "genesis 2:3,5"). Enter navega pro livro/capítulo/versículos.
+class _LocationReferenceField extends StatefulWidget {
+  final BibleLoaded state;
+
+  const _LocationReferenceField({required this.state});
+
+  @override
+  State<_LocationReferenceField> createState() =>
+      _LocationReferenceFieldState();
+}
+
+class _LocationReferenceFieldState extends State<_LocationReferenceField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focus;
+  bool _editing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _focus = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _apply() {
+    final ref = BibleReferenceParser.parse(_controller.text);
+    if (ref == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('bible.referenceInvalid'.tr())));
+      }
+      return;
+    }
+    final norm = BibleReferenceParser.parse(_controller.text)!;
+    // Casa livro por abreviação, nome (normalizados) ou prefixo.
+    String normTxt(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll('ç', 'c')
+        .trim();
+    final books = widget.state.books;
+    final query = norm.bookQuery;
+    BibleBook? match;
+    for (final b in books) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      if (ab == query || nm == query) {
+        match = b;
+        break;
+      }
+    }
+    match ??= books.where((b) {
+      final ab = normTxt(b.abbreviation);
+      final nm = normTxt(b.name);
+      return ab.startsWith(query) || nm.startsWith(query);
+    }).firstOrNull;
+    if (match == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('bible.bookNotFound'.tr())));
+      }
+      return;
+    }
+    final bloc = context.read<BibleBloc>();
+    bloc.add(BibleSelectBook(match.id));
+    bloc.add(BibleSelectChapter(norm.chapter));
+    if (norm.verses.isNotEmpty) {
+      bloc.add(BibleSelectVerses(norm.verses));
+    }
+    _focus.unfocus();
+    setState(() => _editing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_editing) {
+      return TextField(
+        controller: _controller,
+        focusNode: _focus,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _apply(),
+        style: theme.textTheme.bodyMedium,
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'bible.referenceHint'.tr(),
+          hintStyle: theme.textTheme.bodySmall,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 6,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.search, size: 18),
+            onPressed: _apply,
+          ),
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () {
+        _controller.text = widget.state.locationLabel;
+        setState(() => _editing = true);
+        _focus.requestFocus();
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'bible.location'.tr().toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              letterSpacing: 0.6,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.state.locationLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.edit,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
