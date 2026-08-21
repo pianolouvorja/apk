@@ -733,7 +733,7 @@ class _VerseListState extends State<_VerseList> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'search.placeholder'.tr(),
+              hintText: 'bible.filterVersesHint'.tr(),
               prefixIcon: const Icon(TablerIcons.search, size: 18),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
