@@ -1,7 +1,6 @@
 library;
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Controles de mídia nativos (notificação, lock screen, PiP).

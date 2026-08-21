@@ -6,7 +6,6 @@
 //      dart run tool/palco_dev_sender.dart --audio http://127.0.0.1:7080/media/test-external.mp3 --title "Hino 1" --sub "Harpa"
 //      dart run tool/palco_dev_sender.dart --idle
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:louvorja_piano_mobile/core/services/palco/palco_controller.dart';
