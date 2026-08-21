@@ -162,10 +162,19 @@ class _BibleViewState extends State<_BibleView> {
     }
     final bloc = context.read<BibleBloc>();
     bloc.add(BibleSelectBook(match.id));
-    bloc.add(BibleSelectChapter(ref.chapter));
-    if (ref.verses.isNotEmpty) {
-      bloc.add(BibleSelectVerses(ref.verses));
-    }
+    // O carregamento do capítulo ZERA selectedVerses ao concluir; a
+    // seleção precisa chegar DEPOIS, senão é apagada (corrida).
+    () async {
+      bloc.add(BibleSelectChapter(ref.chapter));
+      await bloc.stream
+          .firstWhere(
+            (s) => s is BibleLoaded && s.selectedChapter == ref.chapter,
+          )
+          .timeout(const Duration(seconds: 10), onTimeout: () => bloc.state);
+      if (ref.verses.isNotEmpty) {
+        bloc.add(BibleSelectVerses(ref.verses));
+      }
+    }();
     setState(() {
       _isSearching = false;
       _appBarSearchController.clear();
@@ -1019,10 +1028,23 @@ class _VerseListState extends State<_VerseList> {
                         onTap: () {
                           _searchController.clear();
                           _onSearchChanged('');
-                          context.read<BibleBloc>()
-                            ..add(BibleSelectBook(r.bookId))
-                            ..add(BibleSelectChapter(r.chapter))
-                            ..add(BibleSelectVerse(r.verse));
+                          final bloc = context.read<BibleBloc>();
+                          () async {
+                            bloc.add(BibleSelectBook(r.bookId));
+                            bloc.add(BibleSelectChapter(r.chapter));
+                            await bloc.stream
+                                .firstWhere(
+                                  (s) =>
+                                      s is BibleLoaded &&
+                                      s.selectedBookId == r.bookId &&
+                                      s.selectedChapter == r.chapter,
+                                )
+                                .timeout(
+                                  const Duration(seconds: 10),
+                                  onTimeout: () => bloc.state,
+                                );
+                            bloc.add(BibleSelectVerse(r.verse));
+                          }();
                         },
                       );
                     },
