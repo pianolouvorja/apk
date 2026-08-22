@@ -5,7 +5,14 @@ import 'dart:io';
 
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 
-enum DesktopConnectionStatus { disconnected, connecting, connected }
+enum DesktopConnectionStatus {
+  disconnected,
+  connecting,
+  connected,
+
+  /// Peer sumiu e todas as tentativas de reconexão falharam.
+  closed,
+}
 
 /// Cliente WebSocket do APK → servidor do desktop (Electron).
 ///
@@ -115,7 +122,10 @@ class DesktopConnection {
     final delay = _attempt < reconnectDelays.length
         ? reconnectDelays[_attempt]
         : null;
-    if (delay == null) return; // esgotou tentativas
+    if (delay == null) {
+      _statusCtrl.add(DesktopConnectionStatus.closed);
+      return;
+    }
     _attempt++;
     await Future<void>.delayed(delay);
     if (_closingByUser || _host == null) return;

@@ -26,6 +26,7 @@ class RemoteSession {
   WebLinkServer? _web;
   StreamSubscription<RemotePlayerState>? _desktopStateSub;
   StreamSubscription<DesktopConnectionStatus>? _desktopStatusSub;
+  StreamSubscription<RemoteError>? _desktopErrorSub;
   RemoteMode _mode = RemoteMode.idle;
 
   final _statesCtrl = StreamController<RemotePlayerState>.broadcast();
@@ -52,16 +53,26 @@ class RemoteSession {
       lastState = s;
       _statesCtrl.add(s);
     });
-    _desktopStatusSub = conn.status.listen(
-      (s) => _statusCtrl.add(s.toSessionStatus()),
-    );
+    _desktopStatusSub = conn.status.listen((s) {
+      if (s == DesktopConnectionStatus.closed) {
+        unawaited(_dropDesktop());
+        return;
+      }
+      _statusCtrl.add(s.toSessionStatus());
+    });
+    _desktopErrorSub = conn.errors.listen((error) {
+      // Fechamento normal do Electron: derruba UI remota imediatamente.
+      if (error.code == 'desktop_closed') unawaited(_dropDesktop());
+    });
 
     final ok = await conn.connect(host: host, port: port, token: token);
     if (!ok) {
       await _desktopStateSub?.cancel();
       await _desktopStatusSub?.cancel();
+      await _desktopErrorSub?.cancel();
       _desktopStateSub = null;
       _desktopStatusSub = null;
+      _desktopErrorSub = null;
       await conn.dispose();
       return false;
     }
@@ -140,7 +151,13 @@ class RemoteSession {
   }
 
   Future<void> disconnect() async {
+    await _dropDesktop();
+  }
+
+  /// Limpa imediatamente UI/estado remoto quando o desktop encerra.
+  Future<void> _dropDesktop() async {
     await _teardown();
+    lastState = null;
     _mode = RemoteMode.idle;
     _statusCtrl.add(RemoteSessionStatus.disconnected);
   }
@@ -148,8 +165,10 @@ class RemoteSession {
   Future<void> _teardown() async {
     await _desktopStateSub?.cancel();
     await _desktopStatusSub?.cancel();
+    await _desktopErrorSub?.cancel();
     _desktopStateSub = null;
     _desktopStatusSub = null;
+    _desktopErrorSub = null;
     await _desktop?.dispose();
     _desktop = null;
     await _web?.stop();
@@ -172,5 +191,6 @@ extension on DesktopConnectionStatus {
     DesktopConnectionStatus.disconnected => RemoteSessionStatus.disconnected,
     DesktopConnectionStatus.connecting => RemoteSessionStatus.connecting,
     DesktopConnectionStatus.connected => RemoteSessionStatus.connected,
+    DesktopConnectionStatus.closed => RemoteSessionStatus.disconnected,
   };
 }

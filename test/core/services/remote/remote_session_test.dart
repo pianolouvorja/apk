@@ -60,6 +60,31 @@ void main() {
     await desktop?.close();
   });
 
+  test('desktop_closed derruba sessão remota imediatamente', () async {
+    WebSocket? desktop;
+    server.listen((req) async {
+      desktop = await WebSocketTransformer.upgrade(req);
+      desktop!.listen((_) {});
+    });
+
+    final session = RemoteSession.instance;
+    expect(
+      await session.connectDesktop(
+        host: '127.0.0.1',
+        port: server.port,
+        token: 'T',
+      ),
+      isTrue,
+    );
+    desktop!.add(
+      const RemoteError(id: 'server', code: 'desktop_closed').encode(),
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(session.mode, RemoteMode.idle);
+    expect(session.lastState, isNull);
+  });
+
   test('sendCommand desktop → servidor recebe comando com token', () async {
     final received = <RemoteCommand>[];
     WebSocket? desktop;
