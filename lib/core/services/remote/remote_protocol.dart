@@ -320,6 +320,28 @@ class RemoteProtocol {
     if (positionMs is! num || durationMs is! num) return null;
     if (positionMs < 0 || durationMs < 0) return null;
 
+    // Liturgia espelhada (v1.1, opcional — peers antigos não enviam).
+    final lit = m['liturgy'];
+    final liturgyItems = <RemoteLiturgyItem>[];
+    int? liturgySelected;
+    if (lit is Map) {
+      final sel = lit['selectedIndex'];
+      liturgySelected = sel is num ? sel.toInt() : null;
+      final rawItems = lit['items'];
+      if (rawItems is List) {
+        for (final e in rawItems) {
+          if (e is Map && e['index'] is num && e['type'] is String) {
+            liturgyItems.add(RemoteLiturgyItem(
+              index: (e['index'] as num).toInt(),
+              type: e['type'] as String,
+              title: e['title'] is String ? e['title'] as String? : null,
+              done: e['done'] == true,
+            ));
+          }
+        }
+      }
+    }
+
     return RemotePlayerState(
       hymnId: hymnId,
       title: title is String ? title : null,
@@ -332,8 +354,11 @@ class RemoteProtocol {
       volume: intOrNull(p['volume']) ?? 0,
       canPrevious: p['canPrevious'] == true,
       canNext: p['canNext'] == true,
+      liturgyItems: liturgyItems,
+      liturgySelectedIndex: liturgySelected,
     );
   }
+
 }
 
 /// Token de emparelhamento: 6 chars [A-Z0-9], sem caracteres ambíguos
