@@ -261,10 +261,18 @@ class RemoteProtocol {
     if (action == null) return null;
 
     int? volume;
+    int? index;
     if (m.containsKey('value')) {
       final v = m['value'];
-      if (v is! num || v < 0 || v > 100) return null;
-      volume = v.toInt();
+      if (v is! num) return null;
+      if (action == RemoteAction.liturgySelect ||
+          action == RemoteAction.liturgyToggleDone) {
+        if (v < 0 || v != v.toInt()) return null;
+        index = v.toInt();
+      } else {
+        if (v < 0 || v > 100) return null;
+        volume = v.toInt();
+      }
     }
 
     Duration? position;
@@ -297,6 +305,7 @@ class RemoteProtocol {
       position: position,
       mode: mode,
       hymnId: hymnId,
+      index: index,
     );
   }
 
@@ -331,12 +340,14 @@ class RemoteProtocol {
       if (rawItems is List) {
         for (final e in rawItems) {
           if (e is Map && e['index'] is num && e['type'] is String) {
-            liturgyItems.add(RemoteLiturgyItem(
-              index: (e['index'] as num).toInt(),
-              type: e['type'] as String,
-              title: e['title'] is String ? e['title'] as String? : null,
-              done: e['done'] == true,
-            ));
+            liturgyItems.add(
+              RemoteLiturgyItem(
+                index: (e['index'] as num).toInt(),
+                type: e['type'] as String,
+                title: e['title'] is String ? e['title'] as String? : null,
+                done: e['done'] == true,
+              ),
+            );
           }
         }
       }
@@ -358,7 +369,6 @@ class RemoteProtocol {
       liturgySelectedIndex: liturgySelected,
     );
   }
-
 }
 
 /// Token de emparelhamento: 6 chars [A-Z0-9], sem caracteres ambíguos

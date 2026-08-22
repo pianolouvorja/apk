@@ -77,10 +77,13 @@ void main() {
       port: server.port,
       token: 'TKN123',
     );
-    await session.send(RemoteCommand(id: 'q1', action: RemoteAction.next));
+    await session.send(
+      RemoteCommand(id: 'q1', action: RemoteAction.liturgySelect, index: 2),
+    );
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    expect(received.single.action, RemoteAction.next);
+    expect(received.single.action, RemoteAction.liturgySelect);
+    expect(received.single.index, 2);
     expect(received.single.token, 'TKN123');
     await desktop?.close();
   });

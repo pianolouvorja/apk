@@ -138,8 +138,7 @@ class DesktopConnection {
     _stopHeartbeat();
     _heartbeatTimer = Timer.periodic(heartbeat, (_) {
       final last = _lastPeerActivity;
-      if (last != null &&
-          DateTime.now().difference(last) > heartbeat * 2) {
+      if (last != null && DateTime.now().difference(last) > heartbeat * 2) {
         _ws?.close(); // dispara onDone → reconexão
         return;
       }
@@ -165,6 +164,7 @@ class DesktopConnection {
         position: command.position,
         mode: command.mode,
         hymnId: command.hymnId,
+        index: command.index,
       );
     }
     _ws?.add(command.encode());
