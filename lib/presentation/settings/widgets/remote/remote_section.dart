@@ -56,9 +56,7 @@ class _RemoteSectionState extends State<RemoteSection> {
   void _validateHost() {
     final raw = _hostCtrl.text.trim();
     // Aceita: IP (ex: 192.168.1.192) ou IP:porta (ex: 192.168.1.192:7070)
-    final valid = RegExp(
-      r'^\d{1,3}(\.\d{1,3}){3}(:\d{2,5})?$',
-    ).hasMatch(raw);
+    final valid = RegExp(r'^\d{1,3}(\.\d{1,3}){3}(:\d{2,5})?$').hasMatch(raw);
     if (valid != _hostValid) setState(() => _hostValid = valid);
   }
 
@@ -84,9 +82,7 @@ class _RemoteSectionState extends State<RemoteSection> {
     setState(() => _busy = false);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível conectar ao desktop.'),
-        ),
+        const SnackBar(content: Text('Não foi possível conectar ao desktop.')),
       );
     }
   }
@@ -112,9 +108,9 @@ class _RemoteSectionState extends State<RemoteSection> {
     });
   }
 
-  Future<void> _send(RemoteAction action) async {
+  Future<void> _send(RemoteAction action, {int? index}) async {
     await _session.send(
-      RemoteCommand(id: _nonce(), action: action),
+      RemoteCommand(id: _nonce(), action: action, index: index),
     );
   }
 
@@ -127,7 +123,8 @@ class _RemoteSectionState extends State<RemoteSection> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final connected = _session.mode != RemoteMode.idle &&
+    final connected =
+        _session.mode != RemoteMode.idle &&
         (_status == RemoteSessionStatus.connected);
 
     return Column(
@@ -146,10 +143,7 @@ class _RemoteSectionState extends State<RemoteSection> {
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          'remote.subtitle'.tr(),
-          style: theme.textTheme.bodySmall,
-        ),
+        Text('remote.subtitle'.tr(), style: theme.textTheme.bodySmall),
         const SizedBox(height: 12),
         if (_session.mode == RemoteMode.idle) ...[
           TextField(
@@ -254,13 +248,68 @@ class _RemoteSectionState extends State<RemoteSection> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'remote.weblink_waiting'.tr(),
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('remote.weblink_waiting'.tr(), style: theme.textTheme.bodySmall),
         ],
         const SizedBox(height: 8),
+        _buildLiturgyMirror(theme),
+        const SizedBox(height: 8),
         _buildPlayerControls(theme),
+      ],
+    );
+  }
+
+  /// Espelho da liturgia do desktop: mesma lista, tap = liturgy.select.
+  Widget _buildLiturgyMirror(ThemeData theme) {
+    final st = _state;
+    final items = st?.liturgyItems ?? const <RemoteLiturgyItem>[];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final selected = st?.liturgySelectedIndex;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'remote.liturgy'.tr(),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ...items.map((item) {
+          final isSel = item.index == selected;
+          return ListTile(
+            key: Key('remote-liturgy-${item.index}'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              item.done ? TablerIcons.check : TablerIcons.circle,
+              size: 18,
+              color: isSel
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+            title: Text(
+              item.title ?? item.type,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isSel ? FontWeight.w700 : FontWeight.w400,
+                color: item.done
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            tileColor: isSel
+                ? theme.colorScheme.primary.withValues(alpha: 0.10)
+                : null,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            onTap: () => _send(RemoteAction.liturgySelect, index: item.index),
+            onLongPress: () =>
+                _send(RemoteAction.liturgyToggleDone, index: item.index),
+          );
+        }),
       ],
     );
   }

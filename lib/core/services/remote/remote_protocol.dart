@@ -25,7 +25,13 @@ enum RemoteAction {
   setVolume('player.setVolume'),
   seek('player.seek'),
   setMode('player.setMode'),
-  open('player.open');
+  open('player.open'),
+  // Liturgia no desktop — prioridade (multiplos monitores + projetor).
+  liturgyNext('liturgy.next'),
+  liturgyPrevious('liturgy.previous'),
+  liturgySelect('liturgy.select'),
+  liturgyToggleDone('liturgy.toggleDone'),
+  liturgyState('liturgy.state');
 
   const RemoteAction(this.wire);
   final String wire;
@@ -58,11 +64,9 @@ class RemoteCommand extends RemoteMessage {
     this.position,
     this.mode,
     this.hymnId,
-  })  : assert(
-          volume == null || (volume >= 0 && volume <= 100),
-          'volume 0-100',
-        ),
-        assert(position == null || !position.isNegative, 'seek >= 0');
+    this.index,
+  }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
+       assert(position == null || !position.isNegative, 'seek >= 0');
 
   final String id;
   final RemoteAction action;
@@ -71,6 +75,9 @@ class RemoteCommand extends RemoteMessage {
   final Duration? position;
   final String? mode;
   final int? hymnId;
+
+  /// Índice do item da liturgia (liturgy.select/toggleDone).
+  final int? index;
 
   @override
   String encode() {
@@ -84,9 +91,25 @@ class RemoteCommand extends RemoteMessage {
       if (position != null) 'positionMs': position!.inMilliseconds,
       if (mode != null) 'mode': mode,
       if (hymnId != null) 'hymnId': hymnId,
+      if (index != null) 'value': index,
     };
     return jsonEncode(map);
   }
+}
+
+/// Item da liturgia do desktop espelhado no APK.
+class RemoteLiturgyItem {
+  const RemoteLiturgyItem({
+    required this.index,
+    required this.type,
+    required this.title,
+    required this.done,
+  });
+
+  final int index;
+  final String type;
+  final String? title;
+  final bool done;
 }
 
 /// Alvo → APK: estado COMPLETO do player (push na conexão e após comandos).
@@ -103,6 +126,8 @@ class RemotePlayerState extends RemoteMessage {
     required this.volume,
     required this.canPrevious,
     required this.canNext,
+    this.liturgyItems = const [],
+    this.liturgySelectedIndex,
   });
 
   final int? hymnId;
@@ -116,6 +141,10 @@ class RemotePlayerState extends RemoteMessage {
   final int volume;
   final bool canPrevious;
   final bool canNext;
+
+  /// Espelho da liturgia do desktop (v1.1) — vazio em peers antigos.
+  final List<RemoteLiturgyItem> liturgyItems;
+  final int? liturgySelectedIndex;
 
   @override
   String encode() {
@@ -147,8 +176,7 @@ class RemoteAck extends RemoteMessage {
   final bool ok;
 
   @override
-  String encode() =>
-      jsonEncode({'v': 1, 'type': 'ack', 'id': id, 'ok': ok});
+  String encode() => jsonEncode({'v': 1, 'type': 'ack', 'id': id, 'ok': ok});
 }
 
 /// Erro de protocolo (ação desconhecida, token inválido etc.).
@@ -161,12 +189,12 @@ class RemoteError extends RemoteMessage {
 
   @override
   String encode() => jsonEncode({
-        'v': 1,
-        'type': 'error',
-        'id': id,
-        'code': code,
-        if (message != null) 'message': message,
-      });
+    'v': 1,
+    'type': 'error',
+    'id': id,
+    'code': code,
+    if (message != null) 'message': message,
+  });
 }
 
 /// Heartbeat: cada lado manda a cada 15s; 10s sem resposta = conexão morta.
@@ -316,7 +344,10 @@ class RemotePairing {
   static String generateToken([Random? random]) {
     final rng = random ?? Random.secure();
     return String.fromCharCodes(
-      List.generate(6, (_) => _alphabet.codeUnitAt(rng.nextInt(_alphabet.length))),
+      List.generate(
+        6,
+        (_) => _alphabet.codeUnitAt(rng.nextInt(_alphabet.length)),
+      ),
     );
   }
 
