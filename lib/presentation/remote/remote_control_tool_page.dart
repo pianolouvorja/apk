@@ -24,6 +24,7 @@ class RemoteControlToolPage extends StatefulWidget {
 class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
   StreamSubscription? _sub;
   RemotePlayerState? _state;
+  double? _dragVolume;
 
   @override
   void initState() {
@@ -41,12 +42,13 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
     super.dispose();
   }
 
-  Future<void> _send(RemoteAction action, {int? index}) async {
+  Future<void> _send(RemoteAction action, {int? index, int? volume}) async {
     await RemoteSession.instance.send(
       RemoteCommand(
         id: 't${DateTime.now().microsecondsSinceEpoch}',
         action: action,
         index: index,
+        volume: volume,
       ),
     );
   }
@@ -211,14 +213,22 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                             const Icon(TablerIcons.volume, size: 18),
                             Expanded(
                               child: Slider(
-                                value: (st.volume).clamp(0, 100).toDouble(),
+                                value:
+                                    _dragVolume ??
+                                    (st.volume).clamp(0, 100).toDouble(),
                                 max: 100,
-                                onChanged: (v) => _send(
-                                  RemoteAction.setVolume,
-                                  // volume vai no value do command
-                                ),
-                                onChangeEnd: (v) =>
-                                    _send(RemoteAction.setVolume),
+                                // Só envia ao soltar: evita flood WS no drag.
+                                onChanged: (v) =>
+                                    setState(() => _dragVolume = v),
+                                onChangeEnd: (v) async {
+                                  await _send(
+                                    RemoteAction.setVolume,
+                                    volume: v.round(),
+                                  );
+                                  if (mounted) {
+                                    setState(() => _dragVolume = null);
+                                  }
+                                },
                               ),
                             ),
                             const Icon(TablerIcons.volume2, size: 18),
