@@ -113,7 +113,8 @@ class _RemoteControlSheetState extends State<RemoteControlSheet> {
                   for (final r in controllable)
                     ButtonSegment(
                       value: r,
-                      label: Text(r == 'desktop' ? 'remote.desktop'.tr() : r),
+                      // role cru ('desktop'/'web') vira chave i18n
+                      label: Text('remote.$r'.tr()),
                     ),
                 ],
                 selected: {_targetRole},

@@ -281,6 +281,7 @@
     "desktop": "Desktop",
     "playing": "Tocando",
     "paused": "Pausado",
-    "volume": "Volume"
+    "volume": "Volume",
+    "web": "Web"
   }
 }

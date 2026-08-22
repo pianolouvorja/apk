@@ -282,6 +282,7 @@
     "desktop": "Desktop",
     "playing": "Playing",
     "paused": "Paused",
-    "volume": "Volume"
+    "volume": "Volume",
+    "web": "Web"
   }
 }
