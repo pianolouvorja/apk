@@ -222,7 +222,9 @@
     "bible": "Biblia",
     "bibleSubtitle": "Libros, capitulos y versiculos",
     "timer": "Cronometro",
-    "timerSubtitle": "Cronometro y cuenta regresiva"
+    "timerSubtitle": "Cronometro y cuenta regresiva",
+    "remoteControl": "Control Remoto",
+    "remoteControlSubtitle": "Controla la liturgia y el reproductor del desktop"
   },
   "search": {
     "title": "Búsqueda",
@@ -309,6 +311,10 @@
     "scanQr": "Escanear QR del desktop",
     "qrInvalid": "QR inválido — genera uno nuevo en Configuración del desktop",
     "torch": "Linterna",
-    "cameraError": "No se pudo abrir la cámara. Verifica el permiso en Configuración de Android > Apps > LouvorJA > Permisos."
+    "cameraError": "No se pudo abrir la cámara. Verifica el permiso en Configuración de Android > Apps > LouvorJA > Permisos.",
+    "connectFirst": "Conéctate primero en Configuración → Control Remoto",
+    "noLiturgy": "Sin liturgia en el desktop",
+    "mirroring": "Espejado del desktop — toca para ejecutar",
+    "controlsMoved": "Los controles están en Herramientas → Control Remoto"
   }
 }

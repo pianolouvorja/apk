@@ -11,6 +11,8 @@ import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_she
     show StageModule;
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
+import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
+import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,8 +79,33 @@ class LiturgyPage extends StatelessWidget {
   LiturgyWeekday _todayWeekday() => weekdayFromDart(DateTime.now().weekday);
 }
 
-class _LiturgyView extends StatelessWidget {
+class _LiturgyView extends StatefulWidget {
   const _LiturgyView();
+
+  @override
+  State<_LiturgyView> createState() => _LiturgyViewState();
+}
+
+/// Enquanto o Controle Remoto (desktop) está conectado, a liturgia do
+/// DESKTOP substitui a local: mesma lista, tap = executa no desktop.
+/// Desconectou, volta pra liturgia local do APK.
+class _LiturgyViewState extends State<_LiturgyView> {
+  StreamSubscription? _remoteSub;
+  RemotePlayerState? _remoteState;
+
+  @override
+  void initState() {
+    super.initState();
+    _remoteSub = RemoteSession.instance.states.listen((s) {
+      if (mounted) setState(() => _remoteState = s);
+    });
+  }
+
+  @override
+  void dispose() {
+    _remoteSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,9 +133,111 @@ class _LiturgyView extends StatelessWidget {
           if (state is! LiturgyLoaded) {
             return const Center(child: CircularProgressIndicator());
           }
+          // Espelho: Controle Remoto conectado → liturgia do DESKTOP.
+          if (_remoteState?.liturgyItems.isNotEmpty == true &&
+              RemoteSession.instance.mode == RemoteMode.desktop) {
+            return _RemoteLiturgyMirror(state: _remoteState!);
+          }
           return _Body(state: state);
         },
       ),
+    );
+  }
+}
+
+/// Lista espelhada da liturgia do desktop. Tap = liturgy.select.
+class _RemoteLiturgyMirror extends StatelessWidget {
+  final RemotePlayerState state;
+
+  const _RemoteLiturgyMirror({required this.state});
+
+  Future<void> _select(int index, {bool toggleDone = false}) {
+    return RemoteSession.instance.send(
+      RemoteCommand(
+        id: 'l${DateTime.now().microsecondsSinceEpoch}',
+        action: toggleDone
+            ? RemoteAction.liturgyToggleDone
+            : RemoteAction.liturgySelect,
+        index: index,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        // Banner de espelho
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+          child: Row(
+            children: [
+              Icon(
+                TablerIcons.deviceTv,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'remote.mirroring'.tr(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(8),
+            itemCount: state.liturgyItems.length,
+            itemBuilder: (context, i) {
+              final item = state.liturgyItems[i];
+              final isSel = item.index == state.liturgySelectedIndex;
+              final isCat = item.type == 'category';
+              return ListTile(
+                key: Key('mirror-liturgy-${item.index}'),
+                dense: !isCat,
+                leading: isCat
+                    ? const Icon(TablerIcons.folder, size: 20)
+                    : Icon(
+                        item.done
+                            ? TablerIcons.circleCheck
+                            : TablerIcons.circle,
+                        size: 18,
+                        color: isSel
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                title: Text(
+                  item.title ?? item.type,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: (isCat ? theme.textTheme.titleSmall : null)?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                tileColor: isSel
+                    ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                    : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                onTap: isCat ? null : () => _select(item.index),
+                onLongPress: isCat
+                    ? null
+                    : () => _select(item.index, toggleDone: true),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

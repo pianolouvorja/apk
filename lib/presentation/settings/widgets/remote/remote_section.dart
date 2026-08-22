@@ -38,9 +38,7 @@ class _RemoteSectionState extends State<RemoteSection> {
   var _tokenValid = false;
 
   StreamSubscription? _statusSub;
-  StreamSubscription? _statesSub;
   RemoteSessionStatus? _status;
-  RemotePlayerState? _state;
   String? _webUrl;
   var _busy = false;
 
@@ -51,9 +49,6 @@ class _RemoteSectionState extends State<RemoteSection> {
     _tokenCtrl.addListener(_validateToken);
     _statusSub = _session.status.listen((s) {
       if (mounted) setState(() => _status = s);
-    });
-    _statesSub = _session.states.listen((s) {
-      if (mounted) setState(() => _state = s);
     });
   }
 
@@ -67,7 +62,6 @@ class _RemoteSectionState extends State<RemoteSection> {
   @override
   void dispose() {
     _statusSub?.cancel();
-    _statesSub?.cancel();
     _hostCtrl.dispose();
     _tokenCtrl.dispose();
     super.dispose();
@@ -145,19 +139,7 @@ class _RemoteSectionState extends State<RemoteSection> {
     if (!mounted) return;
     setState(() {
       _webUrl = null;
-      _state = null;
     });
-  }
-
-  Future<void> _send(RemoteAction action, {int? index}) async {
-    await _session.send(
-      RemoteCommand(id: _nonce(), action: action, index: index),
-    );
-  }
-
-  String _nonce() {
-    final ts = DateTime.now().microsecondsSinceEpoch;
-    return 'c$ts';
   }
 
   @override
@@ -314,136 +296,10 @@ class _RemoteSectionState extends State<RemoteSection> {
           Text('remote.weblink_waiting'.tr(), style: theme.textTheme.bodySmall),
         ],
         const SizedBox(height: 8),
-        _buildLiturgyMirror(theme),
-        const SizedBox(height: 8),
-        _buildPlayerControls(theme),
+        // Controles migraram para Ferramentas > Controle Remoto.
+        Text('remote.controlsMoved'.tr(), style: theme.textTheme.bodySmall),
       ],
     );
-  }
-
-  /// Espelho da liturgia do desktop: mesma lista, tap = liturgy.select.
-  Widget _buildLiturgyMirror(ThemeData theme) {
-    final st = _state;
-    final items = st?.liturgyItems ?? const <RemoteLiturgyItem>[];
-    if (items.isEmpty) return const SizedBox.shrink();
-    final selected = st?.liturgySelectedIndex;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'remote.liturgy'.tr(),
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        ...items.map((item) {
-          final isSel = item.index == selected;
-          return ListTile(
-            key: Key('remote-liturgy-${item.index}'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              item.done ? TablerIcons.check : TablerIcons.circle,
-              size: 18,
-              color: isSel
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-            title: Text(
-              item.title ?? item.type,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: isSel ? FontWeight.w700 : FontWeight.w400,
-                color: item.done
-                    ? theme.colorScheme.onSurfaceVariant
-                    : theme.colorScheme.onSurface,
-              ),
-            ),
-            tileColor: isSel
-                ? theme.colorScheme.primary.withValues(alpha: 0.10)
-                : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            onTap: () => _send(RemoteAction.liturgySelect, index: item.index),
-            onLongPress: () =>
-                _send(RemoteAction.liturgyToggleDone, index: item.index),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildPlayerControls(ThemeData theme) {
-    final st = _state;
-    if (st == null) {
-      return Text(
-        'remote.no_state'.tr(),
-        key: const Key('remote-no-state'),
-        style: theme.textTheme.bodySmall,
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (st.title != null)
-          Text(
-            st.title!,
-            style: theme.textTheme.titleSmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        Text(
-          '${_fmt(st.position)} / ${_fmt(st.duration)}'
-          '${st.slideCount > 0 ? '  ·  ${st.slideIndex + 1}/${st.slideCount}' : ''}',
-          style: theme.textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              key: const Key('remote-cmd-previous'),
-              tooltip: 'remote.previous'.tr(),
-              onPressed: st.canPrevious
-                  ? () => _send(RemoteAction.previous)
-                  : null,
-              icon: const Icon(TablerIcons.playerSkipBack),
-            ),
-            IconButton.filled(
-              key: const Key('remote-cmd-toggle'),
-              tooltip: st.playing ? 'remote.pause'.tr() : 'remote.play'.tr(),
-              onPressed: () =>
-                  _send(st.playing ? RemoteAction.pause : RemoteAction.play),
-              icon: Icon(
-                st.playing ? TablerIcons.playerPause : TablerIcons.playerPlay,
-              ),
-            ),
-            IconButton(
-              key: const Key('remote-cmd-next'),
-              tooltip: 'remote.next'.tr(),
-              onPressed: st.canNext ? () => _send(RemoteAction.next) : null,
-              icon: const Icon(TablerIcons.playerSkipForward),
-            ),
-            IconButton(
-              key: const Key('remote-cmd-stop'),
-              tooltip: 'remote.stop'.tr(),
-              onPressed: () => _send(RemoteAction.stop),
-              icon: const Icon(TablerIcons.playerStop),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  String _fmt(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
   }
 }
 
