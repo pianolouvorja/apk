@@ -283,6 +283,26 @@
     "playing": "Reproduciendo",
     "paused": "Pausado",
     "volume": "Volumen",
-    "web": "Web"
+    "web": "Web",
+    "subtitle": "Controla el LouvorJA del desktop desde aquí",
+    "desktop_host": "Desktop (IP:puerto)",
+    "desktop_hint": "ej: 192.168.1.50:7081",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "mode_desktop": "Modo desktop",
+    "mode_web": "Modo web link",
+    "start_weblink": "Iniciar web link",
+    "weblink_url": "Dirección del web link",
+    "weblink_waiting": "Esperando conexión…",
+    "no_state": "Sin estado del reproductor",
+    "status_connected": "Conectado",
+    "status_connecting": "Conectando…",
+    "status_listening": "Esperando desktop…",
+    "status_disconnected": "Desconectado",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "stop": "Detener",
+    "next": "Siguiente",
+    "previous": "Anterior"
   }
 }

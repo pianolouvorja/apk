@@ -283,6 +283,26 @@
     "playing": "Playing",
     "paused": "Paused",
     "volume": "Volume",
-    "web": "Web"
+    "web": "Web",
+    "subtitle": "Control the LouvorJA desktop from here",
+    "desktop_host": "Desktop (IP:port)",
+    "desktop_hint": "e.g. 192.168.1.50:7081",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "mode_desktop": "Desktop mode",
+    "mode_web": "Web link mode",
+    "start_weblink": "Start web link",
+    "weblink_url": "Web link address",
+    "weblink_waiting": "Waiting for connection…",
+    "no_state": "No player state",
+    "status_connected": "Connected",
+    "status_connecting": "Connecting…",
+    "status_listening": "Waiting for desktop…",
+    "status_disconnected": "Disconnected",
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "next": "Next",
+    "previous": "Previous"
   }
 }
