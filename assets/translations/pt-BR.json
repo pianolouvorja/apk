@@ -303,6 +303,9 @@
     "stop": "Parar",
     "next": "Próxima",
     "previous": "Anterior",
-    "liturgy": "Liturgia do desktop"
+    "liturgy": "Liturgia do desktop",
+    "token": "Token de emparelhamento",
+    "scanQr": "Escanear QR do desktop",
+    "qrInvalid": "QR inválido — gere um novo nas Configurações do desktop"
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 /// Seção "Controle Remoto" das Configurações.
@@ -32,7 +33,9 @@ class _RemoteSectionState extends State<RemoteSection> {
   RemoteSession get _session => widget.session ?? RemoteSession.instance;
 
   final _hostCtrl = TextEditingController();
+  final _tokenCtrl = TextEditingController();
   var _hostValid = false;
+  var _tokenValid = false;
 
   StreamSubscription? _statusSub;
   StreamSubscription? _statesSub;
@@ -45,6 +48,7 @@ class _RemoteSectionState extends State<RemoteSection> {
   void initState() {
     super.initState();
     _hostCtrl.addListener(_validateHost);
+    _tokenCtrl.addListener(_validateToken);
     _statusSub = _session.status.listen((s) {
       if (mounted) setState(() => _status = s);
     });
@@ -65,7 +69,44 @@ class _RemoteSectionState extends State<RemoteSection> {
     _statusSub?.cancel();
     _statesSub?.cancel();
     _hostCtrl.dispose();
+    _tokenCtrl.dispose();
     super.dispose();
+  }
+
+  void _validateToken() {
+    final raw = _tokenCtrl.text.trim();
+    final valid = RegExp(r'^[A-Za-z0-9]{4,12}$').hasMatch(raw);
+    if (valid != _tokenValid) setState(() => _tokenValid = valid);
+  }
+
+  /// QR do desktop: louvorja://connect?host=IP:PORTA&token=XXXX
+  Future<void> _scanQr() async {
+    final code = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const _RemoteQrScannerPage()),
+    );
+    if (code == null) return;
+    final uri = Uri.tryParse(code);
+    if (uri == null || uri.scheme != 'louvorja') {
+      _snack('remote.qrInvalid'.tr());
+      return;
+    }
+    final host = uri.queryParameters['host'];
+    final token = uri.queryParameters['token'];
+    if (host == null || token == null) {
+      _snack('remote.qrInvalid'.tr());
+      return;
+    }
+    setState(() {
+      _hostCtrl.text = host;
+      _tokenCtrl.text = token;
+    });
+    _validateHost();
+    _validateToken();
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _connectDesktop() async {
@@ -76,7 +117,7 @@ class _RemoteSectionState extends State<RemoteSection> {
     final ok = await _session.connectDesktop(
       host: host,
       port: port,
-      token: RemotePairing.generateToken(),
+      token: _tokenCtrl.text.trim(),
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -157,6 +198,28 @@ class _RemoteSectionState extends State<RemoteSection> {
             ),
             keyboardType: TextInputType.url,
             enabled: !_busy,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('remote-token'),
+            controller: _tokenCtrl,
+            decoration: InputDecoration(
+              labelText: 'remote.token'.tr(),
+              hintText: 'XXXXXX',
+              border: const OutlineInputBorder(),
+              isDense: true,
+              counterText: '',
+            ),
+            maxLength: 12,
+            textCapitalization: TextCapitalization.characters,
+            enabled: !_busy,
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('remote-scan-qr'),
+            onPressed: !_busy ? _scanQr : null,
+            icon: const Icon(TablerIcons.qrcode),
+            label: Text('remote.scanQr'.tr()),
           ),
           const SizedBox(height: 8),
           Row(
@@ -381,5 +444,25 @@ class _RemoteSectionState extends State<RemoteSection> {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$m:$s';
+  }
+}
+
+/// Página de leitura do QR de emparelhamento do desktop.
+class _RemoteQrScannerPage extends StatelessWidget {
+  const _RemoteQrScannerPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('remote.scanQr'.tr())),
+      body: MobileScanner(
+        onDetect: (capture) {
+          final barcodes = capture.barcodes;
+          if (barcodes.isEmpty) return;
+          final value = barcodes.first.rawValue;
+          if (value != null) Navigator.of(context).pop(value);
+        },
+      ),
+    );
   }
 }
