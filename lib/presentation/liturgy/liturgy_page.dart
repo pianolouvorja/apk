@@ -96,6 +96,8 @@ class _LiturgyViewState extends State<_LiturgyView> {
   @override
   void initState() {
     super.initState();
+    // Liturgia pode abrir depois do state inicial chegar pelo WS.
+    _remoteState = RemoteSession.instance.lastState;
     _remoteSub = RemoteSession.instance.states.listen((s) {
       if (mounted) setState(() => _remoteState = s);
     });

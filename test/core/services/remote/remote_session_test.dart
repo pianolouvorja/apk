@@ -53,11 +53,10 @@ void main() {
     expect(ok, isTrue);
     expect(session.mode, RemoteMode.desktop);
 
-    final gotState = Completer<void>();
-    session.states.listen((_) {
-      if (!gotState.isCompleted) gotState.complete();
-    });
-    await gotState.future.timeout(const Duration(seconds: 5));
+    // Regressão: state chega no upgrade WS, antes da UI assinar `states`.
+    // Session precisa cachear/repassar o frame sem depender de listener tardio.
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    expect(session.lastState?.title, 'To God Be the Glory');
     await desktop?.close();
   });
 

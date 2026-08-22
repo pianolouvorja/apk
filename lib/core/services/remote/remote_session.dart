@@ -24,6 +24,8 @@ class RemoteSession {
 
   DesktopConnection? _desktop;
   WebLinkServer? _web;
+  StreamSubscription<RemotePlayerState>? _desktopStateSub;
+  StreamSubscription<DesktopConnectionStatus>? _desktopStatusSub;
   RemoteMode _mode = RemoteMode.idle;
 
   final _statesCtrl = StreamController<RemotePlayerState>.broadcast();
@@ -41,19 +43,30 @@ class RemoteSession {
     required String token,
   }) async {
     await _teardown();
+    lastState = null;
     final conn = DesktopConnection();
+
+    // Assina ANTES de abrir o socket. O desktop manda state imediatamente
+    // no upgrade WS; assinar depois perde esse frame em Stream.broadcast.
+    _desktopStateSub = conn.states.listen((s) {
+      lastState = s;
+      _statesCtrl.add(s);
+    });
+    _desktopStatusSub = conn.status.listen(
+      (s) => _statusCtrl.add(s.toSessionStatus()),
+    );
+
     final ok = await conn.connect(host: host, port: port, token: token);
     if (!ok) {
+      await _desktopStateSub?.cancel();
+      await _desktopStatusSub?.cancel();
+      _desktopStateSub = null;
+      _desktopStatusSub = null;
       await conn.dispose();
       return false;
     }
     _desktop = conn;
     _mode = RemoteMode.desktop;
-    conn.states.listen((s) {
-      lastState = s;
-      _statesCtrl.add(s);
-    });
-    conn.status.listen((s) => _statusCtrl.add(s.toSessionStatus()));
     _statusCtrl.add(RemoteSessionStatus.connected);
     return true;
   }
@@ -99,8 +112,8 @@ class RemoteSession {
   /// Estado mais recente vindo do alvo (desktop push ou web push).
   /// Usado pela UI e como cache para resync em reconexão.
   RemotePlayerState? lastState;
-  
-// (v1: o APK é controlador — estado flui alvo→APK. pushState reservado v2.)
+
+  // (v1: o APK é controlador — estado flui alvo→APK. pushState reservado v2.)
 
   /// Hook de teste: injeta um estado como se tivesse vindo do alvo.
   void debugInjectStateForTest({
@@ -133,6 +146,10 @@ class RemoteSession {
   }
 
   Future<void> _teardown() async {
+    await _desktopStateSub?.cancel();
+    await _desktopStatusSub?.cancel();
+    _desktopStateSub = null;
+    _desktopStatusSub = null;
     await _desktop?.dispose();
     _desktop = null;
     await _web?.stop();
@@ -152,8 +169,8 @@ enum RemoteSessionStatus { disconnected, connecting, connected, listening }
 
 extension on DesktopConnectionStatus {
   RemoteSessionStatus toSessionStatus() => switch (this) {
-        DesktopConnectionStatus.disconnected => RemoteSessionStatus.disconnected,
-        DesktopConnectionStatus.connecting => RemoteSessionStatus.connecting,
-        DesktopConnectionStatus.connected => RemoteSessionStatus.connected,
-      };
+    DesktopConnectionStatus.disconnected => RemoteSessionStatus.disconnected,
+    DesktopConnectionStatus.connecting => RemoteSessionStatus.connecting,
+    DesktopConnectionStatus.connected => RemoteSessionStatus.connected,
+  };
 }

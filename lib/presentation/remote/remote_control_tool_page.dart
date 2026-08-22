@@ -28,6 +28,8 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
   @override
   void initState() {
     super.initState();
+    // Tool pode abrir depois do state push inicial: hidrata do cache.
+    _state = RemoteSession.instance.lastState;
     _sub = RemoteSession.instance.states.listen((s) {
       if (mounted) setState(() => _state = s);
     });
