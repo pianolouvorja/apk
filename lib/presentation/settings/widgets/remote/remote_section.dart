@@ -448,20 +448,59 @@ class _RemoteSectionState extends State<RemoteSection> {
 }
 
 /// Página de leitura do QR de emparelhamento do desktop.
-class _RemoteQrScannerPage extends StatelessWidget {
+class _RemoteQrScannerPage extends StatefulWidget {
   const _RemoteQrScannerPage();
+
+  @override
+  State<_RemoteQrScannerPage> createState() => _RemoteQrScannerPageState();
+}
+
+class _RemoteQrScannerPageState extends State<_RemoteQrScannerPage> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
+  bool _popped = false;
+  bool _torch = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_popped || !mounted) return;
+    final raw = capture.barcodes.firstOrNull?.rawValue;
+    if (raw == null || raw.isEmpty) return;
+    _popped = true;
+    Navigator.of(context).pop(raw);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('remote.scanQr'.tr())),
+      appBar: AppBar(
+        title: Text('remote.scanQr'.tr()),
+        actions: [
+          IconButton(
+            icon: Icon(_torch ? TablerIcons.boltOff : TablerIcons.bolt),
+            tooltip: 'remote.torch'.tr(),
+            onPressed: () {
+              setState(() => _torch = !_torch);
+              _controller.toggleTorch();
+            },
+          ),
+        ],
+      ),
       body: MobileScanner(
-        onDetect: (capture) {
-          final barcodes = capture.barcodes;
-          if (barcodes.isEmpty) return;
-          final value = barcodes.first.rawValue;
-          if (value != null) Navigator.of(context).pop(value);
-        },
+        controller: _controller,
+        onDetect: _onDetect,
+        errorBuilder: (context, error) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('remote.cameraError'.tr(), textAlign: TextAlign.center),
+          ),
+        ),
       ),
     );
   }

@@ -306,6 +306,8 @@
     "liturgy": "Liturgia do desktop",
     "token": "Token de emparelhamento",
     "scanQr": "Escanear QR do desktop",
-    "qrInvalid": "QR inválido — gere um novo nas Configurações do desktop"
+    "qrInvalid": "QR inválido — gere um novo nas Configurações do desktop",
+    "torch": "Lanterna",
+    "cameraError": "Não foi possível abrir a câmera. Verifique a permissão em Configurações do Android > Apps > LouvorJA > Permissões."
   }
 }
