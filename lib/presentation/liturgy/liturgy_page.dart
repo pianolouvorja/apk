@@ -16,6 +16,8 @@ import 'dart:io' show File;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:louvorja_piano_mobile/core/services/liturgy/ja_liturgy_parser.dart';
+import 'package:louvorja_piano_mobile/core/services/liturgy/media_duration_reader.dart';
+import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -147,6 +149,9 @@ class _LiturgyViewState extends State<_LiturgyView> {
       return;
     }
 
+    // Duração automática: música do catálogo; vídeo/áudio local do arquivo.
+    await _enrichDurations(imported);
+
     final bloc = context.read<LiturgyBloc>();
     var added = 0;
     var skipped = 0;
@@ -183,6 +188,68 @@ class _LiturgyViewState extends State<_LiturgyView> {
             .tr(namedArgs: {'added': '$added', 'skipped': '$skipped'})),
       ),
     );
+  }
+
+  /// Preenche durationMs: música via índice da API; vídeo/áudio via
+  /// leitura do MP4 local (caminho existente no dispositivo).
+  Future<void> _enrichDurations(JaLiturgy imported) async {
+    final musicIds = <int>{};
+    final localPaths = <String>{};
+    for (final items in imported.values) {
+      for (final item in items) {
+        if (item.type == LiturgyItemType.music && item.musicId != null) {
+          musicIds.add(item.musicId!);
+        } else if (item.durationMs == 0 &&
+            item.filePath != null &&
+            (item.type == LiturgyItemType.video ||
+                item.type == LiturgyItemType.otherFiles)) {
+          localPaths.add(item.filePath!);
+        }
+      }
+    }
+    if (musicIds.isEmpty && localPaths.isEmpty) return;
+
+    // Música: duração do índice (offline-first: cache da API).
+    Map<int, int> durationsById = {};
+    if (musicIds.isNotEmpty) {
+      try {
+        final api = LouvorjaApiImpl(
+          baseUrl: 'https://api.louvorja.com.br/json_db',
+          filesUrl: 'https://api.louvorja.com.br/file',
+          apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
+        );
+        final index = await api.fetchMusicIndex();
+        durationsById = {
+          for (final h in index)
+            if (h.durationMs != null) h.id: h.durationMs!,
+        };
+      } catch (_) {
+        // sem rede: durações ficam 0
+      }
+    }
+
+    // Vídeo/áudio local: parse MP4.
+    final probedPaths = <String, int>{};
+    for (final path in localPaths) {
+      final ms = await MediaDurationReader.readMs(path);
+      if (ms > 0) probedPaths[path] = ms;
+    }
+
+    for (final day in imported.keys) {
+      final items = imported[day]!;
+      for (var i = 0; i < items.length; i++) {
+        final item = items[i];
+        if (item.type == LiturgyItemType.music &&
+            item.musicId != null &&
+            item.durationMs == 0) {
+          final d = durationsById[item.musicId!];
+          if (d != null) items[i] = item.copyWith(durationMs: d);
+        } else if (item.filePath != null &&
+            probedPaths.containsKey(item.filePath)) {
+          items[i] = item.copyWith(durationMs: probedPaths[item.filePath!]!);
+        }
+      }
+    }
   }
 
   @override
