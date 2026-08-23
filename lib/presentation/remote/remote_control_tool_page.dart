@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_page.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
@@ -53,6 +54,13 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
     );
   }
 
+  void _openLiturgy(BuildContext context) {
+    // Liturgia espelhada: módulo de Liturgia, não o controle remoto.
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const LiturgyPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -79,75 +87,37 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Liturgia espelhada — tap executa no desktop
-                Expanded(
-                  child: st.liturgyItems.isEmpty
-                      ? Center(child: Text('remote.noLiturgy'.tr()))
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.s3,
-                            vertical: AppSpacing.s2,
-                          ),
-                          itemCount: st.liturgyItems.length,
-                          itemBuilder: (context, i) {
-                            final item = st.liturgyItems[i];
-                            final isSel = item.index == st.liturgySelectedIndex;
-                            final isCat = item.type == 'category';
-                            return ListTile(
-                              key: Key('remote-liturgy-${item.index}'),
-                              dense: !isCat,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 4,
+                // A liturgia espelhada vive no MÓDULO de Liturgia (mesma UI,
+                // mesma personalização). Aqui só status + atalho.
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.s4),
+                  child: Card(
+                    child: ListTile(
+                      key: const Key('remote-open-liturgy'),
+                      leading: Icon(
+                        TablerIcons.clipboardText,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        st.liturgyItems.isEmpty
+                            ? 'remote.noLiturgy'.tr()
+                            : 'remote.liturgyInLiturgyModule'.tr(
+                                args: ['${st.liturgyItems.length}'],
                               ),
-                              leading: isCat
-                                  ? const Icon(TablerIcons.folder, size: 20)
-                                  : Icon(
-                                      item.done
-                                          ? TablerIcons.circleCheck
-                                          : TablerIcons.circle,
-                                      size: 18,
-                                      color: isSel
-                                          ? theme.colorScheme.primary
-                                          : theme.colorScheme.onSurfaceVariant,
-                                    ),
-                              title: Text(
-                                item.title ?? item.type,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style:
-                                    (isCat
-                                            ? theme.textTheme.titleSmall
-                                            : theme.textTheme.bodyMedium)
-                                        ?.copyWith(
-                                          fontWeight: isSel || isCat
-                                              ? FontWeight.w700
-                                              : FontWeight.w400,
-                                        ),
-                              ),
-                              tileColor: isSel
-                                  ? theme.colorScheme.primary.withValues(
-                                      alpha: 0.12,
-                                    )
-                                  : null,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              onTap: isCat
-                                  ? null
-                                  : () => _send(
-                                      RemoteAction.liturgySelect,
-                                      index: item.index,
-                                    ),
-                              onLongPress: () => _send(
-                                RemoteAction.liturgyToggleDone,
-                                index: item.index,
-                              ),
-                            );
-                          },
-                        ),
+                      ),
+                      subtitle: st.liturgyItems.isEmpty
+                          ? null
+                          : Text('remote.openLiturgyModule'.tr()),
+                      trailing: const Icon(TablerIcons.chevronRight),
+                      onTap: st.liturgyItems.isEmpty
+                          ? null
+                          : () => _openLiturgy(context),
+                    ),
+                  ),
                 ),
                 // Controles de mídia — visual de controle remoto
-                Container(
+                Expanded(
+                  child: Container(
                   padding: const EdgeInsets.all(AppSpacing.s4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainer,
@@ -235,6 +205,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                           ],
                         ),
                       ],
+                      ),
                     ),
                   ),
                 ),

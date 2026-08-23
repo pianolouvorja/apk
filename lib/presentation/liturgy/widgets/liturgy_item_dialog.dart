@@ -127,6 +127,7 @@ void showLiturgyItemDialog(
   LiturgyItem? existing,
   String? parentCategoryId,
   bool isCategory = false,
+  void Function(LiturgyItem item)? onSubmit,
 }) {
   final isEditing = existing != null;
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
@@ -545,7 +546,9 @@ void showLiturgyItemDialog(
                                 ? scheduledAt.value!.toIso8601String()
                                 : null,
                           );
-                          if (isEditing) {
+                          if (onSubmit != null) {
+                            onSubmit(item);
+                          } else if (isEditing) {
                             context.read<LiturgyBloc>().add(
                               LiturgyUpdateItem(item),
                             );

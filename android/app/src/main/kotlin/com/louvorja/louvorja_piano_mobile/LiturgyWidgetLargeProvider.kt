@@ -16,7 +16,7 @@ class LiturgyWidgetLargeProvider : AppWidgetProvider() {
 
     companion object {
         const val PREFS_NAME = "FlutterSharedPreferences"
-        const val ITEMS_PREFIX = "liturgy_items_"
+        const val ITEMS_PREFIX = "flutter.liturgy_items_"
         const val ACTION_UPDATE = "com.louvorja.louvorja_piano_mobile.ACTION_WIDGET_LARGE"
     }
 

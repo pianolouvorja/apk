@@ -31,6 +31,7 @@ import 'package:louvorja_piano_mobile/presentation/liturgy/weekday_math.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/bloc/liturgy_bloc.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/services/liturgy_item_executor.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/widgets/liturgy_item_dialog.dart';
+import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_avulsa_page.dart';
 
 /// Converte LiturgyItemType enum para a chave snake_case do i18n.
 String _typeToKey(dynamic type) {
@@ -258,8 +259,36 @@ class _LiturgyViewState extends State<_LiturgyView> {
     super.dispose();
   }
 
+  Future<void> _confirmDeleteDay(BuildContext context, LiturgyLoaded state) async {
+    final l10nDay = 'liturgy.days.${state.selectedDay.name}'.tr();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('liturgy.deleteDayTitle'.tr()),
+        content: Text('liturgy.deleteDayConfirm'.tr(args: [l10nDay])),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('liturgy.deleteDay'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<LiturgyBloc>().add(LiturgyClearDay());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('liturgy.title'.tr()),
@@ -270,13 +299,61 @@ class _LiturgyViewState extends State<_LiturgyView> {
             icon: const Icon(TablerIcons.fileImport, size: 22),
             onPressed: () => _importJaFile(context),
           ),
+          IconButton(
+            key: const Key('liturgy-avulsa-btn'),
+            tooltip: 'liturgy.avulsa.openAvulsa'.tr(),
+            icon: const Icon(TablerIcons.calendarPlus, size: 22),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const LiturgyAvulsaPage(),
+              ),
+            ),
+          ),
+          BlocBuilder<LiturgyBloc, LiturgyState>(
+            builder: (context, state) {
+              final locked = state is LiturgyLoaded && state.locked;
+              return IconButton(
+                key: const Key('liturgy-lock-toggle'),
+                tooltip: locked
+                    ? 'liturgy.unlock'.tr()
+                    : 'liturgy.lock'.tr(),
+                icon: Icon(
+                  locked ? TablerIcons.lock : TablerIcons.lockOpen,
+                  size: 22,
+                  color: locked ? theme.colorScheme.primary : null,
+                ),
+                onPressed: state is LiturgyLoaded
+                    ? () => context
+                          .read<LiturgyBloc>()
+                          .add(LiturgyLockToggled())
+                    : null,
+              );
+            },
+          ),
+          BlocBuilder<LiturgyBloc, LiturgyState>(
+            builder: (context, state) {
+              final loaded = state is LiturgyLoaded;
+              final hasItems = loaded && state.items.isNotEmpty;
+              final locked = loaded && state.locked;
+              return IconButton(
+                key: const Key('liturgy-delete-day'),
+                tooltip: 'liturgy.deleteDay'.tr(),
+                icon: const Icon(TablerIcons.trash, size: 22),
+                onPressed: hasItems && !locked
+                    ? () => _confirmDeleteDay(context, state)
+                    : null,
+              );
+            },
+          ),
           const StageClearButton(),
           const StageCastButton(module: StageModule.liturgy),
         ],
       ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
-          if (state is LiturgyLoaded && state.items.isNotEmpty) {
+          if (state is LiturgyLoaded &&
+              state.items.isNotEmpty &&
+              !state.locked) {
             return FloatingActionButton(
               onPressed: () => showLiturgyItemDialog(context, isCategory: true),
               child: const Icon(TablerIcons.plus, size: 24),
@@ -340,7 +417,7 @@ class _RemoteLiturgyMirror extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'remote.mirroring'.tr(),
+                  'remote.mirroringLocked'.tr(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
@@ -648,6 +725,7 @@ class _BodyState extends State<_Body> {
                   items: widget.state.items,
                   collapsedCategories: _collapsedCategories,
                   onToggleCollapse: _toggleCollapse,
+                  locked: widget.state.locked,
                 ),
         ),
         _NotesBar(notes: widget.state.notes),
@@ -785,11 +863,13 @@ class _Timeline extends StatelessWidget {
   final List<LiturgyItem> items;
   final Set<String> collapsedCategories;
   final ValueChanged<String> onToggleCollapse;
+  final bool locked;
 
   const _Timeline({
     required this.items,
     required this.collapsedCategories,
     required this.onToggleCollapse,
+    this.locked = false,
   });
 
   @override
@@ -797,9 +877,42 @@ class _Timeline extends StatelessWidget {
     final theme = Theme.of(context);
     final segments = _buildSegments(items);
 
-    return ListView.builder(
+    void reorderSegments(int oldIndex, int newIndex) {
+      final bloc = context.read<LiturgyBloc>();
+      // Move bloco: categoria + seus filhos (ou item avulso)
+      final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+      final seg = segments.removeAt(oldIndex);
+      segments.insert(adjusted.clamp(0, segments.length), seg);
+      // Reconstruir lista plana na nova ordem
+      final flat = <LiturgyItem>[];
+      for (final s in segments) {
+        flat.add(s.item);
+        flat.addAll(s.children.map((c) => c.item));
+      }
+      bloc.add(LiturgyItemsReordered(flat));
+    }
+
+    return ReorderableListView.builder(
       padding: const EdgeInsets.all(AppSpacing.s3),
+      buildDefaultDragHandles: false,
       itemCount: segments.length,
+      onReorder: reorderSegments,
+      proxyDecorator: (child, index, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final elevation = Tween<double>(begin: 0, end: 6)
+              .animate(animation)
+              .value;
+          return Material(
+            elevation: elevation,
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.transparent,
+            shadowColor: Colors.transparent,
+            child: child,
+          );
+        },
+        child: child,
+      ),
       itemBuilder: (context, segIndex) {
         final seg = segments[segIndex];
         final isCategory = seg.item.type == LiturgyItemType.category;
@@ -807,7 +920,7 @@ class _Timeline extends StatelessWidget {
             isCategory && collapsedCategories.contains(seg.item.id);
 
         return Column(
-          key: ValueKey(seg.item.id),
+          key: ValueKey('seg-${seg.item.id}'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _ItemCard(
@@ -816,6 +929,7 @@ class _Timeline extends StatelessWidget {
               theme: theme,
               hasChildren: seg.children.isNotEmpty,
               isCollapsed: isCollapsed,
+              draggable: !locked,
               onToggleCollapse: isCategory && seg.children.isNotEmpty
                   ? () => onToggleCollapse(seg.item.id)
                   : null,
@@ -870,6 +984,7 @@ class _ItemCard extends StatelessWidget {
   final bool hasChildren;
   final bool isCollapsed;
   final VoidCallback? onToggleCollapse;
+  final bool draggable;
 
   const _ItemCard({
     required this.item,
@@ -879,6 +994,7 @@ class _ItemCard extends StatelessWidget {
     this.hasChildren = false,
     this.isCollapsed = false,
     this.onToggleCollapse,
+    this.draggable = false,
   });
 
   @override
@@ -960,6 +1076,19 @@ class _ItemCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (draggable && !isChild)
+              ReorderableDragStartListener(
+                key: Key('drag-${item.id}'),
+                index: 0,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 2),
+                  child: Icon(
+                    TablerIcons.gripVertical,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
             if (isCategory && hasChildren && onToggleCollapse != null)
               IconButton(
                 icon: Icon(
@@ -1084,6 +1213,17 @@ class _EmptyState extends StatelessWidget {
               onPressed: () => showLiturgyItemDialog(context, isCategory: true),
               icon: const Icon(TablerIcons.plus, size: 18),
               label: Text('liturgy.addItem'.tr()),
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            OutlinedButton.icon(
+              key: const Key('liturgy-open-avulsa'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LiturgyAvulsaPage(),
+                ),
+              ),
+              icon: const Icon(TablerIcons.calendarPlus, size: 18),
+              label: Text('liturgy.avulsa.openAvulsa'.tr()),
             ),
           ],
         ),

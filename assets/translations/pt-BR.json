@@ -130,7 +130,19 @@
     "setStartTime": "Definir inicio",
     "importJa": "Importar liturgia (.ja)",
     "importJaInvalid": "Arquivo .ja inválido",
-    "importJaDone": "Importado: {added} adicionados, {skipped} duplicados"
+    "importJaDone": "Importado: {added} adicionados, {skipped} duplicados",
+    "lock": "Bloquear liturgia",
+    "unlock": "Desbloquear liturgia",
+    "deleteDay": "Excluir liturgia do dia",
+    "deleteDayTitle": "Excluir liturgia",
+    "deleteDayConfirm": "Excluir todos os itens da liturgia de {0}?",
+    "avulsa": {
+      "title": "Liturgia Avulsa",
+      "changeDate": "Alterar data",
+      "empty": "Nenhuma liturgia para esta data. Toque em + para começar.",
+      "deleteConfirm": "Excluir a liturgia avulsa desta data?",
+      "openAvulsa": "Liturgia avulsa"
+    }
   },
   "bible": {
     "title": "Bíblia",
@@ -317,6 +329,9 @@
     "connectFirst": "Conecte primeiro em Configurações → Controle Remoto",
     "noLiturgy": "Nenhuma liturgia no desktop",
     "mirroring": "Espelhado do desktop — toque para executar",
-    "controlsMoved": "Os controles estão em Ferramentas → Controle Remoto"
+    "controlsMoved": "Os controles estão em Ferramentas → Controle Remoto",
+    "liturgyInLiturgyModule": "Liturgia espelhada: {0} itens",
+    "openLiturgyModule": "Ver no módulo de Liturgia",
+    "mirroringLocked": "Liturgia espelhada do desktop (bloqueada)"
   }
 }

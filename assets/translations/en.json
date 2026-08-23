@@ -131,7 +131,19 @@
     },
     "importJa": "Import liturgy (.ja)",
     "importJaInvalid": "Invalid .ja file",
-    "importJaDone": "Imported: {added} added, {skipped} duplicates"
+    "importJaDone": "Imported: {added} added, {skipped} duplicates",
+    "lock": "Lock liturgy",
+    "unlock": "Unlock liturgy",
+    "deleteDay": "Delete day liturgy",
+    "deleteDayTitle": "Delete liturgy",
+    "deleteDayConfirm": "Delete all liturgy items of {0}?",
+    "avulsa": {
+      "title": "Standalone Liturgy",
+      "changeDate": "Change date",
+      "empty": "No liturgy for this date. Tap + to start.",
+      "deleteConfirm": "Delete the standalone liturgy of this date?",
+      "openAvulsa": "Standalone liturgy"
+    }
   },
   "bible": {
     "title": "Bible",
@@ -318,6 +330,9 @@
     "connectFirst": "Connect first in Settings → Remote Control",
     "noLiturgy": "No liturgy on the desktop",
     "mirroring": "Mirrored from desktop — tap to run",
-    "controlsMoved": "Controls are in Tools → Remote Control"
+    "controlsMoved": "Controls are in Tools → Remote Control",
+    "liturgyInLiturgyModule": "Mirrored liturgy: {0} items",
+    "openLiturgyModule": "Open in Liturgy module",
+    "mirroringLocked": "Mirrored from desktop (locked)"
   }
 }
