@@ -348,7 +348,7 @@
     "previous": "Anterior",
     "liturgy": "Liturgia do desktop",
     "token": "Token de emparelhamento",
-    "scanQr": "Escanear QR do desktop",
+    "scanQr": "Escanear QR",
     "qrInvalid": "QR inválido — gere um novo nas Configurações do desktop",
     "torch": "Lanterna",
     "cameraError": "Não foi possível abrir a câmera. Verifique a permissão em Configurações do Android > Apps > LouvorJA > Permissões.",
@@ -358,6 +358,9 @@
     "controlsMoved": "Os controles estão em Ferramentas → Controle Remoto",
     "liturgyInLiturgyModule": "Liturgia espelhada: {count} itens",
     "openLiturgyModule": "Ver no módulo de Liturgia",
-    "mirroringLocked": "Liturgia espelhada do desktop (bloqueada)"
+    "mirroringLocked": "Liturgia espelhada do desktop (bloqueada)",
+    "wsDetected": "Conexão desktop detectada — conectando…",
+    "p2pDetected": "Pareamento web P2P detectado — gere a resposta…",
+    "unknownQr": "QR não reconhecido — tentando P2P…"
   }
 }
