@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/unified_qr_scanner.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -284,7 +285,20 @@ class _RemoteSectionState extends State<RemoteSection> {
         if (_session.mode == RemoteMode.web &&
             _status == RemoteSessionStatus.listening &&
             _webUrl != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
+          // QR único: web escaneia com a webcam e conecta direto no WS.
+          Center(
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(8),
+              child: QrImageView(
+                data: _webUrl!,
+                size: 220,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Text('remote.weblink_url'.tr(), style: theme.textTheme.bodySmall),
           const SizedBox(height: 4),
           InkWell(
