@@ -49,6 +49,7 @@ dependencies:
 
   # App version info (lê version do pubspec em runtime)
   package_info_plus: ^8.3.0
+  device_info_plus: ^11.5.0
 
   # Media
   cached_network_image: ^3.4.1

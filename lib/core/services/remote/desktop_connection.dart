@@ -83,6 +83,11 @@ class DesktopConnection {
     return true;
   }
 
+  /// Envia a identificação do aparelho ao desktop (logo após conectar).
+  void sendHello({required String device, String? appVersion}) {
+    _ws?.add(RemoteHello(device: device, appVersion: appVersion).encode());
+  }
+
   void _listen() {
     _ws!.listen(
       (data) {
@@ -100,6 +105,8 @@ class DesktopConnection {
             _ws?.add(const RemotePong().encode());
           case RemotePong():
             break;
+          case RemoteHello():
+            break; // servidor não envia hello; resposta do APK é no connect
           case RemoteCommand():
             break; // cliente não recebe comandos no v1
         }

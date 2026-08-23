@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:louvorja_piano_mobile/core/services/remote/desktop_connection.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
+import 'package:louvorja_piano_mobile/core/services/remote/remote_device_name.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/web_link_server.dart';
 
 enum RemoteMode { idle, desktop, web }
@@ -79,6 +80,10 @@ class RemoteSession {
     _desktop = conn;
     _mode = RemoteMode.desktop;
     _statusCtrl.add(RemoteSessionStatus.connected);
+    // Identifica o aparelho para o desktop mostrar quem conectou.
+    final device = await RemoteDeviceName.get() ?? 'Piano LouvorJA';
+    final version = await RemoteDeviceName.appVersion();
+    conn.sendHello(device: device, appVersion: version);
     return true;
   }
 

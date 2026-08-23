@@ -214,6 +214,25 @@ class RemotePong extends RemoteMessage {
   String encode() => jsonEncode({'v': 1, 'type': 'pong'});
 }
 
+/// APK → desktop: identificação do aparelho logo após conectar.
+class RemoteHello extends RemoteMessage {
+  const RemoteHello({required this.device, this.appVersion});
+
+  /// Nome legível do dispositivo (ex.: modelo do aparelho).
+  final String device;
+
+  /// Versão do app APK (ex.: 0.1.86).
+  final String? appVersion;
+
+  @override
+  String encode() => jsonEncode({
+    'v': 1,
+    'type': 'hello',
+    'device': device,
+    if (appVersion != null) 'appVersion': appVersion,
+  });
+}
+
 /// Parser tolerante: NUNCA lança. Tudo que viola o protocolo v1 → null.
 class RemoteProtocol {
   static RemoteMessage? parse(String raw) {
@@ -244,6 +263,14 @@ class RemoteProtocol {
           id: id,
           code: code,
           message: msg is String ? msg : null,
+        );
+      case 'hello':
+        final device = decoded['device'];
+        if (device is! String || device.isEmpty) return null;
+        final ver = decoded['appVersion'];
+        return RemoteHello(
+          device: device,
+          appVersion: ver is String ? ver : null,
         );
       case 'ping':
         return const RemotePing();
