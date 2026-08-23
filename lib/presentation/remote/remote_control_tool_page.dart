@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_page.dart';
+import 'package:louvorja_piano_mobile/presentation/remote/p2p_pairing_page.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
@@ -71,6 +72,16 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
       appBar: AppBar(
         title: Text('remote.title'.tr()),
         actions: [
+          IconButton(
+            key: const Key('remote-p2p-open'),
+            tooltip: 'liturgy.p2p.title'.tr(),
+            icon: const Icon(TablerIcons.qrcode),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const P2pPairingPage(),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'remote.disconnect'.tr(),
             icon: const Icon(TablerIcons.power),

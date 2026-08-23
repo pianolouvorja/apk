@@ -158,6 +158,17 @@
       "imported": "Imported {count} scheduled items",
       "invalidXml": "Invalid .xml file",
       "notPorted": "LouvorJA Delphi file recognized ({name}), but this feature is not ported yet — coming in a future version."
+    },
+    "p2p": {
+      "title": "P2P control (QR)",
+      "hintScan": "Point the camera at the QR shown on the web (Settings → Remote → P2P)",
+      "hintShow": "Show this QR to the web's webcam — or copy the text below and paste it there",
+      "negotiating": "Negotiating connection…",
+      "badOffer": "Invalid QR (not a web offer)",
+      "connected": "Connected!",
+      "disconnected": "Disconnected",
+      "scannerUnavailable": "Scanner unavailable on this platform",
+      "copyFallback": "If the QR doesn't fit/read, copy and paste on the web:"
     }
   },
   "bible": {
