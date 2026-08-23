@@ -128,7 +128,10 @@
     "messages": {
       "confirmDelete": "¿Eliminar este elemento?",
       "toggleCollapse": "Expandir o contraer"
-    }
+    },
+    "importJa": "Importar liturgia (.ja)",
+    "importJaInvalid": "Archivo .ja inválido",
+    "importJaDone": "Importado: {added} añadidos, {skipped} duplicados"
   },
   "bible": {
     "title": "Biblia",

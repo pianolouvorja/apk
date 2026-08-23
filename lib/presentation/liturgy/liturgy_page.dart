@@ -12,6 +12,10 @@ import 'package:louvorja_piano_mobile/presentation/hymns/stage_customization_she
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_video_button.dart';
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
+import 'dart:io' show File;
+
+import 'package:file_picker/file_picker.dart';
+import 'package:louvorja_piano_mobile/core/services/liturgy/ja_liturgy_parser.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -103,6 +107,67 @@ class _LiturgyViewState extends State<_LiturgyView> {
     });
   }
 
+  /// Importa liturgia exportada pelo LouvorJA Delphi (arquivo .ja).
+  ///
+  /// Merge por dia: itens com mesmo (tipo+nome+musicaId/filePath) não
+  /// duplicam; o restante é adicionado ao fim do dia correspondente.
+  Future<void> _importJaFile(BuildContext context) async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['ja'],
+      withData: true,
+    );
+    final data = picked?.files.singleOrNull?.bytes;
+    if (data == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final JaLiturgy imported;
+    try {
+      imported = JaLiturgyParser.parse(decodeJaFile(data));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('liturgy.importJaInvalid'.tr())),
+      );
+      return;
+    }
+
+    final bloc = context.read<LiturgyBloc>();
+    var added = 0;
+    var skipped = 0;
+    // O arquivo usa 1..7 (segunda..domingo); o app usa o dia SELECIONADO.
+    // Importa para o dia correspondente de cada item, mudando o dia atual
+    // quando o .ja só tem um.
+    for (final day in imported.keys) {
+      final target = LiturgyWeekdayJa.fromJaDay(day);
+      if (target == null) continue;
+      bloc.add(LiturgyDayChanged(target));
+      // precisa do estado do dia: lemos direto do repo via bloc state flow
+      final state = await bloc.stream
+          .firstWhere((s) => s is LiturgyLoaded && s.selectedDay == target)
+          .timeout(const Duration(seconds: 2), onTimeout: null);
+      if (state is! LiturgyLoaded) continue;
+      final existing = state.items;
+      for (final item in imported[day]!) {
+        final dup = existing.any((e) =>
+            e.type == item.type &&
+            e.name == item.name &&
+            e.musicId == item.musicId &&
+            e.filePath == item.filePath);
+        if (dup) {
+          skipped++;
+          continue;
+        }
+        bloc.add(LiturgyAddItem(item));
+        added++;
+      }
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('liturgy.importJaDone'
+            .tr(namedArgs: {'added': '$added', 'skipped': '$skipped'})),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _remoteSub?.cancel();
@@ -114,9 +179,15 @@ class _LiturgyViewState extends State<_LiturgyView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('liturgy.title'.tr()),
-        actions: const [
-          StageClearButton(),
-          StageCastButton(module: StageModule.liturgy),
+        actions: [
+          IconButton(
+            key: const Key('liturgy-import-ja'),
+            tooltip: 'liturgy.importJa'.tr(),
+            icon: const Icon(TablerIcons.fileImport, size: 22),
+            onPressed: () => _importJaFile(context),
+          ),
+          const StageClearButton(),
+          const StageCastButton(module: StageModule.liturgy),
         ],
       ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(

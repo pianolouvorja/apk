@@ -127,7 +127,10 @@
       "scheduledFor": "Agendado para"
     },
     "totalDuration": "Duracao total",
-    "setStartTime": "Definir inicio"
+    "setStartTime": "Definir inicio",
+    "importJa": "Importar liturgia (.ja)",
+    "importJaInvalid": "Arquivo .ja inválido",
+    "importJaDone": "Importado: {added} adicionados, {skipped} duplicados"
   },
   "bible": {
     "title": "Bíblia",
