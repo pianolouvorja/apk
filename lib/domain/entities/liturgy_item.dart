@@ -15,15 +15,17 @@ enum LiturgyWeekday {
 }
 
 extension LiturgyWeekdayJa on LiturgyWeekday {
-  /// Dia do formato .ja do Delphi (1=segunda .. 7=domingo).
+  /// Dia do formato .ja do Delphi (1=domingo .. 7=sábado).
+  /// Confirmedo no fonte Delphi: NOMES_DIAS[1]='Domingo'...[7]='Sábado'
+  /// (fmCopiaLiturgiaDia.pas). Chave 7 = Escola Sabatina (sábado manhã).
   static LiturgyWeekday? fromJaDay(int day) => switch (day) {
-    1 => LiturgyWeekday.monday,
-    2 => LiturgyWeekday.tuesday,
-    3 => LiturgyWeekday.wednesday,
-    4 => LiturgyWeekday.thursday,
-    5 => LiturgyWeekday.friday,
-    6 => LiturgyWeekday.saturday,
-    7 => LiturgyWeekday.sunday,
+    1 => LiturgyWeekday.sunday,
+    2 => LiturgyWeekday.monday,
+    3 => LiturgyWeekday.tuesday,
+    4 => LiturgyWeekday.wednesday,
+    5 => LiturgyWeekday.thursday,
+    6 => LiturgyWeekday.friday,
+    7 => LiturgyWeekday.saturday,
     _ => null,
   };
 }
