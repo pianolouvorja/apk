@@ -139,6 +139,33 @@ void main() {
     });
   });
 
+
+  group('RemoteHello', () {
+    test('encodifica hello com device', () {
+      final hello = const RemoteHello(device: 'SM-A155F', appVersion: '0.1.86');
+      final map = jsonDecode(hello.encode()) as Map<String, dynamic>;
+      expect(map['v'], 1);
+      expect(map['type'], 'hello');
+      expect(map['device'], 'SM-A155F');
+      expect(map['appVersion'], '0.1.86');
+    });
+
+    test('parser aceita hello válido', () {
+      final msg = RemoteProtocol.parse(
+        jsonEncode({'v': 1, 'type': 'hello', 'device': 'Pixel 8'}),
+      )!;
+      expect(msg, isA<RemoteHello>());
+      expect((msg as RemoteHello).device, 'Pixel 8');
+    });
+
+    test('parser rejeita hello sem device', () {
+      expect(
+        RemoteProtocol.parse(jsonEncode({'v': 1, 'type': 'hello'})),
+        isNull,
+      );
+    });
+  });
+
   group('ack / error / ping / pong', () {
     test('ack ok', () {
       const raw = '{"v":1,"type":"ack","id":"a1","ok":true}';
