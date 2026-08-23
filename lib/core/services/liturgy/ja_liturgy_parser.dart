@@ -155,5 +155,16 @@ abstract final class JaLiturgyParser {
   }
 }
 
-/// Decodifica bytes (UTF-8 com BOM) — usado pelo FilePicker.
-String decodeJaFile(List<int> bytes) => utf8.decode(bytes, allowMalformed: true);
+/// Decodifica bytes do arquivo .ja — usado pelo FilePicker.
+///
+/// O Delphi LouvorJA exporta em ANSI (Windows-1252); versões mais novas ou
+/// arquivos convertidos vêm em UTF-8 (com ou sem BOM). Estratégia: tenta
+/// UTF-8 estrito; se falhar, decodifica como Windows-1252 (Latin-1
+/// supervisionado — nunca lança, preserva acentos do ANSI).
+String decodeJaFile(List<int> bytes) {
+  try {
+    return utf8.decode(bytes); // estrito: bytes inválidos lançam
+  } on FormatException {
+    return latin1.decode(bytes, allowInvalid: false);
+  }
+}

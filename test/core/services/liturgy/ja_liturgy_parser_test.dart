@@ -1,5 +1,7 @@
 library;
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/core/services/liturgy/ja_liturgy_parser.dart';
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
@@ -109,8 +111,20 @@ void main() {
     expect(map[7]!.length, 2);
   });
 
+  test('decodeJaFile: UTF-8 com BOM preserva acentos', () {
+    final bytes = utf8.encode('\uFEFFsubitem=Música Missão');
+    expect(decodeJaFile(bytes), contains('Música'));
+  });
+
+  test('decodeJaFile: ANSI (cp1252) decodifica acentos', () {
+    // 'Música' em Windows-1252: M ú s i c a
+    final bytes = [0x4D, 0xFA, 0x73, 0x69, 0x63, 0x61];
+    expect(decodeJaFile(bytes), 'Música');
+  });
+
   test('dir vazio → otherFiles', () {
     final empty = _sample.replaceAll('dir=C:\\Users\\iasdn\\Videos\\video.mp4', 'dir=');
     expect(JaLiturgyParser.parse(empty)[7]![1].type, LiturgyItemType.otherFiles);
   });
 }
+// (testes de encoding no bloco abaixo)
