@@ -38,6 +38,8 @@ class P2pRemoteClient {
       final answer = await _pc!.createAnswer();
       await _pc!.setLocalDescription(answer);
       // Espera ICE gathering (candidatos precisam ir no answer do QR).
+      // flutter_webrtc: onIceGatheringState não dispara de forma confiável;
+      // contamos candidatos via onCandidate + timeout como rede de segurança.
       await _waitIce(_pc!);
       final local = await _pc!.getLocalDescription();
       if (local == null) return null;
@@ -50,9 +52,12 @@ class P2pRemoteClient {
   Future<void> _waitIce(RTCPeerConnection pc) async {
     final completer = Completer<void>();
     var done = false;
+    // contagem não é necessária: idle timer cobre
+    Timer? idle;
     void finish() {
       if (!done && !completer.isCompleted) {
         done = true;
+        idle?.cancel();
         completer.complete();
       }
     }
@@ -60,9 +65,19 @@ class P2pRemoteClient {
     pc.onIceGatheringState = (state) {
       if (state == RTCIceGatheringState.RTCIceGatheringStateComplete) finish();
     };
-    // timeout: segue com o que tiver
-    Timer(const Duration(seconds: 5), finish);
-    return completer.future;
+    // flutter_webrtc nativo entrega candidatos via onCandidate —
+    // alguns builds não sinalizam gatheringState=complete.
+    pc.onIceCandidate = (candidate) {
+      // candidato recebido — reinicia idle timer
+      // Sem novo candidato por 1.5s após o primeiro → considera completo.
+      idle?.cancel();
+      idle = Timer(const Duration(milliseconds: 1500), finish);
+    };
+    // timeout máximo: segue com o que tiver
+    Timer(const Duration(seconds: 8), finish);
+    await completer.future;
+    // Evita disparo tardio de finish() depois do await.
+    done = true;
   }
 
   void _bind(RTCDataChannel ch) {
