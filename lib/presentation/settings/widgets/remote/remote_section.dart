@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:louvorja_piano_mobile/presentation/remote/unified_qr_scanner.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 /// Seção "Controle Remoto" das Configurações.
@@ -79,6 +80,17 @@ class _RemoteSectionState extends State<RemoteSection> {
       MaterialPageRoute(builder: (_) => const _RemoteQrScannerPage()),
     );
     if (code == null) return;
+    // QR do web (P2P WebRTC): JSON {type:'offer', sdp:...}
+    final trimmed = code.trim();
+    if (trimmed.startsWith('{')) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => P2pPairingFromScanPage(offerJson: trimmed),
+        ),
+      );
+      return;
+    }
     final uri = Uri.tryParse(code);
     if (uri == null || uri.scheme != 'louvorja') {
       _snack('remote.qrInvalid'.tr());

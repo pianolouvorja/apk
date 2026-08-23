@@ -72,13 +72,13 @@ class _UnifiedQrScannerState extends State<UnifiedQrScanner> {
     } else if (type == QrType.p2pOffer) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => _P2pPairingFromScan(offerJson: value),
+          builder: (_) => P2pPairingFromScanPage(offerJson: value),
         ),
       );
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => _P2pPairingFromScan(offerJson: value),
+          builder: (_) => P2pPairingFromScanPage(offerJson: value),
         ),
       );
     }
@@ -93,14 +93,14 @@ class _UnifiedQrScannerState extends State<UnifiedQrScanner> {
   }
 }
 
-class _P2pPairingFromScan extends StatefulWidget {
+class P2pPairingFromScanPage extends StatefulWidget {
   final String offerJson;
-  const _P2pPairingFromScan({required this.offerJson});
+  const P2pPairingFromScanPage({super.key, required this.offerJson});
   @override
-  State<_P2pPairingFromScan> createState() => _P2pPairingFromScanState();
+  State<P2pPairingFromScanPage> createState() => _P2pPairingFromScanPageState();
 }
 
-class _P2pPairingFromScanState extends State<_P2pPairingFromScan> {
+class _P2pPairingFromScanPageState extends State<P2pPairingFromScanPage> {
   String? _answerJson;
   String _log = '';
   late P2pRemoteClient _client;
