@@ -112,12 +112,29 @@ class _LiturgyViewState extends State<_LiturgyView> {
   /// Merge por dia: itens com mesmo (tipo+nome+musicaId/filePath) não
   /// duplicam; o restante é adicionado ao fim do dia correspondente.
   Future<void> _importJaFile(BuildContext context) async {
+    // FileType.custom com extensão .ja não é selecionável no Android SAF
+    // (mime desconhecido) — aceita qualquer arquivo e valida a extensão.
     final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['ja'],
+      type: FileType.any,
       withData: true,
     );
-    final data = picked?.files.singleOrNull?.bytes;
+    final file = picked?.files.singleOrNull;
+    if (file == null) return;
+    if (!file.name.toLowerCase().endsWith('.ja')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('liturgy.importJaInvalid'.tr())),
+      );
+      return;
+    }
+    // withData pode não preencher bytes em alguns providers: lê do path.
+    var data = file.bytes;
+    if (data == null && file.path != null) {
+      try {
+        data = await File(file.path!).readAsBytes();
+      } catch (_) {
+        data = null;
+      }
+    }
     if (data == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final JaLiturgy imported;
