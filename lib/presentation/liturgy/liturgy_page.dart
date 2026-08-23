@@ -197,37 +197,31 @@ class _LiturgyViewState extends State<_LiturgyView> {
 
     var added = 0;
     var skipped = 0;
-    // O arquivo usa 1..7 (segunda..domingo); o app usa o dia SELECIONADO.
-    // Importa para o dia correspondente de cada item, mudando o dia atual
-    // quando o .ja só tem um.
+    // Escrita DIRETA no repository — determinística, sem corrida de eventos
+    // do bloc (bug real: DayChanged/ClearDay/AddItem na fila podiam limpar o
+    // dia recém-importado ou ler estado parcial).
     for (final day in imported.keys) {
       final target = LiturgyWeekdayJa.fromJaDay(day);
       if (target == null) continue;
-      // Sobrescrever: limpa o dia antes de importar.
-      if (overwrite) {
-        bloc.add(LiturgyDayChanged(target));
-        await bloc.stream
-            .firstWhere((s) => s is LiturgyLoaded && s.selectedDay == target)
-            .timeout(const Duration(seconds: 2), onTimeout: null);
-        bloc.add(LiturgyClearDay());
-        await bloc.stream.firstWhere(
-            (s) => s is LiturgyLoaded && s.items.isEmpty,
-            orElse: () => bloc.state);
-      }
-      bloc.add(LiturgyDayChanged(target));
-      final state = await bloc.stream
-          .firstWhere((s) => s is LiturgyLoaded && s.selectedDay == target)
-          .timeout(const Duration(seconds: 2), onTimeout: null);
-      if (state is! LiturgyLoaded) continue;
-      final existing = state.items;
-      for (final item in imported[day]!) {
-        if (existing.any((e) => isDup(e, item))) {
+      final incoming = imported[day]!;
+      final existing = bloc.repository.loadItems(target);
+      final next = overwrite ? <LiturgyItem>[] : [...existing];
+      for (final item in incoming) {
+        if (next.any((e) => isDup(e, item))) {
           skipped++;
           continue;
         }
-        bloc.add(LiturgyAddItem(item));
+        next.add(item);
         added++;
       }
+      await bloc.repository.saveItems(target, next);
+    }
+    // Recarrega o dia corrente pra UI refletir a importação.
+    if (context.mounted) {
+      final state = bloc.state;
+      final current =
+          state is LiturgyLoaded ? state.selectedDay : null;
+      bloc.add(LiturgyDayChanged(current ?? LiturgyWeekday.saturday));
     }
     messenger.showSnackBar(
       SnackBar(
