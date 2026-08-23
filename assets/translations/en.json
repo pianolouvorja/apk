@@ -136,7 +136,7 @@
     "unlock": "Unlock liturgy",
     "deleteDay": "Delete day liturgy",
     "deleteDayTitle": "Delete liturgy",
-    "deleteDayConfirm": "Delete all liturgy items of {0}?",
+    "deleteDayConfirm": "Delete all liturgy items of {count}?",
     "avulsa": {
       "title": "Standalone Liturgy",
       "changeDate": "Change date",
@@ -336,7 +336,7 @@
     "noLiturgy": "No liturgy on the desktop",
     "mirroring": "Mirrored from desktop — tap to run",
     "controlsMoved": "Controls are in Tools → Remote Control",
-    "liturgyInLiturgyModule": "Mirrored liturgy: {0} items",
+    "liturgyInLiturgyModule": "Mirrored liturgy: {count} items",
     "openLiturgyModule": "Open in Liturgy module",
     "mirroringLocked": "Mirrored from desktop (locked)"
   }

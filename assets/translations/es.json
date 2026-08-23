@@ -136,7 +136,7 @@
     "unlock": "Desbloquear liturgia",
     "deleteDay": "Eliminar liturgia del día",
     "deleteDayTitle": "Eliminar liturgia",
-    "deleteDayConfirm": "¿Eliminar todos los itens de la liturgia de {0}?",
+    "deleteDayConfirm": "¿Eliminar todos los itens de la liturgia de {count}?",
     "avulsa": {
       "title": "Liturgia Suelta",
       "changeDate": "Cambiar fecha",
@@ -336,7 +336,7 @@
     "noLiturgy": "Sin liturgia en el desktop",
     "mirroring": "Espejado del desktop — toca para ejecutar",
     "controlsMoved": "Los controles están en Herramientas → Control Remoto",
-    "liturgyInLiturgyModule": "Liturgia reflejada: {0} itens",
+    "liturgyInLiturgyModule": "Liturgia reflejada: {count} itens",
     "openLiturgyModule": "Ver en el módulo de Liturgia",
     "mirroringLocked": "Reflejada del escritorio (bloqueada)"
   }

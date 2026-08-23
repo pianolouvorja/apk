@@ -104,11 +104,17 @@ class RemoteLiturgyItem {
     required this.type,
     required this.title,
     required this.done,
+    this.subtitle,
+    this.isCategory = false,
+    this.accentColor,
   });
 
   final int index;
   final String type;
   final String? title;
+  final String? subtitle;
+  final bool isCategory;
+  final String? accentColor;
   final bool done;
 }
 
@@ -373,6 +379,12 @@ class RemoteProtocol {
                 type: e['type'] as String,
                 title: e['title'] is String ? e['title'] as String? : null,
                 done: e['done'] == true,
+                subtitle:
+                    e['subtitle'] is String ? e['subtitle'] as String? : null,
+                isCategory: e['isCategory'] == true,
+                accentColor: e['accentColor'] is String
+                    ? e['accentColor'] as String?
+                    : null,
               ),
             );
           }

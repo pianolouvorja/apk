@@ -314,7 +314,7 @@ class _LiturgyViewState extends State<_LiturgyView> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('liturgy.deleteDayTitle'.tr()),
-        content: Text('liturgy.deleteDayConfirm'.tr(args: [l10nDay])),
+        content: Text('liturgy.deleteDayConfirm'.tr(namedArgs: {'count': l10nDay})),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -446,9 +446,54 @@ class _RemoteLiturgyMirror extends StatelessWidget {
     );
   }
 
+  /// Converte item remoto em LiturgyItem para renderizar o MESMO card do
+  /// módulo (visual idêntico: accent por tipo, ícone, colapso).
+  LiturgyItem _toItem(RemoteLiturgyItem e) {
+    final type = LiturgyItemType.values.firstWhere(
+      (t) => t.name == e.type,
+      orElse: () => LiturgyItemType.category,
+    );
+    return LiturgyItem(
+      id: 'remote-${e.index}',
+      type: type,
+      name: e.title ?? e.type,
+      subtitle: e.subtitle ?? '',
+      done: e.done,
+      accentColor: e.accentColor ?? '',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Agrupa categorias + filhos como a timeline do módulo (flat remote
+    // list não traz categoryId — usa isCategory + ordem).
+    final children = <Widget>[];
+    final items = state.liturgyItems;
+    for (final e in items) {
+      final item = _toItem(e);
+      final isSel = e.index == state.liturgySelectedIndex;
+      final isCat = e.isCategory;
+      children.add(
+        Padding(
+          key: Key('mirror-liturgy-${e.index}'),
+          padding: EdgeInsets.only(
+            left: isCat ? 0 : 32,
+            bottom: isCat ? 0 : 4,
+          ),
+          child: _MirrorItemCard(
+            item: item,
+            isCategory: isCat,
+            theme: theme,
+            selected: isSel,
+            onTap: isCat
+                ? null
+                : () => _select(e.index),
+            onToggleDone: () => _select(e.index, toggleDone: true),
+          ),
+        ),
+      );
+    }
     return Column(
       children: [
         // Banner de espelho
@@ -473,56 +518,129 @@ class _RemoteLiturgyMirror extends StatelessWidget {
                   ),
                 ),
               ),
+              Icon(
+                TablerIcons.lock,
+                size: 14,
+                color: theme.colorScheme.primary,
+              ),
             ],
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(8),
-            itemCount: state.liturgyItems.length,
-            itemBuilder: (context, i) {
-              final item = state.liturgyItems[i];
-              final isSel = item.index == state.liturgySelectedIndex;
-              final isCat = item.type == 'category';
-              return ListTile(
-                key: Key('mirror-liturgy-${item.index}'),
-                dense: !isCat,
-                leading: isCat
-                    ? const Icon(TablerIcons.folder, size: 20)
-                    : Icon(
-                        item.done
-                            ? TablerIcons.circleCheck
-                            : TablerIcons.circle,
-                        size: 18,
-                        color: isSel
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                title: Text(
-                  item.title ?? item.type,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: (isCat ? theme.textTheme.titleSmall : null)?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                tileColor: isSel
-                    ? theme.colorScheme.primary.withValues(alpha: 0.12)
-                    : null,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onTap: isCat ? null : () => _select(item.index),
-                onLongPress: isCat
-                    ? null
-                    : () => _select(item.index, toggleDone: true),
-              );
-            },
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.s3),
+            children: children,
           ),
         ),
       ],
     );
   }
+}
+
+/// Card do espelho: mesmo visual do _ItemCard do módulo, mas ações apontam
+/// pro desktop (select/toggleDone) — read-only localmente.
+class _MirrorItemCard extends StatelessWidget {
+  final LiturgyItem item;
+  final bool isCategory;
+  final ThemeData theme;
+  final bool selected;
+  final VoidCallback? onTap;
+  final VoidCallback onToggleDone;
+
+  const _MirrorItemCard({
+    required this.item,
+    required this.isCategory,
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+    required this.onToggleDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final typeMeta = LiturgyTypeRegistry.metaFor(item.type);
+    final accent = item.accentColor.isNotEmpty
+        ? _parseHexStatic(item.accentColor, theme)
+        : typeMeta.color;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s1),
+      color: selected
+          ? theme.colorScheme.primary.withValues(alpha: 0.12)
+          : isCategory
+          ? accent.withValues(alpha: 0.10)
+          : theme.colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isCategory
+            ? BorderSide(color: accent.withValues(alpha: 0.4), width: 1)
+            : selected
+            ? BorderSide(color: theme.colorScheme.primary, width: 1)
+            : BorderSide.none,
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s3,
+          vertical: AppSpacing.s1,
+        ),
+        leading: Container(
+          width: isCategory ? 36 : 28,
+          height: isCategory ? 36 : 28,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.2),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
+          ),
+          child: Icon(
+            typeMeta.icon,
+            size: isCategory ? 20 : 16,
+            color: accent,
+          ),
+        ),
+        title: Text(
+          item.name.isEmpty
+              ? 'liturgy.types.${_typeToKey(item.type)}'.tr()
+              : item.name,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: isCategory ? FontWeight.w700 : FontWeight.w500,
+            fontSize: isCategory ? null : 14,
+            decoration: item.done ? TextDecoration.lineThrough : null,
+            color: item.done ? theme.colorScheme.onSurfaceVariant : null,
+          ),
+        ),
+        subtitle: item.subtitle.isNotEmpty
+            ? Text(
+                item.subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+              )
+            : null,
+        trailing: GestureDetector(
+          onTap: onToggleDone,
+          child: Icon(
+            item.done ? TablerIcons.circleCheck : TablerIcons.circle,
+            size: 22,
+            color: item.done
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Color _parseHexStatic(String hex, ThemeData theme) {
+  final cleaned = hex.replaceAll('#', '');
+  if (cleaned.length == 6) {
+    return Color(int.parse('FF$cleaned', radix: 16));
+  }
+  if (cleaned.length == 8) {
+    return Color(int.parse(cleaned, radix: 16));
+  }
+  return theme.colorScheme.primary;
 }
 
 class _Body extends StatefulWidget {

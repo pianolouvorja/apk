@@ -102,7 +102,9 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                         st.liturgyItems.isEmpty
                             ? 'remote.noLiturgy'.tr()
                             : 'remote.liturgyInLiturgyModule'.tr(
-                                args: ['${st.liturgyItems.length}'],
+                                namedArgs: {
+                                  'count': '${st.liturgyItems.length}',
+                                },
                               ),
                       ),
                       subtitle: st.liturgyItems.isEmpty
