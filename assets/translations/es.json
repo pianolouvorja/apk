@@ -156,7 +156,8 @@
       "notes": "Notas",
       "addToLiturgy": "Agregar a la liturgia",
       "imported": "Importados {count} ítems agendados",
-      "invalidXml": "Archivo .xml inválido"
+      "invalidXml": "Archivo .xml inválido",
+      "notPorted": "Archivo de LouvorJA Delphi reconocido ({name}), pero este recurso aún no fue portado — llegará en una versión futura."
     }
   },
   "bible": {

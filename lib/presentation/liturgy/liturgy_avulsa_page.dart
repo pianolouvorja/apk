@@ -53,7 +53,20 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
     final picked = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
     var file = picked?.files.singleOrNull;
     if (file == null) return;
-    if (!file.name.toLowerCase().endsWith('.xml')) {
+    final fname = file.name.toLowerCase();
+    const notPorted = [
+      'coletaneasusuario',
+      'favoritos',
+      'videosonusuario',
+      'configpt',
+    ];
+    if (notPorted.any(fname.startsWith)) {
+      messenger.showSnackBar(SnackBar(
+          content: Text('liturgy.scheduled.notPorted'
+              .tr(namedArgs: {'name': file.name}))));
+      return;
+    }
+    if (!fname.endsWith('.xml')) {
       messenger.showSnackBar(SnackBar(
           content: Text('liturgy.scheduled.invalidXml'.tr())));
       return;

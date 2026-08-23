@@ -104,7 +104,7 @@ class ScheduledRepository {
   }
 
   /// Datas no ClientDataset podem vir dd/mm/yyyy, yyyy-mm-dd ou float
-  /// (TDateTime). Tolerante: só aceita os formatos textuais.
+  /// (TDateTime: dias desde 30/12/1899). Tolerante a todos.
   DateTime? _parseDate(String v) {
     if (v.isEmpty) return null;
     final parts = v.split('/');
@@ -116,6 +116,14 @@ class ScheduledRepository {
         return DateTime(y, m, d);
       }
     }
-    return DateTime.tryParse(v); // yyyy-mm-dd
+    final iso = DateTime.tryParse(v); // yyyy-mm-dd[Thh:mm]
+    if (iso != null) return iso;
+    // TDateTime float (ex: "46023" ou "46023.5")
+    final days = double.tryParse(v);
+    if (days != null && days > 0 && days < 3000000) {
+      return DateTime(1899, 12, 30).add(Duration(
+          milliseconds: (days * 86400000).round()));
+    }
+    return null;
   }
 }

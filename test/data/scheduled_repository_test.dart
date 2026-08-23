@@ -78,4 +78,34 @@ void main() {
     expect(changed, 0);
     expect(repo.loadItems(), isEmpty);
   });
+  test('datas TDateTime float (serial Delphi) também parseiam', () async {
+    await repo.importFromDelphi(categories: [], items: [
+      {'ID': 'f1', 'DATA': '46023', 'NOME': 'float date'},      // ~2026-01-17
+      {'ID': 'f2', 'DATA': '46023.5', 'NOME': 'float com hora'},
+    ]);
+    final items = repo.loadItems();
+    expect(items, hasLength(2));
+    // 46023 dias desde 1899-12-30 — só valida que virou data válida
+    expect(items[0].date.year, greaterThan(2025));
+    expect(items[1].date.year, greaterThan(2025));
+  });
+
+  test('volume: 5000 itens sem quebrar', () async {
+    final items = List.generate(5000, (i) => {
+      'ID': 'v' + i.toString(),
+      'CATEGORIA': 'c1',
+      'DATA': '12/10/2026',
+      'NOME': 'Item número \$i com nome razoavelmente longo para volume',
+      'ARQUIVO': 'C:\\Users\\arquivo\$i.mp4',
+    });
+    final changed = await repo.importFromDelphi(
+        categories: [
+          {'ID': 'c1', 'NOME': 'Volume'}
+        ],
+        items: items);
+    expect(changed, 5000);
+    expect(repo.loadItems(), hasLength(5000));
+    expect(repo.itemsOn(DateTime(2026, 10, 12)), hasLength(5000));
+  });
+
 }
