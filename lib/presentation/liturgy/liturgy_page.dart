@@ -335,13 +335,21 @@ class _LiturgyViewState extends State<_LiturgyView> {
     }
   }
 
+  /// Espelho ativo: liturgia do desktop conectado substitui a local.
+  bool get _isMirroring =>
+      _remoteState?.liturgyItems.isNotEmpty == true &&
+      RemoteSession.instance.mode == RemoteMode.desktop;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('liturgy.title'.tr()),
-        actions: [
+        // Espelhada: sem ações de edição local — só exibição (lockada).
+        actions: _isMirroring
+            ? const [StageStopVideoButton()]
+            : [
           IconButton(
             key: const Key('liturgy-import-ja'),
             tooltip: 'liturgy.importJa'.tr(),
@@ -396,7 +404,7 @@ class _LiturgyViewState extends State<_LiturgyView> {
           ),
           const StageClearButton(),
           const StageCastButton(module: StageModule.liturgy),
-        ],
+          ],
       ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
@@ -417,8 +425,7 @@ class _LiturgyViewState extends State<_LiturgyView> {
             return const Center(child: CircularProgressIndicator());
           }
           // Espelho: Controle Remoto conectado → liturgia do DESKTOP.
-          if (_remoteState?.liturgyItems.isNotEmpty == true &&
-              RemoteSession.instance.mode == RemoteMode.desktop) {
+          if (_isMirroring) {
             return _RemoteLiturgyMirror(state: _remoteState!);
           }
           return _Body(state: state);
