@@ -50,7 +50,7 @@ void main() {
     expect(sun[0].musicId, 1660);
     expect(sun[0].name, 'Momentos de louvor');
     expect(sun[0].subtitle, contains('Adoradores 4'));
-    expect(sun[0].done, isTrue);
+    expect(sun[0].done, isFalse); // checked=22/08/2026 != hoje
     expect(sun[1].type, LiturgyItemType.video);
     expect(sun[1].filePath, contains('video.mp4'));
     expect(sun[1].done, isFalse);
@@ -126,5 +126,19 @@ void main() {
     final empty = _sample.replaceAll('dir=C:\\Users\\iasdn\\Videos\\video.mp4', 'dir=');
     expect(JaLiturgyParser.parse(empty)[7]![1].type, LiturgyItemType.otherFiles);
   });
+  test('checked com data de HOJE => done; data antiga => não', () {
+    final hoje = DateTime.now();
+    final dd = hoje.day.toString().padLeft(2, '0');
+    final mm = hoje.month.toString().padLeft(2, '0');
+    final yyyy = hoje.year.toString();
+    final sample = '[item_a]\r\ntipo=anotacao\r\nitem=X\r\nchecked=$dd/$mm/$yyyy\r\n\r\n[Geral]\r\n7=item_a;\r\n';
+    final map = JaLiturgyParser.parse(sample);
+    expect(map[7]!.single.done, isTrue);
+
+    final ontem = '[item_b]\r\ntipo=anotacao\r\nitem=Y\r\nchecked=01/01/2020\r\n\r\n[Geral]\r\n7=item_b;\r\n';
+    final map2 = JaLiturgyParser.parse(ontem);
+    expect(map2[7]!.single.done, isFalse);
+  });
+
 }
 // (testes de encoding no bloco abaixo)

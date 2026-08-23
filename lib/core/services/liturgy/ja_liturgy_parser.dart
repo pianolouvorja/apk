@@ -97,6 +97,18 @@ abstract final class JaLiturgyParser {
     final name = f['item'] ?? '';
     final subitem = f['subitem'] ?? '';
     final checked = f['checked'] ?? '';
+    // Semântica Delphi: checked guarda a DATA (dd/mm/aaaa) em que foi
+    // marcado; só está done se == HOJE (reset automático na virada do dia —
+    // fmMenu.pas compara com FormatDateTime('dd/mm/yyyy', Now)).
+    bool isDoneToday() {
+      final v = checked.trim();
+      if (v.isEmpty) return false;
+      final now = DateTime.now();
+      final dd = now.day.toString().padLeft(2, '0');
+      final mm = now.month.toString().padLeft(2, '0');
+      final yyyy = now.year.toString();
+      return v == '$dd/$mm/$yyyy';
+    }
     final cor = f['cor'] ?? '';
     final musicId = int.tryParse(f['musica'] ?? '');
 
@@ -113,7 +125,7 @@ abstract final class JaLiturgyParser {
       type: type,
       name: name.isEmpty ? subitem : name,
       subtitle: subitem,
-      done: checked.trim().isNotEmpty,
+      done: isDoneToday(),
       accentColor: _delphiColor(cor),
       musicId: type == LiturgyItemType.music ? musicId : null,
       filePath: type != LiturgyItemType.music && type != LiturgyItemType.annotation
