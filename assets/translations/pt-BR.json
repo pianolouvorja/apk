@@ -147,7 +147,16 @@
     "importJaOverwriteAsk": "{count} item(ns) do arquivo já existem na liturgia. Sobrescrever os dias afetados com o conteúdo do arquivo?",
     "importJaKeep": "Manter e adicionar novos",
     "importJaOverwrite": "Sobrescrever dias",
-    "importJaOverwritten": "Liturgia sobrescrita: {added} itens"
+    "importJaOverwritten": "Liturgia sobrescrita: {added} itens",
+    "scheduled": {
+      "import": "Importar itens agendados (Delphi)",
+      "title": "Itens agendados desta data",
+      "noCategory": "Sem categoria",
+      "notes": "Observações",
+      "addToLiturgy": "Adicionar à liturgia",
+      "imported": "Importados {count} itens agendados",
+      "invalidXml": "Arquivo .xml inválido"
+    }
   },
   "bible": {
     "title": "Bíblia",

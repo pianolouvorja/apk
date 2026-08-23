@@ -148,7 +148,16 @@
     "importJaOverwriteAsk": "{count} item(s) already exist. Overwrite the affected days with the file contents?",
     "importJaKeep": "Keep and add new",
     "importJaOverwrite": "Overwrite days",
-    "importJaOverwritten": "Liturgy overwritten: {added} items"
+    "importJaOverwritten": "Liturgy overwritten: {added} items",
+    "scheduled": {
+      "import": "Import scheduled items (Delphi)",
+      "title": "Scheduled items for this date",
+      "noCategory": "No category",
+      "notes": "Notes",
+      "addToLiturgy": "Add to liturgy",
+      "imported": "Imported {count} scheduled items",
+      "invalidXml": "Invalid .xml file"
+    }
   },
   "bible": {
     "title": "Bible",

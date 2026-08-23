@@ -2,7 +2,10 @@
 // Usa storage próprio (liturgy_avulsa_yyyyMMdd) — não afeta a liturgia semanal.
 library;
 
+import 'dart:io' show File;
+
 import 'package:easy_localization/easy_localization.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -12,6 +15,9 @@ import 'package:louvorja_piano_mobile/data/repositories/liturgy_repository.dart'
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/services/liturgy_item_executor.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/widgets/liturgy_item_dialog.dart';
+import 'package:louvorja_piano_mobile/core/services/liturgy/datapacket_parser.dart';
+import 'package:louvorja_piano_mobile/data/repositories/scheduled_repository.dart';
+import 'package:louvorja_piano_mobile/domain/entities/scheduled_item.dart';
 
 class LiturgyAvulsaPage extends StatefulWidget {
   const LiturgyAvulsaPage({super.key});
@@ -22,8 +28,10 @@ class LiturgyAvulsaPage extends StatefulWidget {
 
 class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
   LiturgyRepository? _repo;
+  ScheduledRepository? _scheduled;
   DateTime _date = DateTime.now();
   List<LiturgyItem> _items = [];
+  List<ScheduledItemOnDate> _scheduledToday = [];
   bool _locked = false;
 
   @override
@@ -35,7 +43,50 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     _repo = LiturgyRepository(prefs);
+    _scheduled = ScheduledRepository(prefs);
     _load();
+  }
+
+  /// Importa itensAgendados(.xml) do Delphi: pede os 2 arquivos em sequência.
+  Future<void> _importScheduled(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
+    var file = picked?.files.singleOrNull;
+    if (file == null) return;
+    if (!file.name.toLowerCase().endsWith('.xml')) {
+      messenger.showSnackBar(SnackBar(
+          content: Text('liturgy.scheduled.invalidXml'.tr())));
+      return;
+    }
+    var data = file.bytes;
+    if (data == null && file.path != null) {
+      try { data = await File(file.path!).readAsBytes(); } catch (_) {}
+    }
+    if (data == null) return;
+    final catsXml = String.fromCharCodes(data);
+
+    // segundo arquivo: itens (se o usuário cancelar, importa só categorias)
+    List<Map<String, String>> itemRows = [];
+    final picked2 = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
+    final f2 = picked2?.files.singleOrNull;
+    if (f2 != null && f2.name.toLowerCase().endsWith('.xml')) {
+      var d2 = f2.bytes;
+      if (d2 == null && f2.path != null) {
+        try { d2 = await File(f2.path!).readAsBytes(); } catch (_) {}
+      }
+      if (d2 != null) {
+        itemRows = DataPacketParser.parse(String.fromCharCodes(d2));
+      }
+    }
+
+    final catRows = DataPacketParser.parse(catsXml);
+    final n = await _scheduled!.importFromDelphi(
+        categories: catRows, items: itemRows);
+    if (!mounted) return;
+    _load();
+    messenger.showSnackBar(SnackBar(
+        content: Text('liturgy.scheduled.imported'
+            .tr(namedArgs: {'count': '$n'}))));
   }
 
   void _load() {
@@ -43,6 +94,12 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
     setState(() {
       _items = _repo!.loadAvulsa(_date);
       _locked = false;
+      _scheduledToday = (_scheduled?.itemsOn(_date) ?? [])
+          .map((s) => ScheduledItemOnDate(item: s,
+              category: _scheduled!.loadCategories()
+                  .where((c) => c.id == s.categoryId)
+                  .firstOrNull))
+          .toList();
     });
   }
 
@@ -75,6 +132,12 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
       appBar: AppBar(
         title: Text('liturgy.avulsa.title'.tr()),
         actions: [
+          IconButton(
+            key: const Key('avulsa-import-scheduled'),
+            tooltip: 'liturgy.scheduled.import'.tr(),
+            icon: const Icon(TablerIcons.calendarDown, size: 22),
+            onPressed: () => _importScheduled(context),
+          ),
           IconButton(
             key: const Key('avulsa-lock-toggle'),
             tooltip: _locked ? 'liturgy.unlock'.tr() : 'liturgy.lock'.tr(),
@@ -176,8 +239,97 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                     ),
                   ),
                 ),
+                // Itens agendados desta data (importados do Delphi)
+                if (_scheduledToday.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.s3, AppSpacing.s2, AppSpacing.s3, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'liturgy.scheduled.title'.tr(),
+                          style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        for (final s in _scheduledToday)
+                          Card(
+                            margin:
+                                const EdgeInsets.only(top: AppSpacing.s1),
+                            child: ListTile(
+                              dense: true,
+                              leading: const Icon(TablerIcons.calendarEvent,
+                                  size: 20),
+                              title: Text(s.item.name),
+                              subtitle: Text(
+                                s.category?.name ??
+                                    'liturgy.scheduled.noCategory'.tr(),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (s.item.notes.isNotEmpty)
+                                    IconButton(
+                                      tooltip: 'liturgy.scheduled.notes'.tr(),
+                                      icon: const Icon(
+                                          TablerIcons.messageCircle,
+                                          size: 18),
+                                      onPressed: () => showDialog<void>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: Text(s.item.name),
+                                          content: Text(s.item.notes),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx),
+                                              child: Text(
+                                                  'common.cancel'.tr()),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  IconButton(
+                                    tooltip: 'liturgy.scheduled.addToLiturgy'.tr(),
+                                    icon: const Icon(TablerIcons.plus,
+                                        size: 18),
+                                    onPressed: _locked
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              _items = [
+                                                ..._items,
+                                                LiturgyItem(
+                                                  id:
+                                                      'sched_${s.item.id}',
+                                                  type: LiturgyItemType
+                                                      .otherFiles,
+                                                  name: s.item.name,
+                                                  subtitle: s
+                                                      .category?.name
+                                                      ?? '',
+                                                  filePath: s
+                                                      .item.filePath
+                                                      .isNotEmpty
+                                                      ? s.item.filePath
+                                                      : null,
+                                                ),
+                                              ];
+                                            });
+                                            _persist();
+                                          },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 Expanded(
-                  child: _items.isEmpty
+                  child: _items.isEmpty && _scheduledToday.isEmpty
                       ? Center(
                           child: Text('liturgy.avulsa.empty'.tr()),
                         )
@@ -290,4 +442,11 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
             ),
     );
   }
+}
+
+/// Item agendado + sua categoria (p/ exibição na data).
+class ScheduledItemOnDate {
+  const ScheduledItemOnDate({required this.item, this.category});
+  final ScheduledItem item;
+  final ScheduledCategory? category;
 }
