@@ -154,6 +154,47 @@ class _LiturgyViewState extends State<_LiturgyView> {
     await _enrichDurations(imported);
 
     final bloc = context.read<LiturgyBloc>();
+
+    bool isDup(a, b) =>
+        a.type == b.type &&
+        a.name == b.name &&
+        a.musicId == b.musicId &&
+        a.filePath == b.filePath;
+
+    // Pré-checa duplicados em TODOS os dias (sem alterar nada).
+    var duplicates = 0;
+    for (final day in imported.keys) {
+      final target = LiturgyWeekdayJa.fromJaDay(day);
+      if (target == null) continue;
+      final existing = bloc.repository.loadItems(target);
+      duplicates +=
+          imported[day]!.where((i) => existing.any((e) => isDup(e, i))).length;
+    }
+
+    // Duplicados? Pergunta: sobrescrever dias afetados ou só adicionar novos.
+    var overwrite = false;
+    if (duplicates > 0 && context.mounted) {
+      overwrite = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('liturgy.importJaOverwriteTitle'.tr()),
+              content: Text('liturgy.importJaOverwriteAsk'
+                  .tr(namedArgs: {'count': '$duplicates'})),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text('liturgy.importJaKeep'.tr()),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text('liturgy.importJaOverwrite'.tr()),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+    }
+
     var added = 0;
     var skipped = 0;
     // O arquivo usa 1..7 (segunda..domingo); o app usa o dia SELECIONADO.
@@ -162,20 +203,25 @@ class _LiturgyViewState extends State<_LiturgyView> {
     for (final day in imported.keys) {
       final target = LiturgyWeekdayJa.fromJaDay(day);
       if (target == null) continue;
+      // Sobrescrever: limpa o dia antes de importar.
+      if (overwrite) {
+        bloc.add(LiturgyDayChanged(target));
+        await bloc.stream
+            .firstWhere((s) => s is LiturgyLoaded && s.selectedDay == target)
+            .timeout(const Duration(seconds: 2), onTimeout: null);
+        bloc.add(LiturgyClearDay());
+        await bloc.stream.firstWhere(
+            (s) => s is LiturgyLoaded && s.items.isEmpty,
+            orElse: () => bloc.state);
+      }
       bloc.add(LiturgyDayChanged(target));
-      // precisa do estado do dia: lemos direto do repo via bloc state flow
       final state = await bloc.stream
           .firstWhere((s) => s is LiturgyLoaded && s.selectedDay == target)
           .timeout(const Duration(seconds: 2), onTimeout: null);
       if (state is! LiturgyLoaded) continue;
       final existing = state.items;
       for (final item in imported[day]!) {
-        final dup = existing.any((e) =>
-            e.type == item.type &&
-            e.name == item.name &&
-            e.musicId == item.musicId &&
-            e.filePath == item.filePath);
-        if (dup) {
+        if (existing.any((e) => isDup(e, item))) {
           skipped++;
           continue;
         }
@@ -185,8 +231,11 @@ class _LiturgyViewState extends State<_LiturgyView> {
     }
     messenger.showSnackBar(
       SnackBar(
-        content: Text('liturgy.importJaDone'
-            .tr(namedArgs: {'added': '$added', 'skipped': '$skipped'})),
+        content: Text(overwrite
+            ? 'liturgy.importJaOverwritten'
+                .tr(namedArgs: {'added': '$added'})
+            : 'liturgy.importJaDone'
+                .tr(namedArgs: {'added': '$added', 'skipped': '$skipped'})),
       ),
     );
   }

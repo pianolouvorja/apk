@@ -143,7 +143,12 @@
       "empty": "Sin liturgia para esta fecha. Toca + para empezar.",
       "deleteConfirm": "¿Eliminar la liturgia suelta de esta fecha?",
       "openAvulsa": "Liturgia suelta"
-    }
+    },
+    "importJaOverwriteTitle": "Ítems duplicados",
+    "importJaOverwriteAsk": "{count} ítem(ns) ya existen. ¿Sobrescribir los días afectados?",
+    "importJaKeep": "Mantener y agregar nuevos",
+    "importJaOverwrite": "Sobrescribir días",
+    "importJaOverwritten": "Liturgia sobrescrita: {added} ítems"
   },
   "bible": {
     "title": "Biblia",

@@ -143,7 +143,12 @@
       "empty": "No liturgy for this date. Tap + to start.",
       "deleteConfirm": "Delete the standalone liturgy of this date?",
       "openAvulsa": "Standalone liturgy"
-    }
+    },
+    "importJaOverwriteTitle": "Duplicate items",
+    "importJaOverwriteAsk": "{count} item(s) already exist. Overwrite the affected days with the file contents?",
+    "importJaKeep": "Keep and add new",
+    "importJaOverwrite": "Overwrite days",
+    "importJaOverwritten": "Liturgy overwritten: {added} items"
   },
   "bible": {
     "title": "Bible",
