@@ -170,7 +170,16 @@ class DesktopConnection {
 
   /// Envia comando. Token vai na primeira mensagem de cada conexão
   /// (auth implícito); depois, dispensável mas barato.
+  ///
+  /// Se o socket caiu (reconexão em curso), espera até 2s pela
+  /// reconexão antes de desistir — comando de operador nunca é
+  /// descartado silenciosamente (bug: botões "não faziam nada").
   Future<void> send(RemoteCommand command) async {
+    if (!isConnected) {
+      for (var i = 0; i < 10 && !isConnected; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+    }
     if (!isConnected) return;
     if (_token != null && command.token == null) {
       command = RemoteCommand(
