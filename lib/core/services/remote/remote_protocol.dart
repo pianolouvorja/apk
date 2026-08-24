@@ -47,7 +47,19 @@ enum RemoteAction {
   countdownPause('countdown.pause'),
   countdownReset('countdown.reset'),
   countdownSaveMark('countdown.saveMark'),
-  countdownSetDuration('countdown.setDuration');
+  countdownSetDuration('countdown.setDuration'),
+  // Fase 2 — clock e random.
+  clockSetConfig('clock.setConfig'),
+  clockToggleProjection('clock.toggleProjection'),
+  randomSetMode('random.setMode'),
+  randomAddName('random.addName'),
+  randomRemoveAvailable('random.removeAvailable'),
+  randomClearAvailable('random.clearAvailable'),
+  randomGenerateNumberRange('random.generateNumberRange'),
+  randomStartDraw('random.startDraw'),
+  randomCancelDraw('random.cancelDraw'),
+  randomClearHistory('random.clearHistory'),
+  randomResetAll('random.resetAll');
 
   const RemoteAction(this.wire);
   final String wire;
@@ -86,6 +98,10 @@ class RemoteCommand extends RemoteMessage {
     this.chapter,
     this.verse,
     this.durationMs,
+    this.name,
+    this.style,
+    this.showSeconds,
+    this.format24h,
   }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
        assert(position == null || !position.isNegative, 'seek >= 0'),
        assert(durationMs == null || durationMs > 0, 'durationMs > 0');
@@ -108,6 +124,12 @@ class RemoteCommand extends RemoteMessage {
   final int? verse;
   final int? durationMs;
 
+  /// Fase 2: random.addName / clock.setConfig.
+  final String? name;
+  final String? style;
+  final bool? showSeconds;
+  final bool? format24h;
+
   @override
   String encode() {
     final map = <String, dynamic>{
@@ -126,6 +148,10 @@ class RemoteCommand extends RemoteMessage {
       if (chapter != null) 'chapter': chapter,
       if (verse != null) 'verse': verse,
       if (durationMs != null) 'durationMs': durationMs,
+      if (name != null) 'name': name,
+      if (style != null) 'style': style,
+      if (showSeconds != null) 'showSeconds': showSeconds,
+      if (format24h != null) 'format24h': format24h,
     };
     return jsonEncode(map);
   }
@@ -171,6 +197,8 @@ class RemotePlayerState extends RemoteMessage {
     this.bibleModule,
     this.timerModule,
     this.countdownModule,
+    this.clockModule,
+    this.randomModule,
   });
 
   final int? hymnId;
@@ -193,6 +221,8 @@ class RemotePlayerState extends RemoteMessage {
   final RemoteBibleState? bibleModule;
   final RemoteTimerState? timerModule;
   final RemoteCountdownState? countdownModule;
+  final RemoteClockState? clockModule;
+  final RemoteRandomState? randomModule;
 
   @override
   String encode() {
@@ -259,6 +289,40 @@ class RemoteTimerState {
   final String status;
   final int accumulatedMs;
   final List<int> savedTimesMs;
+  final bool isProjecting;
+}
+
+/// Estado do relógio do alvo (v2 fase 2).
+class RemoteClockState {
+  const RemoteClockState({
+    required this.style,
+    required this.showSeconds,
+    required this.format24h,
+    required this.isProjecting,
+  });
+
+  final String style;
+  final bool showSeconds;
+  final bool format24h;
+  final bool isProjecting;
+}
+
+/// Estado do sorteio do alvo (v2 fase 2).
+class RemoteRandomState {
+  const RemoteRandomState({
+    required this.mode,
+    required this.drawnCount,
+    required this.availableCount,
+    required this.isDrawing,
+    this.currentDisplay,
+    required this.isProjecting,
+  });
+
+  final String mode;
+  final int drawnCount;
+  final int availableCount;
+  final bool isDrawing;
+  final String? currentDisplay;
   final bool isProjecting;
 }
 
@@ -556,6 +620,37 @@ class RemoteProtocol {
       bibleModule: _parseBibleModule(m['bible']),
       timerModule: _parseTimerModule(m['timer']),
       countdownModule: _parseCountdownModule(m['countdown']),
+      clockModule: _parseClockModule(m['clock']),
+      randomModule: _parseRandomModule(m['random']),
+    );
+  }
+
+  static RemoteClockState? _parseClockModule(Object? raw) {
+    if (raw is! Map) return null;
+    final style = raw['style'];
+    return RemoteClockState(
+      style: style is String ? style : 'digital',
+      showSeconds: raw['showSeconds'] == true,
+      format24h: raw['format24h'] == true,
+      isProjecting: raw['isProjecting'] == true,
+    );
+  }
+
+  static RemoteRandomState? _parseRandomModule(Object? raw) {
+    if (raw is! Map) return null;
+    final mode = raw['mode'];
+    final display = raw['currentDisplay'];
+    return RemoteRandomState(
+      mode: mode is String ? mode : 'names',
+      drawnCount: raw['drawnCount'] is num
+          ? (raw['drawnCount'] as num).toInt()
+          : 0,
+      availableCount: raw['availableCount'] is num
+          ? (raw['availableCount'] as num).toInt()
+          : 0,
+      isDrawing: raw['isDrawing'] == true,
+      currentDisplay: display is String ? display : null,
+      isProjecting: raw['isProjecting'] == true,
     );
   }
 

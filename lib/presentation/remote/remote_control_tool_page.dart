@@ -120,6 +120,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                     Tab(icon: const Icon(TablerIcons.clipboardText), text: 'remote.tabLiturgy'.tr()),
                     Tab(icon: const Icon(TablerIcons.book), text: 'remote.tabBible'.tr()),
                     Tab(icon: const Icon(TablerIcons.clock), text: 'remote.tabTime'.tr()),
+                    Tab(icon: const Icon(TablerIcons.dice), text: 'remote.tabMore'.tr()),
                   ],
                 ),
                 Expanded(
@@ -130,6 +131,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                       _liturgyAndPlayer(context, theme, st),
                       RemoteBiblePanel(),
                       RemoteTimePanel(state: st),
+                      RemoteClockRandomPanel(clock: st.clockModule, random: st.randomModule),
                     ],
                   ),
                 ),

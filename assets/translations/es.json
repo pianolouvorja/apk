@@ -382,6 +382,15 @@
     },
     "marks": "Marcas",
     "mark": "Marcar",
-    "reset": "Reiniciar"
+    "reset": "Reiniciar",
+    "tabMore": "Más",
+    "clock": {
+      "title": "Reloj"
+    },
+    "random": {
+      "title": "Sorteo"
+    },
+    "project": "Proyectar",
+    "draw": "Sortear"
   }
 }

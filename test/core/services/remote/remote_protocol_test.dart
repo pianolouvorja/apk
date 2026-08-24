@@ -340,6 +340,55 @@ void main() {
     });
   });
 
+  group('v2 fase 2 — clock/random', () {
+    test('encode random.addName carrega name', () {
+      final json = jsonDecode(
+        RemoteCommand(
+          id: 'r1',
+          action: RemoteAction.randomAddName,
+          name: 'Ana',
+        ).encode(),
+      ) as Map<String, dynamic>;
+      expect(json['action'], 'random.addName');
+      expect(json['name'], 'Ana');
+    });
+
+    test('encode clock.setConfig carrega style/showSeconds/format24h', () {
+      final json = jsonDecode(
+        RemoteCommand(
+          id: 'k1',
+          action: RemoteAction.clockSetConfig,
+          style: 'analog',
+          showSeconds: false,
+        ).encode(),
+      ) as Map<String, dynamic>;
+      expect(json['style'], 'analog');
+      expect(json['showSeconds'], false);
+      expect(json.containsKey('format24h'), isFalse);
+    });
+
+    test('state v2 fase 2 traz clock/random', () {
+      final msg = RemoteProtocol.parse(
+        '{"v":1,"type":"state","player":{"playing":false,"positionMs":0,'
+        '"durationMs":0,"slideIndex":0,"slideCount":0,"volume":0,'
+        '"canPrevious":false,"canNext":false},'
+        '"liturgy":{"selectedIndex":null,"items":[]},'
+        '"clock":{"style":"analog","showSeconds":false,"format24h":true,'
+        '"isProjecting":true},'
+        '"random":{"mode":"names","drawnCount":2,"availableCount":5,'
+        '"isDrawing":true,"currentDisplay":"Ana","isProjecting":true}}',
+      );
+      final st = msg! as RemotePlayerState;
+      expect(st.clockModule, isNotNull);
+      expect(st.clockModule!.style, 'analog');
+      expect(st.clockModule!.isProjecting, isTrue);
+      expect(st.randomModule, isNotNull);
+      expect(st.randomModule!.isDrawing, isTrue);
+      expect(st.randomModule!.currentDisplay, 'Ana');
+      expect(st.randomModule!.availableCount, 5);
+    });
+  });
+
   group('RemotePairing', () {
     test('gera token de 6 chars alfanumérico', () {
       final token = RemotePairing.generateToken();

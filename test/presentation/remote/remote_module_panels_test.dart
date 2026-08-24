@@ -17,6 +17,10 @@ void main() {
     int? chapter,
     int? verse,
     int? durationMs,
+    String? name,
+    String? style,
+    bool? showSeconds,
+    bool? format24h,
   }) async {
     sent.add(RemoteCommand(
       id: 't',

@@ -20,10 +20,14 @@ typedef RemoteSend = Future<void> Function(
   int? chapter,
   int? verse,
   int? durationMs,
+  String? name,
+  String? style,
+  bool? showSeconds,
+  bool? format24h,
 });
 
 RemoteSend _defaultSend = (action,
-    {index, volume, versionId, bookId, chapter, verse, durationMs}) {
+    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h}) {
   return RemoteSession.instance.send(
     RemoteCommand(
       id: 'm${DateTime.now().microsecondsSinceEpoch}',
@@ -35,6 +39,10 @@ RemoteSend _defaultSend = (action,
       chapter: chapter,
       verse: verse,
       durationMs: durationMs,
+      name: name,
+      style: style,
+      showSeconds: showSeconds,
+      format24h: format24h,
     ),
   );
 };
@@ -298,4 +306,42 @@ class _TimeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class RemoteClockRandomPanel extends StatelessWidget {
+  const RemoteClockRandomPanel({super.key, this.send, this.clock, this.random});
+  final RemoteSend? send;
+  final RemoteClockState? clock;
+  final RemoteRandomState? random;
+  RemoteSend get _send => send ?? _defaultSend;
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(AppSpacing.s4),
+    children: [
+      Card(child: ListTile(
+        leading: const Icon(TablerIcons.clock),
+        title: Text('remote.clock.title'.tr()),
+        subtitle: Text(clock == null ? '—' : '${clock!.style} · ${clock!.format24h ? '24h' : '12h'}'),
+        trailing: FilledButton(
+          onPressed: () => _send(RemoteAction.clockToggleProjection),
+          child: Text('remote.project'.tr()),
+        ),
+      )),
+      Card(child: ListTile(
+        leading: const Icon(TablerIcons.dice),
+        title: Text('remote.random.title'.tr()),
+        subtitle: Text(random == null ? '—' : '${random!.drawnCount} / ${random!.availableCount}'),
+        trailing: FilledButton(
+          onPressed: () => _send(RemoteAction.randomStartDraw),
+          child: Text('remote.draw'.tr()),
+        ),
+      )),
+      OutlinedButton.icon(
+        onPressed: () => _send(RemoteAction.randomCancelDraw),
+        icon: const Icon(TablerIcons.playerStop),
+        label: Text('remote.stop'.tr()),
+      ),
+    ],
+  );
 }
