@@ -135,7 +135,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage>
                     children: [
                       // aba 0: status liturgia + player (conteúdo original)
                       _liturgyAndPlayer(context, theme, st),
-                      RemoteHymnsPanel(),
+                      RemoteHymnsPanel(state: st),
                       RemoteBiblePanel(),
                       RemoteTimePanel(state: st),
                       RemoteClockRandomPanel(clock: st.clockModule, random: st.randomModule),

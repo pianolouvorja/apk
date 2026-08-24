@@ -3,7 +3,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
-import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/remote_module_panels.dart';
 
 void main() {
@@ -24,6 +23,7 @@ void main() {
     bool? format24h,
     int? musicId,
     String? mode,
+    String? query,
   }) async {
     sent.add(RemoteCommand(
       id: 't',
@@ -37,6 +37,7 @@ void main() {
       durationMs: durationMs,
       musicId: musicId,
       mode: mode,
+      query: query,
     ));
   }
 
@@ -80,18 +81,25 @@ void main() {
     expect(sent, isEmpty);
   });
 
-  testWidgets('RemoteHymnsPanel busca e envia media.open com modo escolhido',
+  testWidgets('RemoteHymnsPanel busca via media.search e abre com hit do desktop',
       (tester) async {
-    const hymns = [
-      Hymn(id: 378, title: 'Chegou o Grande Dia', number: 378),
-      Hymn(id: 160, title: 'Ao Pé da Cruz', number: 160),
-    ];
+    const state = RemotePlayerState(
+      playing: false,
+      position: Duration.zero,
+      duration: Duration.zero,
+      slideIndex: 0,
+      slideCount: 0,
+      volume: 0,
+      canPrevious: false,
+      canNext: false,
+      mediaModule: RemoteMediaState(
+        searchResults: [
+          RemoteMusicHit(musicId: 42, name: 'Ao Pé da Cruz', track: 160),
+        ],
+      ),
+    );
     await tester.pumpWidget(
-      wrap(RemoteHymnsPanel(
-        send: fakeSend,
-        repository: (q) async =>
-            hymns.where((h) => h.title!.contains(q)).toList(),
-      )),
+      wrap(RemoteHymnsPanel(send: fakeSend, state: state)),
     );
 
     await tester.enterText(
@@ -99,19 +107,18 @@ void main() {
       'Cruz',
     );
     await tester.pump(const Duration(milliseconds: 500));
+    expect(sent.single.action, RemoteAction.mediaSearch);
+    expect(sent.single.query, 'Cruz');
 
-    expect(find.byKey(const Key('remote-hymns-result-0')), findsOneWidget);
-
-    // troca modo p/ playback e abre
+    // troca modo p/ playback e abre o hit (id do DESKTOP)
     await tester.tap(find.byKey(const Key('remote-hymns-mode-instrumental')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('remote-hymns-result-0')));
     await tester.pump();
 
-    expect(sent, hasLength(1));
-    expect(sent.single.action, RemoteAction.mediaOpen);
-    expect(sent.single.musicId, 160);
-    expect(sent.single.mode, 'instrumental');
+    expect(sent.last.action, RemoteAction.mediaOpen);
+    expect(sent.last.musicId, 42);
+    expect(sent.last.mode, 'instrumental');
   });
 
   testWidgets('RemoteTimePanel renderiza timer + countdown e envia ações',

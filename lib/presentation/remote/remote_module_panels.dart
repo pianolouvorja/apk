@@ -11,10 +11,6 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
-import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
-import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
-import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
-import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 
 typedef RemoteSend = Future<void> Function(
   RemoteAction action, {
@@ -31,10 +27,11 @@ typedef RemoteSend = Future<void> Function(
   bool? format24h,
   int? musicId,
   String? mode,
+  String? query,
 });
 
 RemoteSend _defaultSend = (action,
-    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode}) {
+    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode, query}) {
   return RemoteSession.instance.send(
     RemoteCommand(
       id: 'm${DateTime.now().microsecondsSinceEpoch}',
@@ -52,6 +49,7 @@ RemoteSend _defaultSend = (action,
       format24h: format24h,
       musicId: musicId,
       mode: mode,
+      query: query,
     ),
   );
 };
@@ -188,27 +186,134 @@ class RemoteTimePanel extends StatelessWidget {
           status: timer?.status,
           elapsedMs: timer?.accumulatedMs ?? 0,
           marks: timer?.savedTimesMs ?? const [],
+          isProjecting: timer?.isProjecting ?? false,
           onStart: () => _send(RemoteAction.timerStart),
           onPause: () => _send(RemoteAction.timerPause),
           onReset: () => _send(RemoteAction.timerReset),
           onSaveMark: () => _send(RemoteAction.timerSaveMark),
+          onToggleProjection: () =>
+              _send(RemoteAction.timerToggleProjection),
         ),
         const SizedBox(height: AppSpacing.s4),
-        _TimeCard(
+        _CountdownCard(
           key: const Key('remote-countdown-card'),
-          title: 'remote.countdown.title'.tr(),
-          status: countdown?.status,
-          elapsedMs: countdown?.accumulatedMs ?? 0,
-          totalMs: countdown?.durationMs,
-          marks: countdown?.savedTimesMs ?? const [],
-          finished: countdown?.finished ?? false,
-          tag: 'countdown',
-          onStart: () => _send(RemoteAction.countdownStart),
-          onPause: () => _send(RemoteAction.countdownPause),
-          onReset: () => _send(RemoteAction.countdownReset),
-          onSaveMark: () => _send(RemoteAction.countdownSaveMark),
+          countdown: countdown,
+          send: _send,
         ),
       ],
+    );
+  }
+}
+
+/// Card countdown com edição de duração (min:seg) e controle de projeção.
+class _CountdownCard extends StatefulWidget {
+  const _CountdownCard({super.key, required this.countdown, this.send});
+
+  final RemoteCountdownState? countdown;
+  final RemoteSend? send;
+
+  @override
+  State<_CountdownCard> createState() => _CountdownCardState();
+}
+
+class _CountdownCardState extends State<_CountdownCard> {
+  final _minCtrl = TextEditingController();
+  final _secCtrl = TextEditingController();
+  bool _editing = false;
+
+  @override
+  void dispose() {
+    _minCtrl.dispose();
+    _secCtrl.dispose();
+    super.dispose();
+  }
+
+  void _applyDuration() {
+    final min = int.tryParse(_minCtrl.text.trim()) ?? 0;
+    final sec = int.tryParse(_secCtrl.text.trim()) ?? 0;
+    final ms = (min * 60 + sec) * 1000;
+    if (ms <= 0) return;
+    (widget.send ?? _defaultSend)(
+      RemoteAction.countdownSetDuration,
+      durationMs: ms,
+    );
+    setState(() => _editing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cd = widget.countdown;
+    return _TimeCard(
+      title: 'remote.countdown.title'.tr(),
+      status: cd?.status,
+      elapsedMs: cd?.accumulatedMs ?? 0,
+      totalMs: cd?.durationMs,
+      marks: cd?.savedTimesMs ?? const [],
+      finished: cd?.finished ?? false,
+      tag: 'countdown',
+      isProjecting: cd?.isProjecting ?? false,
+      onStart: () => (widget.send ?? _defaultSend)(RemoteAction.countdownStart),
+      onPause: () =>
+          (widget.send ?? _defaultSend)(RemoteAction.countdownPause),
+      onReset: () =>
+          (widget.send ?? _defaultSend)(RemoteAction.countdownReset),
+      onSaveMark: () =>
+          (widget.send ?? _defaultSend)(RemoteAction.countdownSaveMark),
+      onToggleProjection: () => (widget.send ?? _defaultSend)(
+        RemoteAction.countdownToggleProjection,
+      ),
+      // edição de duração + botão projetar/parar
+      extra: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_editing) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('remote-countdown-min'),
+                    controller: _minCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'remote.countdown.minutes'.tr(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s3),
+                Expanded(
+                  child: TextField(
+                    key: const Key('remote-countdown-sec'),
+                    controller: _secCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'remote.countdown.seconds'.tr(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            FilledButton(
+              key: const Key('remote-countdown-apply'),
+              onPressed: _applyDuration,
+              child: Text('remote.countdown.apply'.tr()),
+            ),
+          ] else
+            TextButton.icon(
+              key: const Key('remote-countdown-edit'),
+              onPressed: () {
+                final cur = (cd?.durationMs ?? 0) ~/ 1000;
+                _minCtrl.text = '${cur ~/ 60}';
+                _secCtrl.text = '${cur % 60}';
+                setState(() => _editing = true);
+              },
+              icon: const Icon(TablerIcons.pencil, size: 18),
+              label: Text('remote.countdown.edit'.tr()),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -227,6 +332,9 @@ class _TimeCard extends StatelessWidget {
     this.totalMs,
     this.finished = false,
     this.tag = 'timer',
+    this.isProjecting = false,
+    this.onToggleProjection,
+    this.extra,
   });
 
   final String title;
@@ -237,6 +345,9 @@ class _TimeCard extends StatelessWidget {
   final List<int> marks;
   final bool finished;
   final String tag; // sufixo de key (timer/countdown)
+  final bool isProjecting;
+  final VoidCallback? onToggleProjection;
+  final Widget? extra;
   final VoidCallback onStart;
   final VoidCallback onPause;
   final VoidCallback onReset;
@@ -283,6 +394,26 @@ class _TimeCard extends StatelessWidget {
                 '${'remote.marks'.tr()}: ${marks.map(_fmt).join(' · ')}',
                 style: theme.textTheme.bodySmall,
               ),
+            ],
+            if (onToggleProjection != null) ...[
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: Key('remote-$tag-projection'),
+                onPressed: onToggleProjection,
+                icon: Icon(
+                  isProjecting ? TablerIcons.square : TablerIcons.deviceTv,
+                  size: 18,
+                ),
+                label: Text(
+                  isProjecting
+                      ? 'remote.stopProjection'.tr()
+                      : 'remote.project'.tr(),
+                ),
+              ),
+            ],
+            if (extra != null) ...[
+              const SizedBox(height: AppSpacing.s2),
+              extra!,
             ],
             const SizedBox(height: AppSpacing.s3),
             Row(
@@ -356,15 +487,14 @@ class RemoteClockRandomPanel extends StatelessWidget {
 }
 
 
-/// Painel Hinos (fase 3): busca no catálogo local → abre no desktop.
-///
-/// O catálogo (HymnRepository) é offline-first; o resultado escolhido
-/// vira media.open {musicId, mode} no alvo conectado.
+/// Painel Hinos: busca REMOTA no catálogo do alvo (ids corretos do
+/// desktop — a API pública tem ids distintos e media.open falhava com
+/// trackMissing). O resultado escolhido vira media.open {musicId, mode}.
 class RemoteHymnsPanel extends StatefulWidget {
-  const RemoteHymnsPanel({super.key, this.send, this.repository});
+  const RemoteHymnsPanel({super.key, this.send, this.state});
 
   final RemoteSend? send;
-  final Future<List<Hymn>> Function(String query)? repository;
+  final RemotePlayerState? state;
 
   @override
   State<RemoteHymnsPanel> createState() => _RemoteHymnsPanelState();
@@ -373,11 +503,14 @@ class RemoteHymnsPanel extends StatefulWidget {
 class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
   final _queryCtrl = TextEditingController();
   Timer? _debounce;
-  List<Hymn> _results = const [];
-  bool _loading = false;
+  bool _searching = false;
   String _mode = 'audio';
 
-  static const _modes = [('audio', 'Cantado'), ('instrumental', 'Playback'), ('no_audio', 'Só slides')];
+  static const _modes = [
+    ('audio', 'Cantado'),
+    ('instrumental', 'Playback'),
+    ('no_audio', 'Só slides'),
+  ];
 
   @override
   void dispose() {
@@ -386,48 +519,24 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
     super.dispose();
   }
 
-  Future<List<Hymn>> _search(String q) async {
-    if (widget.repository != null) return widget.repository!(q);
-    try {
-      await null; // permite await uniforme no fallback
-      final api = LouvorjaApiImpl(
-        baseUrl: 'https://api.louvorja.com.br/json_db',
-        filesUrl: 'https://api.louvorja.com.br/file',
-        apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
-        languagePrefix: 'pt',
-      );
-      return await HymnRepositoryImpl(
-        api,
-        CatalogCache.noop(),
-      ).searchHymns(q);
-    } catch (_) {
-      return const [];
-    }
-  }
-
   void _onQuery(String q) {
     _debounce?.cancel();
-    if (q.trim().isEmpty) {
-      setState(() => _results = const []);
-      return;
-    }
-    setState(() => _loading = true);
-    _debounce = Timer(const Duration(milliseconds: 400), () async {
-      final results = await _search(q.trim());
-      if (mounted) setState(() { _results = results; _loading = false; });
+    if (q.trim().isEmpty) return;
+    setState(() => _searching = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      (widget.send ?? _defaultSend)(
+        RemoteAction.mediaSearch,
+        query: q.trim(),
+      );
+      // Resultados chegam no próximo state (media.searchResults).
+      if (mounted) setState(() => _searching = false);
     });
   }
-
-  void _open(Hymn hymn) =>
-      (widget.send ?? _defaultSend)(
-        RemoteAction.mediaOpen,
-        musicId: hymn.id,
-        mode: _mode,
-      );
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hits = widget.state?.mediaModule?.searchResults ?? const [];
     return Column(
       children: [
         Padding(
@@ -458,19 +567,30 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
             ],
           ),
         ),
-        if (_loading) const LinearProgressIndicator(),
+        if (_searching) const LinearProgressIndicator(),
         Expanded(
-          child: _results.isEmpty
-              ? Center(child: Text('remote.hymns.empty'.tr(), style: theme.textTheme.bodySmall))
+          child: hits.isEmpty
+              ? Center(
+                  child: Text(
+                    'remote.hymns.empty'.tr(),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                )
               : ListView.builder(
-                  itemCount: _results.length,
+                  itemCount: hits.length,
                   itemBuilder: (_, i) {
-                    final h = _results[i];
+                    final h = hits[i];
                     return ListTile(
                       key: Key('remote-hymns-result-$i'),
                       dense: true,
-                      title: Text('${h.number ?? h.id} — ${h.title ?? ''}'),
-                      onTap: () => _open(h),
+                      title: Text(
+                        h.track != null ? '${h.track} — ${h.name}' : h.name,
+                      ),
+                      onTap: () => (widget.send ?? _defaultSend)(
+                        RemoteAction.mediaOpen,
+                        musicId: h.musicId,
+                        mode: _mode,
+                      ),
                     );
                   },
                 ),

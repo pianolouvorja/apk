@@ -43,11 +43,13 @@ enum RemoteAction {
   timerSaveMark('timer.saveMark'),
   timerRemoveMark('timer.removeMark'),
   timerClearMarks('timer.clearMarks'),
+  timerToggleProjection('timer.toggleProjection'),
   countdownStart('countdown.start'),
   countdownPause('countdown.pause'),
   countdownReset('countdown.reset'),
   countdownSaveMark('countdown.saveMark'),
   countdownSetDuration('countdown.setDuration'),
+  countdownToggleProjection('countdown.toggleProjection'),
   // Fase 2 — clock e random.
   clockSetConfig('clock.setConfig'),
   clockToggleProjection('clock.toggleProjection'),
@@ -61,7 +63,8 @@ enum RemoteAction {
   randomClearHistory('random.clearHistory'),
   randomResetAll('random.resetAll'),
   // Fase 3 — hinos/mídia.
-  mediaOpen('media.open');
+  mediaOpen('media.open'),
+  mediaSearch('media.search');
 
   const RemoteAction(this.wire);
   final String wire;
@@ -105,6 +108,7 @@ class RemoteCommand extends RemoteMessage {
     this.showSeconds,
     this.format24h,
     this.musicId,
+    this.query,
   }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
        assert(position == null || !position.isNegative, 'seek >= 0'),
        assert(durationMs == null || durationMs > 0, 'durationMs > 0');
@@ -136,6 +140,9 @@ class RemoteCommand extends RemoteMessage {
   /// Fase 3: media.open (musicId; `mode` reaproveita o do player).
   final int? musicId;
 
+  /// media.search
+  final String? query;
+
   @override
   String encode() {
     final map = <String, dynamic>{
@@ -159,6 +166,7 @@ class RemoteCommand extends RemoteMessage {
       if (showSeconds != null) 'showSeconds': showSeconds,
       if (format24h != null) 'format24h': format24h,
       if (musicId != null) 'musicId': musicId,
+      if (query != null) 'query': query,
       if (mode != null) 'mode': mode,
     };
     return jsonEncode(map);
@@ -207,6 +215,7 @@ class RemotePlayerState extends RemoteMessage {
     this.countdownModule,
     this.clockModule,
     this.randomModule,
+    this.mediaModule,
   });
 
   final int? hymnId;
@@ -231,6 +240,7 @@ class RemotePlayerState extends RemoteMessage {
   final RemoteCountdownState? countdownModule;
   final RemoteClockState? clockModule;
   final RemoteRandomState? randomModule;
+  final RemoteMediaState? mediaModule;
 
   @override
   String encode() {
@@ -298,6 +308,25 @@ class RemoteTimerState {
   final int accumulatedMs;
   final List<int> savedTimesMs;
   final bool isProjecting;
+}
+
+/// Resultado de busca de hinos no catálogo do ALVO (ids corretos).
+class RemoteMusicHit {
+  const RemoteMusicHit({
+    required this.musicId,
+    required this.name,
+    this.track,
+  });
+
+  final int musicId;
+  final String name;
+  final int? track;
+}
+
+class RemoteMediaState {
+  const RemoteMediaState({required this.searchResults});
+
+  final List<RemoteMusicHit> searchResults;
 }
 
 /// Estado do relógio do alvo (v2 fase 2).
@@ -630,6 +659,29 @@ class RemoteProtocol {
       countdownModule: _parseCountdownModule(m['countdown']),
       clockModule: _parseClockModule(m['clock']),
       randomModule: _parseRandomModule(m['random']),
+      mediaModule: _parseMediaModule(m['media']),
+    );
+  }
+
+  static RemoteMediaState? _parseMediaModule(Object? raw) {
+    if (raw is! Map) return null;
+    final results = raw['searchResults'];
+    return RemoteMediaState(
+      searchResults: results is List
+          ? results
+                .whereType<Map>()
+                .map(
+                  (e) => RemoteMusicHit(
+                    musicId: e['musicId'] is num
+                        ? (e['musicId'] as num).toInt()
+                        : 0,
+                    name: e['name'] is String ? e['name'] as String : '',
+                    track: e['track'] is num ? (e['track'] as num).toInt() : null,
+                  ),
+                )
+                .where((h) => h.musicId > 0)
+                .toList()
+          : const [],
     );
   }
 

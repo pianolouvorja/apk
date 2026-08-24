@@ -378,7 +378,11 @@
       "title": "Stopwatch"
     },
     "countdown": {
-      "title": "Countdown"
+      "title": "Countdown",
+      "edit": "Edit duration",
+      "apply": "Apply duration",
+      "minutes": "Min",
+      "seconds": "Sec"
     },
     "marks": "Marks",
     "mark": "Mark",
@@ -396,6 +400,7 @@
     "hymns": {
       "search": "Search hymn",
       "empty": "Search by number or name"
-    }
+    },
+    "stopProjection": "Stop projection"
   }
 }

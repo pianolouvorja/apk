@@ -377,7 +377,11 @@
       "title": "Cronômetro"
     },
     "countdown": {
-      "title": "Tempo (countdown)"
+      "title": "Contagem regressiva",
+      "edit": "Editar duração",
+      "apply": "Aplicar duração",
+      "minutes": "Min",
+      "seconds": "Seg"
     },
     "marks": "Marcas",
     "mark": "Marcar",
@@ -395,6 +399,7 @@
     "hymns": {
       "search": "Buscar hino",
       "empty": "Busque pelo número ou nome"
-    }
+    },
+    "stopProjection": "Parar projeção"
   }
 }
