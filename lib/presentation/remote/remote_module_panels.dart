@@ -620,14 +620,22 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
     super.dispose();
   }
 
+  String _lastQuery = '';
+
   void _onQuery(String q) {
     _debounce?.cancel();
-    if (q.trim().isEmpty) return;
+    final query = q.trim();
+    if (query.isEmpty) {
+      setState(() => _searching = false);
+      return;
+    }
     setState(() => _searching = true);
     _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (query == _lastQuery) return; // já buscou esse termo
+      _lastQuery = query;
       (widget.send ?? _defaultSend)(
         RemoteAction.mediaSearch,
-        query: q.trim(),
+        query: query,
       );
       // Resultados chegam no próximo state (media.searchResults).
       if (mounted) setState(() => _searching = false);
@@ -637,7 +645,15 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hits = widget.state?.mediaModule?.searchResults ?? const [];
+    final media = widget.state?.mediaModule;
+    var hits = media?.searchResults ?? const [];
+    // Casa a lista com a query que a gerou: se o usuário já digitou mais,
+    // resultados de query antiga não são exibidos (evita lista "congelada").
+    if (media?.query != null &&
+        _queryCtrl.text.trim() != media!.query &&
+        media.query!.isNotEmpty) {
+      hits = const [];
+    }
     return Column(
       children: [
         Padding(
@@ -645,6 +661,7 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
           child: TextField(
             key: const Key('remote-hymns-query'),
             controller: _queryCtrl,
+            autofocus: false,
             onChanged: _onQuery,
             decoration: InputDecoration(
               prefixIcon: const Icon(TablerIcons.search),

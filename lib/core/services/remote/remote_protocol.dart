@@ -352,9 +352,12 @@ class RemoteMusicHit {
 }
 
 class RemoteMediaState {
-  const RemoteMediaState({required this.searchResults});
+  const RemoteMediaState({required this.searchResults, this.query});
 
   final List<RemoteMusicHit> searchResults;
+
+  /// Query que gerou estes resultados (p/ o painel casar input ↔ lista).
+  final String? query;
 }
 
 /// Estado do relógio do alvo (v2 fase 2).
@@ -695,6 +698,7 @@ class RemoteProtocol {
     if (raw is! Map) return null;
     final results = raw['searchResults'];
     return RemoteMediaState(
+      query: raw['query'] is String ? raw['query'] as String : null,
       searchResults: results is List
           ? results
                 .whereType<Map>()
