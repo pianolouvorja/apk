@@ -329,10 +329,11 @@ class _LiturgyViewState extends State<_LiturgyView> {
     }
   }
 
-  /// Espelho ativo: liturgia do desktop conectado substitui a local.
+  /// Espelho ativo: liturgia do alvo conectado (desktop OU web link)
+  /// substitui a local.
   bool get _isMirroring =>
       _remoteState?.liturgyItems.isNotEmpty == true &&
-      RemoteSession.instance.mode == RemoteMode.desktop;
+      RemoteSession.instance.isControlling;
 
   @override
   Widget build(BuildContext context) {

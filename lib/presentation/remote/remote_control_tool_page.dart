@@ -67,7 +67,8 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final st = _state;
-    final connected = RemoteSession.instance.mode == RemoteMode.desktop;
+    // Conectado = controlando um alvo (desktop OU web link com browser).
+    final connected = RemoteSession.instance.isControlling;
 
     return Scaffold(
       appBar: AppBar(

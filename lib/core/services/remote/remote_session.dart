@@ -38,6 +38,21 @@ class RemoteSession {
 
   RemoteMode get mode => _mode;
 
+  RemoteSessionStatus _lastStatus = RemoteSessionStatus.disconnected;
+
+  /// Status mais recente (mantido em sync com o stream [status]).
+  RemoteSessionStatus get currentStatus => _lastStatus;
+
+  /// true quando o APK está efetivamente controlando um alvo:
+  /// - desktop: conexão estabelecida com o Electron;
+  /// - web: servidor de pé E o browser conectou nele.
+  ///
+  /// É ESTE getter (não `mode != idle`) que a UI deve usar para decidir
+  /// se mostra a ferramenta/espelho — no modo web o servidor fica escutando
+  /// sem cliente, e isso NÃO é "conectado".
+  bool get isControlling =>
+      _mode != RemoteMode.idle && _lastStatus == RemoteSessionStatus.connected;
+
   /// Conecta no desktop (Electron). Reconexão automática é da connection.
   Future<bool> connectDesktop({
     required String host,
@@ -59,7 +74,7 @@ class RemoteSession {
         unawaited(_dropDesktop());
         return;
       }
-      _statusCtrl.add(s.toSessionStatus());
+      _emitStatus(s.toSessionStatus());
     });
     _desktopErrorSub = conn.errors.listen((error) {
       // Fechamento normal do Electron: derruba UI remota imediatamente.
@@ -79,7 +94,7 @@ class RemoteSession {
     }
     _desktop = conn;
     _mode = RemoteMode.desktop;
-    _statusCtrl.add(RemoteSessionStatus.connected);
+    _emitStatus(RemoteSessionStatus.connected);
     // Identifica o aparelho para o desktop mostrar quem conectou.
     final device = await RemoteDeviceName.get() ?? 'Piano LouvorJA';
     final version = await RemoteDeviceName.appVersion();
@@ -104,11 +119,11 @@ class RemoteSession {
       _statesCtrl.add(s);
     });
     server.clientEvents.listen((up) {
-      _statusCtrl.add(
+      _emitStatus(
         up ? RemoteSessionStatus.connected : RemoteSessionStatus.listening,
       );
     });
-    _statusCtrl.add(RemoteSessionStatus.listening);
+    _emitStatus(RemoteSessionStatus.listening);
     return url;
   }
 
@@ -164,7 +179,12 @@ class RemoteSession {
     await _teardown();
     lastState = null;
     _mode = RemoteMode.idle;
-    _statusCtrl.add(RemoteSessionStatus.disconnected);
+    _emitStatus(RemoteSessionStatus.disconnected);
+  }
+
+  void _emitStatus(RemoteSessionStatus s) {
+    _lastStatus = s;
+    _statusCtrl.add(s);
   }
 
   Future<void> _teardown() async {
@@ -185,7 +205,7 @@ class RemoteSession {
     // transporte — conexões podem ser refeitas depois.
     await _teardown();
     _mode = RemoteMode.idle;
-    _statusCtrl.add(RemoteSessionStatus.disconnected);
+    _emitStatus(RemoteSessionStatus.disconnected);
   }
 }
 

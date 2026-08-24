@@ -113,6 +113,53 @@ void main() {
     await desktop?.close();
   });
 
+  test('isControlling: web link só controla quando o browser conecta', () async {
+    final session = RemoteSession.instance;
+    // Desktop conectado = controlando direto.
+    server.listen((req) async {
+      final ws = await WebSocketTransformer.upgrade(req);
+      ws.listen((_) {});
+    });
+    await session.connectDesktop(host: '127.0.0.1', port: server.port, token: 'T');
+    expect(session.mode, RemoteMode.desktop);
+    expect(session.isControlling, isTrue,
+        reason: 'desktop conectado deve controlar');
+    await session.disconnect();
+    expect(session.isControlling, isFalse);
+
+    // Web link: servidor de pé ≠ controlando; só quando o browser conecta.
+    final url = await session.startWebLink(token: 'WEB2');
+    expect(url, isNotNull);
+    expect(session.mode, RemoteMode.web);
+    expect(session.isControlling, isFalse,
+        reason: 'web link escutando sem cliente não é controlling');
+
+    // Assina ANTES de conectar: broadcast perde frames de listeners tardios.
+    final connected = Completer<void>();
+    final sub = session.status.listen((s) {
+      if (s == RemoteSessionStatus.connected && !connected.isCompleted) {
+        connected.complete();
+      }
+    });
+    final browser = await WebSocket.connect(url!);
+    await connected.future.timeout(const Duration(seconds: 5));
+    expect(session.isControlling, isTrue,
+        reason: 'browser conectado via web link deve controlar');
+
+    await browser.close();
+    final dropped = Completer<void>();
+    await sub.cancel();
+    final sub2 = session.status.listen((s) {
+      if (s == RemoteSessionStatus.listening && !dropped.isCompleted) {
+        dropped.complete();
+      }
+    });
+    await dropped.future.timeout(const Duration(seconds: 5));
+    expect(session.isControlling, isFalse,
+        reason: 'browser desconectado deve sair de controlling');
+    await sub2.cancel();
+  });
+
   test('startWebLink → APK envia comando; web devolve state', () async {
     final session = RemoteSession.instance;
     final url = await session.startWebLink(token: 'WEB9');
