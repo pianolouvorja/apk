@@ -68,8 +68,8 @@ class RemoteBiblePanel extends StatelessWidget {
       {int? bookId, int? chapter, int? verse}) {
     _send(
       RemoteAction.bibleOpen,
-      versionId: bible.versionId,
-      bookId: bookId ?? bible.bookId,
+      versionId: bible.versionId ?? 1,
+      bookId: bookId ?? bible.bookId ?? 1,
       chapter: chapter ?? bible.chapter ?? 1,
       verse: verse,
     );
@@ -164,11 +164,16 @@ class RemoteBiblePanel extends StatelessWidget {
         const SizedBox(height: AppSpacing.s4),
         FilledButton.icon(
           key: const Key('remote-bible-project'),
-          onPressed: selectedBook == null
-              ? null
-              : () => _open(bible, verse: bible.selectedVerses.isNotEmpty
-                  ? bible.selectedVerses.last
-                  : 1),
+          // Sem seleção no estado: usa o primeiro livro do catálogo (não
+          // desabilita — operador espera que "abrir" sempre abra algo).
+          onPressed: () => _open(
+                bible,
+                bookId: bible.bookId ?? (books.isNotEmpty ? books.first.id : 1),
+                chapter: bible.chapter ?? 1,
+                verse: bible.selectedVerses.isNotEmpty
+                    ? bible.selectedVerses.last
+                    : 1,
+              ),
           icon: const Icon(TablerIcons.book),
           label: Text('remote.bible.open'.tr()),
         ),
