@@ -8,9 +8,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_page.dart';
-import 'package:louvorja_piano_mobile/presentation/remote/p2p_pairing_page.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/remote_module_panels.dart';
-import 'package:louvorja_piano_mobile/presentation/remote/unified_qr_scanner.dart';
+import 'package:louvorja_piano_mobile/presentation/settings/widgets/remote/remote_section.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
@@ -87,19 +86,32 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage>
             key: const Key('remote-scan-qr'),
             tooltip: 'remote.scanQr'.tr(),
             icon: const Icon(TablerIcons.scan),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const UnifiedQrScanner()),
-            ),
-          ),
-          IconButton(
-            key: const Key('remote-p2p-open'),
-            tooltip: 'liturgy.p2p.title'.tr(),
-            icon: const Icon(TablerIcons.qrcode),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const P2pPairingPage(),
-              ),
-            ),
+            // Lê o QR do DESKTOP (louvorja://connect?...) e conecta direto.
+            onPressed: () async {
+              final code = await Navigator.of(context).push<String>(
+                MaterialPageRoute<String>(
+                  builder: (_) => const DesktopQrScannerPage(),
+                ),
+              );
+              if (code == null) return;
+              final uri = Uri.tryParse(code.trim());
+              final host = uri?.queryParameters['host'];
+              final token = uri?.queryParameters['token'];
+              if (host == null || token == null) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('remote.qrInvalid'.tr())),
+                );
+                return;
+              }
+              final parts = host.split(':');
+              await RemoteSession.instance.connectDesktop(
+                host: parts.first,
+                port: parts.length > 1 ? int.tryParse(parts[1]) ?? 7071 : 7071,
+                token: token,
+              );
+              if (mounted) setState(() {});
+            },
           ),
           IconButton(
             tooltip: 'remote.disconnect'.tr(),

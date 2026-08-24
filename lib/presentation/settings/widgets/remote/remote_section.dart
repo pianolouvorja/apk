@@ -78,7 +78,7 @@ class _RemoteSectionState extends State<RemoteSection> {
   /// QR do desktop: louvorja://connect?host=IP:PORTA&token=XXXX
   Future<void> _scanQr() async {
     final code = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const _RemoteQrScannerPage()),
+      MaterialPageRoute(builder: (_) => const DesktopQrScannerPage()),
     );
     if (code == null) return;
     // QR do web (P2P WebRTC): JSON {type:'offer', sdp:...}
@@ -333,14 +333,14 @@ class _RemoteSectionState extends State<RemoteSection> {
 }
 
 /// Página de leitura do QR de emparelhamento do desktop.
-class _RemoteQrScannerPage extends StatefulWidget {
-  const _RemoteQrScannerPage();
+class DesktopQrScannerPage extends StatefulWidget {
+  const DesktopQrScannerPage();
 
   @override
-  State<_RemoteQrScannerPage> createState() => _RemoteQrScannerPageState();
+  State<DesktopQrScannerPage> createState() => _DesktopQrScannerPageState();
 }
 
-class _RemoteQrScannerPageState extends State<_RemoteQrScannerPage> {
+class _DesktopQrScannerPageState extends State<DesktopQrScannerPage> {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
