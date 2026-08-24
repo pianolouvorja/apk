@@ -170,6 +170,22 @@ class RemotePlayerState extends RemoteMessage {
         'canPrevious': canPrevious,
         'canNext': canNext,
       },
+      'liturgy': {
+        'selectedIndex': liturgySelectedIndex,
+        'items': liturgyItems
+            .map(
+              (item) => {
+                'index': item.index,
+                'type': item.type,
+                'title': item.title,
+                'subtitle': item.subtitle,
+                'isCategory': item.isCategory,
+                'accentColor': item.accentColor,
+                'done': item.done,
+              },
+            )
+            .toList(),
+      },
     });
   }
 }

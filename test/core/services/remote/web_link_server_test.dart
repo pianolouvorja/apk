@@ -141,6 +141,33 @@ void main() {
     );
   });
 
+  test('estado enviado pelo web preserva itens da liturgia no JSON', () {
+    const state = RemotePlayerState(
+      playing: false,
+      position: Duration.zero,
+      duration: Duration.zero,
+      slideIndex: 0,
+      slideCount: 0,
+      volume: 80,
+      canPrevious: false,
+      canNext: true,
+      liturgyItems: [
+        RemoteLiturgyItem(
+          index: 0,
+          type: 'hymn',
+          title: 'Santo, Santo, Santo',
+          done: false,
+        ),
+      ],
+      liturgySelectedIndex: 0,
+    );
+
+    final json = state.encode();
+    expect(json, contains('"liturgy"'));
+    expect(json, contains('Santo, Santo, Santo'));
+    expect(json, contains('"selectedIndex":0'));
+  });
+
   test('web responde ack → APK recebe', () async {
     final url = await server.start(token: 'T');
     final connected = Completer<void>();
