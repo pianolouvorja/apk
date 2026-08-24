@@ -109,7 +109,10 @@ class _RemoteSectionState extends State<RemoteSection> {
     });
     _validateHost();
     _validateToken();
-  }
+  
+    // Conecta AUTOMÁTICO — ler o QR já significa "quero conectar agora".
+    await _connectDesktop();
+}
 
   void _snack(String msg) {
     if (!mounted) return;
