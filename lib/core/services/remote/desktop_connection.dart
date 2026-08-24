@@ -182,16 +182,10 @@ class DesktopConnection {
     }
     if (!isConnected) return;
     if (_token != null && command.token == null) {
-      command = RemoteCommand(
-        id: command.id,
-        action: command.action,
-        token: _attempt == 0 ? _token : _token,
-        volume: command.volume,
-        position: command.position,
-        mode: command.mode,
-        hymnId: command.hymnId,
-        index: command.index,
-      );
+      // token NÃO é final no RemoteCommand — injeta sem reconstruir
+      // (reconstruir dropava os campos v2: bible.open chegava sem
+      // bookId, media.search sem query — bug de 3 horas de caça).
+      command.token = _token;
     }
     _ws?.add(command.encode());
   }
