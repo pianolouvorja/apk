@@ -395,7 +395,17 @@
     },
     "random": {
       "title": "Draw",
-      "generateNumbers": "Generate numbers 1–100"
+      "generateNumbers": "Generate numbers 1–100",
+      "numbers": "Numbers",
+      "names": "Names",
+      "min": "Min",
+      "max": "Max",
+      "applyRange": "Apply range",
+      "namesHint": "Names (one per line)",
+      "importNames": "Import names",
+      "drawing": "Drawing…",
+      "drawnList": "Drawn",
+      "returnName": "Return"
     },
     "project": "Project",
     "draw": "Draw",

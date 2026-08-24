@@ -63,6 +63,9 @@ enum RemoteAction {
   randomClearHistory('random.clearHistory'),
   randomResetAll('random.resetAll'),
   randomToggleProjection('random.toggleProjection'),
+  randomSetNumberRange('random.setNumberRange'),
+  randomImportNames('random.importNames'),
+  randomRemoveDrawn('random.removeDrawn'),
   // Fase 3 — hinos/mídia.
   mediaOpen('media.open'),
   mediaSearch('media.search');
@@ -110,6 +113,9 @@ class RemoteCommand extends RemoteMessage {
     this.format24h,
     this.musicId,
     this.query,
+    this.numberMin,
+    this.numberMax,
+    this.namesText,
   }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
        assert(position == null || !position.isNegative, 'seek >= 0'),
        assert(durationMs == null || durationMs > 0, 'durationMs > 0');
@@ -144,6 +150,11 @@ class RemoteCommand extends RemoteMessage {
   /// media.search
   final String? query;
 
+  /// Sorteio: intervalo de números ou lista de nomes (texto multi-linha).
+  final int? numberMin;
+  final int? numberMax;
+  final String? namesText;
+
   @override
   String encode() {
     final map = <String, dynamic>{
@@ -168,6 +179,9 @@ class RemoteCommand extends RemoteMessage {
       if (format24h != null) 'format24h': format24h,
       if (musicId != null) 'musicId': musicId,
       if (query != null) 'query': query,
+      if (numberMin != null) 'numberMin': numberMin,
+      if (numberMax != null) 'numberMax': numberMax,
+      if (namesText != null) 'namesText': namesText,
       if (mode != null) 'mode': mode,
     };
     return jsonEncode(map);
@@ -384,6 +398,10 @@ class RemoteRandomState {
     required this.isDrawing,
     this.currentDisplay,
     required this.isProjecting,
+    this.numberMin,
+    this.numberMax,
+    this.available = const [],
+    this.drawn = const [],
   });
 
   final String mode;
@@ -391,6 +409,10 @@ class RemoteRandomState {
   final int availableCount;
   final bool isDrawing;
   final String? currentDisplay;
+  final int? numberMin;
+  final int? numberMax;
+  final List<String> available;
+  final List<String> drawn;
   final bool isProjecting;
 }
 
@@ -732,8 +754,20 @@ class RemoteProtocol {
     if (raw is! Map) return null;
     final mode = raw['mode'];
     final display = raw['currentDisplay'];
+    List<String> _strList(Object? v) => v is List
+        ? v.map((e) => '$e').where((e) => e.isNotEmpty).toList()
+        : const [];
     return RemoteRandomState(
       mode: mode is String ? mode : 'names',
+      numberMin: raw['numberMin'] is num
+          ? (raw['numberMin'] as num).toInt()
+          : null,
+      numberMax: raw['numberMax'] is num
+          ? (raw['numberMax'] as num).toInt()
+          : null,
+      available: _strList(raw['available']),
+      drawn: _strList(raw['drawn']),
+      currentDisplay: display is String ? display : null,
       drawnCount: raw['drawnCount'] is num
           ? (raw['drawnCount'] as num).toInt()
           : 0,
@@ -741,7 +775,6 @@ class RemoteProtocol {
           ? (raw['availableCount'] as num).toInt()
           : 0,
       isDrawing: raw['isDrawing'] == true,
-      currentDisplay: display is String ? display : null,
       isProjecting: raw['isProjecting'] == true,
     );
   }

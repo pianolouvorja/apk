@@ -394,7 +394,17 @@
     },
     "random": {
       "title": "Sorteio",
-      "generateNumbers": "Gerar números 1–100"
+      "generateNumbers": "Gerar números 1–100",
+      "numbers": "Números",
+      "names": "Nomes",
+      "min": "Mín",
+      "max": "Máx",
+      "applyRange": "Aplicar intervalo",
+      "namesHint": "Nomes (um por linha)",
+      "importNames": "Importar nomes",
+      "drawing": "Sorteando…",
+      "drawnList": "Sorteados",
+      "returnName": "Devolver"
     },
     "project": "Projetar",
     "draw": "Sortear",

@@ -24,6 +24,9 @@ void main() {
     int? musicId,
     String? mode,
     String? query,
+    int? numberMin,
+    int? numberMax,
+    String? namesText,
   }) async {
     sent.add(RemoteCommand(
       id: 't',
@@ -38,6 +41,9 @@ void main() {
       musicId: musicId,
       mode: mode,
       query: query,
+      numberMin: numberMin,
+      numberMax: numberMax,
+      namesText: namesText,
     ));
   }
 

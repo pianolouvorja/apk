@@ -14,6 +14,9 @@ import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 
 typedef RemoteSend = Future<void> Function(
   RemoteAction action, {
+  int? numberMin,
+  int? numberMax,
+  String? namesText,
   int? index,
   int? volume,
   int? versionId,
@@ -31,11 +34,14 @@ typedef RemoteSend = Future<void> Function(
 });
 
 RemoteSend _defaultSend = (action,
-    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode, query}) {
+    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode, query, numberMin, numberMax, namesText}) {
   return RemoteSession.instance.send(
     RemoteCommand(
       id: 'm${DateTime.now().microsecondsSinceEpoch}',
       action: action,
+      numberMin: numberMin,
+      numberMax: numberMax,
+      namesText: namesText,
       index: index,
       volume: volume,
       versionId: versionId,
@@ -526,81 +532,277 @@ class _TimeCard extends StatelessWidget {
 
 
 class RemoteClockRandomPanel extends StatelessWidget {
-  const RemoteClockRandomPanel({super.key, this.send, this.clock, this.random});
-  final RemoteSend? send;
+  const RemoteClockRandomPanel({super.key, this.clock, this.random});
+
   final RemoteClockState? clock;
   final RemoteRandomState? random;
-  RemoteSend get _send => send ?? _defaultSend;
+
+  RemoteSend get _send => _defaultSend;
+
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(AppSpacing.s4),
-    children: [
-      Card(child: ListTile(
-        leading: const Icon(TablerIcons.clock),
-        title: Text('remote.clock.title'.tr()),
-        subtitle: Text(clock == null ? '—' : '${clock!.style} · ${clock!.format24h ? '24h' : '12h'}'),
-        trailing: FilledButton(
-          onPressed: () => _send(RemoteAction.clockToggleProjection),
-          child: Text('remote.project'.tr()),
-        ),
-      )),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.s3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Icon(TablerIcons.dice),
-                  const SizedBox(width: AppSpacing.s2),
-                  Expanded(child: Text('remote.random.title'.tr())),
-                  Text(random == null
-                      ? '—'
-                      : '${random!.drawnCount} / ${random!.availableCount}'),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s3),
-              FilledButton.icon(
-                key: const Key('remote-random-draw'),
-                // Sem lista = botão continua seguro, mas gera 1–100 primeiro.
-                onPressed: () => _send(RemoteAction.randomStartDraw),
-                icon: const Icon(TablerIcons.dice),
-                label: Text('remote.draw'.tr()),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-              OutlinedButton.icon(
-                key: const Key('remote-random-numbers'),
-                onPressed: () => _send(RemoteAction.randomGenerateNumberRange),
-                icon: const Icon(TablerIcons.numbers),
-                label: Text('remote.random.generateNumbers'.tr()),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-              OutlinedButton.icon(
-                key: const Key('remote-random-projection'),
-                onPressed: () => _send(RemoteAction.randomToggleProjection),
-                icon: Icon(random?.isProjecting == true
-                    ? TablerIcons.square
-                    : TablerIcons.deviceTv),
-                label: Text(random?.isProjecting == true
-                    ? 'remote.stopProjection'.tr()
-                    : 'remote.project'.tr()),
-              ),
-              const SizedBox(height: AppSpacing.s2),
-              OutlinedButton.icon(
-                key: const Key('remote-random-stop'),
-                onPressed: () => _send(RemoteAction.randomCancelDraw),
-                icon: const Icon(TablerIcons.playerStop),
-                label: Text('remote.stop'.tr()),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.s4),
+      children: [
+        _ClockCard(clock: clock, send: _send),
+        const SizedBox(height: AppSpacing.s4),
+        _RandomCard(random: random, send: _send),
+      ],
+    );
+  }
 }
 
+class _ClockCard extends StatelessWidget {
+  const _ClockCard({required this.clock, required this.send});
+
+  final RemoteClockState? clock;
+  final RemoteSend send;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = clock;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(TablerIcons.clock),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(child: Text('remote.clock.title'.tr())),
+                Text(
+                  c == null
+                      ? '—'
+                      : (c.format24h ? '24h' : '12h'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            OutlinedButton.icon(
+              key: const Key('remote-clock-projection'),
+              onPressed: () => send(RemoteAction.clockToggleProjection),
+              icon: Icon(c?.isProjecting == true
+                  ? TablerIcons.square
+                  : TablerIcons.deviceTv),
+              label: Text(c?.isProjecting == true
+                  ? 'remote.stopProjection'.tr()
+                  : 'remote.project'.tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sorteio completo: modos (números/nomes), intervalo, importar nomes,
+/// sortear, sorteados com devolver — espelho do app desktop.
+class _RandomCard extends StatefulWidget {
+  const _RandomCard({required this.random, required this.send});
+
+  final RemoteRandomState? random;
+  final RemoteSend send;
+
+  @override
+  State<_RandomCard> createState() => _RandomCardState();
+}
+
+class _RandomCardState extends State<_RandomCard> {
+  final _namesCtrl = TextEditingController();
+  final _minCtrl = TextEditingController();
+  final _maxCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _namesCtrl.dispose();
+    _minCtrl.dispose();
+    _maxCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.random;
+    final mode = r?.mode ?? 'numbers';
+    final isNames = mode == 'names';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(TablerIcons.dice),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(child: Text('remote.random.title'.tr())),
+                Text('${r?.drawnCount ?? 0} / ${r?.availableCount ?? 0}'),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            SegmentedButton<String>(
+              key: const Key('remote-random-mode'),
+              segments: [
+                ButtonSegment(
+                  value: 'numbers',
+                  label: Text('remote.random.numbers'.tr()),
+                  icon: const Icon(TablerIcons.numbers),
+                ),
+                ButtonSegment(
+                  value: 'names',
+                  label: Text('remote.random.names'.tr()),
+                  icon: const Icon(TablerIcons.users),
+                ),
+              ],
+              selected: {mode},
+              onSelectionChanged: (sel) =>
+                  widget.send(RemoteAction.randomSetMode, mode: sel.first),
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            if (!isNames) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      key: const Key('remote-random-min'),
+                      controller: _minCtrl
+                        ..text = '${r?.numberMin ?? 1}',
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'remote.random.min'.tr(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(
+                    child: TextField(
+                      key: const Key('remote-random-max'),
+                      controller: _maxCtrl
+                        ..text = '${r?.numberMax ?? 100}',
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'remote.random.max'.tr(),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: const Key('remote-random-apply-range'),
+                onPressed: () {
+                  final min = int.tryParse(_minCtrl.text) ?? 1;
+                  final max = int.tryParse(_maxCtrl.text) ?? 100;
+                  widget.send(RemoteAction.randomSetNumberRange,
+                      numberMin: min, numberMax: max);
+                },
+                icon: const Icon(TablerIcons.check),
+                label: Text('remote.random.applyRange'.tr()),
+              ),
+            ],
+            if (isNames) ...[
+              TextField(
+                key: const Key('remote-random-names'),
+                controller: _namesCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'remote.random.namesHint'.tr(),
+                  hintText: 'Maria\nJoão\nAna',
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: const Key('remote-random-import'),
+                onPressed: () {
+                  final text = _namesCtrl.text.trim();
+                  if (text.isEmpty) return;
+                  widget.send(RemoteAction.randomImportNames, namesText: text);
+                  _namesCtrl.clear();
+                },
+                icon: const Icon(TablerIcons.userPlus),
+                label: Text('remote.random.importNames'.tr()),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.s3),
+            if ((r?.currentDisplay ?? '').isNotEmpty)
+              Text(
+                r!.currentDisplay!,
+                key: const Key('remote-random-display'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            const SizedBox(height: AppSpacing.s2),
+            FilledButton.icon(
+              key: const Key('remote-random-draw'),
+              onPressed: r?.isDrawing == true
+                  ? null
+                  : () => widget.send(RemoteAction.randomStartDraw),
+              icon: const Icon(TablerIcons.dice),
+              label: Text(r?.isDrawing == true
+                  ? 'remote.random.drawing'.tr()
+                  : 'remote.draw'.tr()),
+            ),
+            const SizedBox(height: AppSpacing.s2),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('remote-random-projection'),
+                    onPressed: () =>
+                        widget.send(RemoteAction.randomToggleProjection),
+                    icon: Icon(r?.isProjecting == true
+                        ? TablerIcons.square
+                        : TablerIcons.deviceTv),
+                    label: Text(r?.isProjecting == true
+                        ? 'remote.stopProjection'.tr()
+                        : 'remote.project'.tr()),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s2),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('remote-random-stop'),
+                    onPressed: () =>
+                        widget.send(RemoteAction.randomCancelDraw),
+                    icon: const Icon(TablerIcons.playerStop),
+                    label: Text('remote.stop'.tr()),
+                  ),
+                ),
+              ],
+            ),
+            if ((r?.drawn ?? const []).isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.s3),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('remote.random.drawnList'.tr(),
+                    style: Theme.of(context).textTheme.labelMedium),
+              ),
+              for (var i = 0; i < r!.drawn.length; i++)
+                ListTile(
+                  dense: true,
+                  key: Key('remote-random-drawn-$i'),
+                  title: Text(r.drawn[i]),
+                  trailing: IconButton(
+                    key: Key('remote-random-undraw-$i'),
+                    icon: const Icon(TablerIcons.arrowBackUp),
+                    tooltip: 'remote.random.returnName'.tr(),
+                    onPressed: () => widget.send(
+                        RemoteAction.randomRemoveDrawn,
+                        index: i),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Painel Hinos: busca REMOTA no catálogo do alvo (ids corretos do
 /// desktop — a API pública tem ids distintos e media.open falhava com
