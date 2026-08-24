@@ -118,6 +118,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                   onTap: (i) => setState(() => _tab = i),
                   tabs: [
                     Tab(icon: const Icon(TablerIcons.clipboardText), text: 'remote.tabLiturgy'.tr()),
+                    Tab(icon: const Icon(TablerIcons.music), text: 'remote.tabHymns'.tr()),
                     Tab(icon: const Icon(TablerIcons.book), text: 'remote.tabBible'.tr()),
                     Tab(icon: const Icon(TablerIcons.clock), text: 'remote.tabTime'.tr()),
                     Tab(icon: const Icon(TablerIcons.dice), text: 'remote.tabMore'.tr()),
@@ -129,6 +130,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                     children: [
                       // aba 0: status liturgia + player (conteúdo original)
                       _liturgyAndPlayer(context, theme, st),
+                      RemoteHymnsPanel(),
                       RemoteBiblePanel(),
                       RemoteTimePanel(state: st),
                       RemoteClockRandomPanel(clock: st.clockModule, random: st.randomModule),

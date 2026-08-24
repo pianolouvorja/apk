@@ -3,6 +3,7 @@
 // tree pura sobre RemoteSession.send, sem lógica testável isolada.
 library;
 
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -10,6 +11,10 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
+import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
+import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
+import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
+import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 
 typedef RemoteSend = Future<void> Function(
   RemoteAction action, {
@@ -24,10 +29,12 @@ typedef RemoteSend = Future<void> Function(
   String? style,
   bool? showSeconds,
   bool? format24h,
+  int? musicId,
+  String? mode,
 });
 
 RemoteSend _defaultSend = (action,
-    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h}) {
+    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode}) {
   return RemoteSession.instance.send(
     RemoteCommand(
       id: 'm${DateTime.now().microsecondsSinceEpoch}',
@@ -43,6 +50,8 @@ RemoteSend _defaultSend = (action,
       style: style,
       showSeconds: showSeconds,
       format24h: format24h,
+      musicId: musicId,
+      mode: mode,
     ),
   );
 };
@@ -344,4 +353,129 @@ class RemoteClockRandomPanel extends StatelessWidget {
       ),
     ],
   );
+}
+
+
+/// Painel Hinos (fase 3): busca no catálogo local → abre no desktop.
+///
+/// O catálogo (HymnRepository) é offline-first; o resultado escolhido
+/// vira media.open {musicId, mode} no alvo conectado.
+class RemoteHymnsPanel extends StatefulWidget {
+  const RemoteHymnsPanel({super.key, this.send, this.repository});
+
+  final RemoteSend? send;
+  final Future<List<Hymn>> Function(String query)? repository;
+
+  @override
+  State<RemoteHymnsPanel> createState() => _RemoteHymnsPanelState();
+}
+
+class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
+  final _queryCtrl = TextEditingController();
+  Timer? _debounce;
+  List<Hymn> _results = const [];
+  bool _loading = false;
+  String _mode = 'audio';
+
+  static const _modes = [('audio', 'Cantado'), ('instrumental', 'Playback'), ('no_audio', 'Só slides')];
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _queryCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<List<Hymn>> _search(String q) async {
+    if (widget.repository != null) return widget.repository!(q);
+    try {
+      await null; // permite await uniforme no fallback
+      final api = LouvorjaApiImpl(
+        baseUrl: 'https://api.louvorja.com.br/json_db',
+        filesUrl: 'https://api.louvorja.com.br/file',
+        apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
+        languagePrefix: 'pt',
+      );
+      return await HymnRepositoryImpl(
+        api,
+        CatalogCache.noop(),
+      ).searchHymns(q);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  void _onQuery(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() => _results = const []);
+      return;
+    }
+    setState(() => _loading = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      final results = await _search(q.trim());
+      if (mounted) setState(() { _results = results; _loading = false; });
+    });
+  }
+
+  void _open(Hymn hymn) =>
+      (widget.send ?? _defaultSend)(
+        RemoteAction.mediaOpen,
+        musicId: hymn.id,
+        mode: _mode,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.s4),
+          child: TextField(
+            key: const Key('remote-hymns-query'),
+            controller: _queryCtrl,
+            onChanged: _onQuery,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(TablerIcons.search),
+              labelText: 'remote.hymns.search'.tr(),
+              isDense: true,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+          child: Wrap(
+            spacing: AppSpacing.s2,
+            children: [
+              for (final (m, label) in _modes)
+                ChoiceChip(
+                  key: Key('remote-hymns-mode-$m'),
+                  label: Text(label),
+                  selected: _mode == m,
+                  onSelected: (_) => setState(() => _mode = m),
+                ),
+            ],
+          ),
+        ),
+        if (_loading) const LinearProgressIndicator(),
+        Expanded(
+          child: _results.isEmpty
+              ? Center(child: Text('remote.hymns.empty'.tr(), style: theme.textTheme.bodySmall))
+              : ListView.builder(
+                  itemCount: _results.length,
+                  itemBuilder: (_, i) {
+                    final h = _results[i];
+                    return ListTile(
+                      key: Key('remote-hymns-result-$i'),
+                      dense: true,
+                      title: Text('${h.number ?? h.id} — ${h.title ?? ''}'),
+                      onTap: () => _open(h),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
 }

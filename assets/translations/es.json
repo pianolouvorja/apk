@@ -391,6 +391,11 @@
       "title": "Sorteo"
     },
     "project": "Proyectar",
-    "draw": "Sortear"
+    "draw": "Sortear",
+    "tabHymns": "Himnos",
+    "hymns": {
+      "search": "Buscar himno",
+      "empty": "Busca por número o nombre"
+    }
   }
 }

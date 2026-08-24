@@ -59,7 +59,9 @@ enum RemoteAction {
   randomStartDraw('random.startDraw'),
   randomCancelDraw('random.cancelDraw'),
   randomClearHistory('random.clearHistory'),
-  randomResetAll('random.resetAll');
+  randomResetAll('random.resetAll'),
+  // Fase 3 — hinos/mídia.
+  mediaOpen('media.open');
 
   const RemoteAction(this.wire);
   final String wire;
@@ -102,6 +104,7 @@ class RemoteCommand extends RemoteMessage {
     this.style,
     this.showSeconds,
     this.format24h,
+    this.musicId,
   }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
        assert(position == null || !position.isNegative, 'seek >= 0'),
        assert(durationMs == null || durationMs > 0, 'durationMs > 0');
@@ -130,6 +133,9 @@ class RemoteCommand extends RemoteMessage {
   final bool? showSeconds;
   final bool? format24h;
 
+  /// Fase 3: media.open (musicId; `mode` reaproveita o do player).
+  final int? musicId;
+
   @override
   String encode() {
     final map = <String, dynamic>{
@@ -152,6 +158,8 @@ class RemoteCommand extends RemoteMessage {
       if (style != null) 'style': style,
       if (showSeconds != null) 'showSeconds': showSeconds,
       if (format24h != null) 'format24h': format24h,
+      if (musicId != null) 'musicId': musicId,
+      if (mode != null) 'mode': mode,
     };
     return jsonEncode(map);
   }

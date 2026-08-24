@@ -390,6 +390,11 @@
       "title": "Sorteio"
     },
     "project": "Projetar",
-    "draw": "Sortear"
+    "draw": "Sortear",
+    "tabHymns": "Hinos",
+    "hymns": {
+      "search": "Buscar hino",
+      "empty": "Busque pelo número ou nome"
+    }
   }
 }

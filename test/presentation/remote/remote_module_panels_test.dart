@@ -3,6 +3,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
+import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/remote_module_panels.dart';
 
 void main() {
@@ -21,6 +22,8 @@ void main() {
     String? style,
     bool? showSeconds,
     bool? format24h,
+    int? musicId,
+    String? mode,
   }) async {
     sent.add(RemoteCommand(
       id: 't',
@@ -32,6 +35,8 @@ void main() {
       chapter: chapter,
       verse: verse,
       durationMs: durationMs,
+      musicId: musicId,
+      mode: mode,
     ));
   }
 
@@ -73,6 +78,40 @@ void main() {
     await tester.tap(find.byKey(const Key('remote-bible-open')));
     await tester.pump();
     expect(sent, isEmpty);
+  });
+
+  testWidgets('RemoteHymnsPanel busca e envia media.open com modo escolhido',
+      (tester) async {
+    const hymns = [
+      Hymn(id: 378, title: 'Chegou o Grande Dia', number: 378),
+      Hymn(id: 160, title: 'Ao Pé da Cruz', number: 160),
+    ];
+    await tester.pumpWidget(
+      wrap(RemoteHymnsPanel(
+        send: fakeSend,
+        repository: (q) async =>
+            hymns.where((h) => h.title!.contains(q)).toList(),
+      )),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('remote-hymns-query')),
+      'Cruz',
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('remote-hymns-result-0')), findsOneWidget);
+
+    // troca modo p/ playback e abre
+    await tester.tap(find.byKey(const Key('remote-hymns-mode-instrumental')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('remote-hymns-result-0')));
+    await tester.pump();
+
+    expect(sent, hasLength(1));
+    expect(sent.single.action, RemoteAction.mediaOpen);
+    expect(sent.single.musicId, 160);
+    expect(sent.single.mode, 'instrumental');
   });
 
   testWidgets('RemoteTimePanel renderiza timer + countdown e envia ações',
