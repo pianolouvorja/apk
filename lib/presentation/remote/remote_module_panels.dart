@@ -188,7 +188,7 @@ class RemoteBiblePanel extends StatelessWidget {
   }
 }
 
-/// Campo numérico com navegação por chevron (±).
+/// Campo numérico híbrido: dropdown (select) + navegação por chevron (±).
 class _ChevronField extends StatelessWidget {
   const _ChevronField({
     required this.label,
@@ -211,9 +211,18 @@ class _ChevronField extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: InputDecorator(
+          child: DropdownButtonFormField<int>(
+            key: Key('remote-bible-$keyPrefix-select'),
+            initialValue: value.clamp(min, max),
+            isExpanded: true,
             decoration: InputDecoration(labelText: label, isDense: true),
-            child: Text('$value', style: Theme.of(context).textTheme.titleMedium),
+            items: [
+              for (var n = min; n <= max; n++)
+                DropdownMenuItem(value: n, child: Text('$n')),
+            ],
+            onChanged: (n) {
+              if (n != null) onChanged(n);
+            },
           ),
         ),
         IconButton(
