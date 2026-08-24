@@ -362,6 +362,26 @@
     "mirroringLocked": "Reflejada del escritorio (bloqueada)",
     "wsDetected": "Conexión de escritorio detectada — conectando…",
     "p2pDetected": "Emparejamiento web P2P detectado — generando respuesta…",
-    "unknownQr": "QR no reconocido — intentando P2P…"
+    "unknownQr": "QR no reconocido — intentando P2P…",
+    "tabLiturgy": "Liturgia",
+    "tabBible": "Biblia",
+    "tabTime": "Tiempo",
+    "bible": {
+      "hint": "Ingresa libro (número), capítulo y versículo y proyecta en el escritorio.",
+      "book": "Libro (n.º)",
+      "chapter": "Capítulo",
+      "verse": "Versículo",
+      "open": "Abrir y proyectar",
+      "close": "Cerrar proyección"
+    },
+    "timer": {
+      "title": "Cronómetro"
+    },
+    "countdown": {
+      "title": "Cuenta regresiva"
+    },
+    "marks": "Marcas",
+    "mark": "Marcar",
+    "reset": "Reiniciar"
   }
 }

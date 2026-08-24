@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_page.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/p2p_pairing_page.dart';
+import 'package:louvorja_piano_mobile/presentation/remote/remote_module_panels.dart';
 import 'package:louvorja_piano_mobile/presentation/remote/unified_qr_scanner.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
@@ -28,6 +29,9 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
   StreamSubscription? _sub;
   RemotePlayerState? _state;
   double? _dragVolume;
+  // ignore: unused_field — setado via onTap da TabBar
+  // (analyze sugeriu final; precisa ser mutável)
+  int _tab = 0;
 
   @override
   void initState() {
@@ -107,6 +111,35 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
           : st == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
+              children: [
+                // Abas v2: liturgia (padrão) + módulos do controle total.
+                TabBar(
+                  isScrollable: true,
+                  onTap: (i) => setState(() => _tab = i),
+                  tabs: [
+                    Tab(icon: const Icon(TablerIcons.clipboardText), text: 'remote.tabLiturgy'.tr()),
+                    Tab(icon: const Icon(TablerIcons.book), text: 'remote.tabBible'.tr()),
+                    Tab(icon: const Icon(TablerIcons.clock), text: 'remote.tabTime'.tr()),
+                  ],
+                ),
+                Expanded(
+                  child: IndexedStack(
+                    index: _tab,
+                    children: [
+                      // aba 0: status liturgia + player (conteúdo original)
+                      _liturgyAndPlayer(context, theme, st),
+                      RemoteBiblePanel(),
+                      RemoteTimePanel(state: st),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _liturgyAndPlayer(BuildContext context, ThemeData theme, RemotePlayerState st) {
+    return Column(
               children: [
                 // A liturgia espelhada vive no MÓDULO de Liturgia (mesma UI,
                 // mesma personalização). Aqui só status + atalho.
@@ -233,7 +266,6 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                   ),
                 ),
               ],
-            ),
     );
   }
 }

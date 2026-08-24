@@ -31,7 +31,23 @@ enum RemoteAction {
   liturgyPrevious('liturgy.previous'),
   liturgySelect('liturgy.select'),
   liturgyToggleDone('liturgy.toggleDone'),
-  liturgyState('liturgy.state');
+  liturgyState('liturgy.state'),
+  // Controle remoto total (v2 — spec Obsidian "Controle Remoto Total v2").
+  bibleOpen('bible.open'),
+  bibleSelectVerse('bible.selectVerse'),
+  bibleClearSelection('bible.clearSelection'),
+  bibleClose('bible.close'),
+  timerStart('timer.start'),
+  timerPause('timer.pause'),
+  timerReset('timer.reset'),
+  timerSaveMark('timer.saveMark'),
+  timerRemoveMark('timer.removeMark'),
+  timerClearMarks('timer.clearMarks'),
+  countdownStart('countdown.start'),
+  countdownPause('countdown.pause'),
+  countdownReset('countdown.reset'),
+  countdownSaveMark('countdown.saveMark'),
+  countdownSetDuration('countdown.setDuration');
 
   const RemoteAction(this.wire);
   final String wire;
@@ -65,8 +81,14 @@ class RemoteCommand extends RemoteMessage {
     this.mode,
     this.hymnId,
     this.index,
+    this.versionId,
+    this.bookId,
+    this.chapter,
+    this.verse,
+    this.durationMs,
   }) : assert(volume == null || (volume >= 0 && volume <= 100), 'volume 0-100'),
-       assert(position == null || !position.isNegative, 'seek >= 0');
+       assert(position == null || !position.isNegative, 'seek >= 0'),
+       assert(durationMs == null || durationMs > 0, 'durationMs > 0');
 
   final String id;
   final RemoteAction action;
@@ -78,6 +100,13 @@ class RemoteCommand extends RemoteMessage {
 
   /// Índice do item da liturgia (liturgy.select/toggleDone).
   final int? index;
+
+  /// Campos v2 (bible/timer/countdown).
+  final int? versionId;
+  final int? bookId;
+  final int? chapter;
+  final int? verse;
+  final int? durationMs;
 
   @override
   String encode() {
@@ -92,6 +121,11 @@ class RemoteCommand extends RemoteMessage {
       if (mode != null) 'mode': mode,
       if (hymnId != null) 'hymnId': hymnId,
       if (index != null) 'value': index,
+      if (versionId != null) 'versionId': versionId,
+      if (bookId != null) 'bookId': bookId,
+      if (chapter != null) 'chapter': chapter,
+      if (verse != null) 'verse': verse,
+      if (durationMs != null) 'durationMs': durationMs,
     };
     return jsonEncode(map);
   }
@@ -134,6 +168,9 @@ class RemotePlayerState extends RemoteMessage {
     required this.canNext,
     this.liturgyItems = const [],
     this.liturgySelectedIndex,
+    this.bibleModule,
+    this.timerModule,
+    this.countdownModule,
   });
 
   final int? hymnId;
@@ -151,6 +188,11 @@ class RemotePlayerState extends RemoteMessage {
   /// Espelho da liturgia do desktop (v1.1) — vazio em peers antigos.
   final List<RemoteLiturgyItem> liturgyItems;
   final int? liturgySelectedIndex;
+
+  /// Módulos v2 (controle remoto total) — null em peers v1.
+  final RemoteBibleState? bibleModule;
+  final RemoteTimerState? timerModule;
+  final RemoteCountdownState? countdownModule;
 
   @override
   String encode() {
@@ -188,6 +230,55 @@ class RemotePlayerState extends RemoteMessage {
       },
     });
   }
+}
+
+/// Estado da Bíblia do alvo (v2). Null em peers v1.
+class RemoteBibleState {
+  const RemoteBibleState({
+    this.bookId,
+    this.chapter,
+    this.selectedVerses = const [],
+    required this.isProjecting,
+  });
+
+  final int? bookId;
+  final int? chapter;
+  final List<int> selectedVerses;
+  final bool isProjecting;
+}
+
+/// Estado do timer/cronômetro do alvo (v2).
+class RemoteTimerState {
+  const RemoteTimerState({
+    required this.status,
+    required this.accumulatedMs,
+    this.savedTimesMs = const [],
+    required this.isProjecting,
+  });
+
+  final String status;
+  final int accumulatedMs;
+  final List<int> savedTimesMs;
+  final bool isProjecting;
+}
+
+/// Estado do countdown do alvo (v2).
+class RemoteCountdownState {
+  const RemoteCountdownState({
+    required this.status,
+    required this.durationMs,
+    required this.accumulatedMs,
+    required this.finished,
+    this.savedTimesMs = const [],
+    required this.isProjecting,
+  });
+
+  final String status;
+  final int durationMs;
+  final int accumulatedMs;
+  final bool finished;
+  final List<int> savedTimesMs;
+  final bool isProjecting;
 }
 
 /// Alvo → APK: resultado de um comando.
@@ -345,6 +436,41 @@ class RemoteProtocol {
       hymnId = h.toInt();
     }
 
+    int? verse;
+    if (m.containsKey('verse')) {
+      final v = m['verse'];
+      if (v is! num || v < 1) return null;
+      verse = v.toInt();
+    }
+
+    int? bookId;
+    if (m.containsKey('bookId')) {
+      final b = m['bookId'];
+      if (b is! num || b < 1) return null;
+      bookId = b.toInt();
+    }
+
+    int? chapter;
+    if (m.containsKey('chapter')) {
+      final c = m['chapter'];
+      if (c is! num || c < 1) return null;
+      chapter = c.toInt();
+    }
+
+    int? versionId;
+    if (m.containsKey('versionId')) {
+      final ver = m['versionId'];
+      if (ver is! num || ver < 1) return null;
+      versionId = ver.toInt();
+    }
+
+    int? durationMs;
+    if (m.containsKey('durationMs')) {
+      final d = m['durationMs'];
+      if (d is! num || d <= 0) return null;
+      durationMs = d.toInt();
+    }
+
     final token = m['token'];
     return RemoteCommand(
       id: id,
@@ -355,6 +481,11 @@ class RemoteProtocol {
       mode: mode,
       hymnId: hymnId,
       index: index,
+      versionId: versionId,
+      bookId: bookId,
+      chapter: chapter,
+      verse: verse,
+      durationMs: durationMs,
     );
   }
 
@@ -422,6 +553,59 @@ class RemoteProtocol {
       canNext: p['canNext'] == true,
       liturgyItems: liturgyItems,
       liturgySelectedIndex: liturgySelected,
+      bibleModule: _parseBibleModule(m['bible']),
+      timerModule: _parseTimerModule(m['timer']),
+      countdownModule: _parseCountdownModule(m['countdown']),
+    );
+  }
+
+  static RemoteBibleState? _parseBibleModule(Object? raw) {
+    if (raw is! Map) return null;
+    final bookId = raw['bookId'];
+    final verses = raw['selectedVerses'];
+    return RemoteBibleState(
+      bookId: bookId is num ? bookId.toInt() : null,
+      chapter: raw['chapter'] is num ? (raw['chapter'] as num).toInt() : null,
+      selectedVerses: verses is List
+          ? verses.whereType<num>().map((v) => v.toInt()).toList()
+          : const [],
+      isProjecting: raw['isProjecting'] == true,
+    );
+  }
+
+  static RemoteTimerState? _parseTimerModule(Object? raw) {
+    if (raw is! Map) return null;
+    final status = raw['status'];
+    final marks = raw['savedTimesMs'];
+    return RemoteTimerState(
+      status: status is String ? status : 'idle',
+      accumulatedMs: raw['accumulatedMs'] is num
+          ? (raw['accumulatedMs'] as num).toInt()
+          : 0,
+      savedTimesMs: marks is List
+          ? marks.whereType<num>().map((v) => v.toInt()).toList()
+          : const [],
+      isProjecting: raw['isProjecting'] == true,
+    );
+  }
+
+  static RemoteCountdownState? _parseCountdownModule(Object? raw) {
+    if (raw is! Map) return null;
+    final status = raw['status'];
+    final marks = raw['savedTimesMs'];
+    return RemoteCountdownState(
+      status: status is String ? status : 'idle',
+      durationMs: raw['durationMs'] is num
+          ? (raw['durationMs'] as num).toInt()
+          : 0,
+      accumulatedMs: raw['accumulatedMs'] is num
+          ? (raw['accumulatedMs'] as num).toInt()
+          : 0,
+      finished: raw['finished'] == true,
+      savedTimesMs: marks is List
+          ? marks.whereType<num>().map((v) => v.toInt()).toList()
+          : const [],
+      isProjecting: raw['isProjecting'] == true,
     );
   }
 }

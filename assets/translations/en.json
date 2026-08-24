@@ -362,6 +362,26 @@
     "mirroringLocked": "Mirrored from desktop (locked)",
     "wsDetected": "Desktop connection detected — connecting…",
     "p2pDetected": "Web P2P pairing detected — generating answer…",
-    "unknownQr": "Unrecognized QR — trying P2P…"
+    "unknownQr": "Unrecognized QR — trying P2P…",
+    "tabLiturgy": "Liturgy",
+    "tabBible": "Bible",
+    "tabTime": "Time",
+    "bible": {
+      "hint": "Enter book (number), chapter and verse and project on the desktop.",
+      "book": "Book (no.)",
+      "chapter": "Chapter",
+      "verse": "Verse",
+      "open": "Open and project",
+      "close": "Close projection"
+    },
+    "timer": {
+      "title": "Stopwatch"
+    },
+    "countdown": {
+      "title": "Countdown"
+    },
+    "marks": "Marks",
+    "mark": "Mark",
+    "reset": "Reset"
   }
 }

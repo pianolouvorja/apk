@@ -246,6 +246,100 @@ void main() {
     });
   });
 
+  group('v2 — bible/timer/countdown', () {
+    test('encode bible.open carrega versionId/bookId/chapter/verse', () {
+      final json = jsonDecode(
+        RemoteCommand(
+          id: 'b1',
+          action: RemoteAction.bibleOpen,
+          versionId: 1,
+          bookId: 1,
+          chapter: 3,
+          verse: 3,
+        ).encode(),
+      ) as Map<String, dynamic>;
+      expect(json['action'], 'bible.open');
+      expect(json['versionId'], 1);
+      expect(json['bookId'], 1);
+      expect(json['chapter'], 3);
+      expect(json['verse'], 3);
+    });
+
+    test('encode countdown.setDuration carrega durationMs', () {
+      final json = jsonDecode(
+        RemoteCommand(
+          id: 'c1',
+          action: RemoteAction.countdownSetDuration,
+          durationMs: 60000,
+        ).encode(),
+      ) as Map<String, dynamic>;
+      expect(json['action'], 'countdown.setDuration');
+      expect(json['durationMs'], 60000);
+    });
+
+    test('parse command bible.open (vindo de peer de teste)', () {
+      final msg = RemoteProtocol.parse(
+        '{"v":1,"type":"command","id":"x","action":"bible.open",'
+        '"bookId":1,"chapter":2,"verse":4}',
+      );
+      expect(msg, isA<RemoteCommand>());
+      final cmd = msg! as RemoteCommand;
+      expect(cmd.action, RemoteAction.bibleOpen);
+      expect(cmd.bookId, 1);
+      expect(cmd.chapter, 2);
+      expect(cmd.verse, 4);
+    });
+
+    test('parse command countdown.setDuration inválido (0) → null', () {
+      final msg = RemoteProtocol.parse(
+        '{"v":1,"type":"command","id":"x","action":"countdown.setDuration",'
+        '"durationMs":0}',
+      );
+      expect(msg, isNull);
+    });
+
+    test('state v2 traz módulos bible/timer/countdown', () {
+      final msg = RemoteProtocol.parse(
+        '{"v":1,"type":"state","player":{"playing":false,"positionMs":0,'
+        '"durationMs":0,"slideIndex":0,"slideCount":0,"volume":0,'
+        '"canPrevious":false,"canNext":false},'
+        '"liturgy":{"selectedIndex":null,"items":[]},'
+        '"bible":{"bookId":1,"chapter":3,"selectedVerses":[3,4],'
+        '"isProjecting":true},'
+        '"timer":{"status":"running","accumulatedMs":42000,'
+        '"savedTimesMs":[30000],"isProjecting":false},'
+        '"countdown":{"status":"idle","durationMs":300000,'
+        '"accumulatedMs":0,"finished":false,"savedTimesMs":[],'
+        '"isProjecting":false}}',
+      );
+      expect(msg, isA<RemotePlayerState>());
+      final st = msg! as RemotePlayerState;
+      expect(st.bibleModule, isNotNull);
+      expect(st.bibleModule!.bookId, 1);
+      expect(st.bibleModule!.selectedVerses, [3, 4]);
+      expect(st.bibleModule!.isProjecting, isTrue);
+      expect(st.timerModule, isNotNull);
+      expect(st.timerModule!.status, 'running');
+      expect(st.timerModule!.savedTimesMs, [30000]);
+      expect(st.countdownModule, isNotNull);
+      expect(st.countdownModule!.durationMs, 300000);
+      expect(st.countdownModule!.finished, isFalse);
+    });
+
+    test('state sem módulos v2 → campos null (peer v1)', () {
+      final msg = RemoteProtocol.parse(
+        '{"v":1,"type":"state","player":{"playing":false,"positionMs":0,'
+        '"durationMs":0,"slideIndex":0,"slideCount":0,"volume":0,'
+        '"canPrevious":false,"canNext":false},'
+        '"liturgy":{"selectedIndex":null,"items":[]}}',
+      );
+      final st = msg! as RemotePlayerState;
+      expect(st.bibleModule, isNull);
+      expect(st.timerModule, isNull);
+      expect(st.countdownModule, isNull);
+    });
+  });
+
   group('RemotePairing', () {
     test('gera token de 6 chars alfanumérico', () {
       final token = RemotePairing.generateToken();
