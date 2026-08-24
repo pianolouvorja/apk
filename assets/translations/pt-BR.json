@@ -371,7 +371,9 @@
       "chapter": "Capítulo",
       "verse": "Versículo",
       "open": "Abrir e projetar",
-      "close": "Fechar projeção"
+      "close": "Fechar projeção",
+      "waiting": "Carregando catálogo da Bíblia…",
+      "version": "Versão"
     },
     "timer": {
       "title": "Cronômetro"
@@ -391,7 +393,8 @@
       "title": "Relógio"
     },
     "random": {
-      "title": "Sorteio"
+      "title": "Sorteio",
+      "generateNumbers": "Gerar números 1–100"
     },
     "project": "Projetar",
     "draw": "Sortear",

@@ -372,7 +372,9 @@
       "chapter": "Chapter",
       "verse": "Verse",
       "open": "Open and project",
-      "close": "Close projection"
+      "close": "Close projection",
+      "waiting": "Loading Bible catalog…",
+      "version": "Version"
     },
     "timer": {
       "title": "Stopwatch"
@@ -392,7 +394,8 @@
       "title": "Clock"
     },
     "random": {
-      "title": "Draw"
+      "title": "Draw",
+      "generateNumbers": "Generate numbers 1–100"
     },
     "project": "Project",
     "draw": "Draw",

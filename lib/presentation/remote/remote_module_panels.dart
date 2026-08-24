@@ -54,46 +54,23 @@ RemoteSend _defaultSend = (action,
   );
 };
 
-/// Painel Bíblia: livro/capítulo/versículo numéricos + abrir/projetar.
-///
-/// v2 fase 1: entrada numérica direta (livro por número). A grade visual
-/// de livros (com nomes) entra com a integração do catálogo local.
-class RemoteBiblePanel extends StatefulWidget {
-  const RemoteBiblePanel({super.key, this.send});
+/// Painel Bíblia: seleção de versão, livro por NOME (dropdown), navegação
+/// de capítulo/versículo por chevron — dados do catálogo do desktop.
+class RemoteBiblePanel extends StatelessWidget {
+  const RemoteBiblePanel({super.key, this.send, this.state});
 
   final RemoteSend? send;
+  final RemotePlayerState? state;
 
-  @override
-  State<RemoteBiblePanel> createState() => _RemoteBiblePanelState();
-}
+  RemoteSend get _send => send ?? _defaultSend;
 
-class _RemoteBiblePanelState extends State<RemoteBiblePanel> {
-  final _bookCtrl = TextEditingController();
-  final _chapterCtrl = TextEditingController(text: '1');
-  final _verseCtrl = TextEditingController(text: '1');
-
-  @override
-  void dispose() {
-    _bookCtrl.dispose();
-    _chapterCtrl.dispose();
-    _verseCtrl.dispose();
-    super.dispose();
-  }
-
-  int? _parse(TextEditingController c) {
-    final v = int.tryParse(c.text.trim());
-    return (v != null && v >= 1) ? v : null;
-  }
-
-  Future<void> _open() async {
-    final book = _parse(_bookCtrl);
-    final chapter = _parse(_chapterCtrl);
-    final verse = _parse(_verseCtrl);
-    if (book == null || chapter == null) return;
-    await (widget.send ?? _defaultSend)(
+  void _open(RemoteBibleState bible,
+      {int? bookId, int? chapter, int? verse}) {
+    _send(
       RemoteAction.bibleOpen,
-      bookId: book,
-      chapter: chapter,
+      versionId: bible.versionId,
+      bookId: bookId ?? bible.bookId,
+      chapter: chapter ?? bible.chapter ?? 1,
       verse: verse,
     );
   }
@@ -101,63 +78,148 @@ class _RemoteBiblePanelState extends State<RemoteBiblePanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bible = state?.bibleModule;
+    if (bible == null) {
+      return Center(
+        child: Text('remote.bible.waiting'.tr(),
+            style: theme.textTheme.bodySmall),
+      );
+    }
+    final books = bible.books;
+    final versions = bible.versions;
+    RemoteBibleBook? selectedBook;
+    for (final b in books) {
+      if (b.id == bible.bookId) {
+        selectedBook = b;
+        break;
+      }
+    }
+    final chapter = bible.chapter ?? 1;
+    final maxChapters = selectedBook?.chapters ?? 150;
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.s4),
       children: [
-        Text('remote.bible.hint'.tr(), style: theme.textTheme.bodySmall),
-        const SizedBox(height: AppSpacing.s3),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                key: const Key('remote-bible-book'),
-                controller: _bookCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'remote.bible.book'.tr(),
-                  isDense: true,
-                ),
-              ),
+        if (versions.length > 1)
+          DropdownButtonFormField<int>(
+            key: const Key('remote-bible-version'),
+            initialValue: bible.versionId,
+            decoration: InputDecoration(
+              labelText: 'remote.bible.version'.tr(),
+              isDense: true,
             ),
-            const SizedBox(width: AppSpacing.s3),
-            Expanded(
-              child: TextField(
-                key: const Key('remote-bible-chapter'),
-                controller: _chapterCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'remote.bible.chapter'.tr(),
-                  isDense: true,
-                ),
+            items: [
+              for (final v in versions)
+                DropdownMenuItem(value: v.id, child: Text(v.abbreviation)),
+            ],
+            onChanged: (id) {
+              if (id != null) {
+                _send(RemoteAction.bibleOpen,
+                    versionId: id,
+                    bookId: bible.bookId ?? 1,
+                    chapter: chapter);
+              }
+            },
+          ),
+        if (versions.length > 1) const SizedBox(height: AppSpacing.s3),
+        DropdownButtonFormField<int>(
+          key: const Key('remote-bible-book-select'),
+          initialValue: bible.bookId,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'remote.bible.book'.tr(),
+            isDense: true,
+          ),
+          items: [
+            for (final b in books)
+              DropdownMenuItem(
+                value: b.id,
+                child: Text(b.number > 0 ? '${b.number}. ${b.name}' : b.name),
               ),
-            ),
-            const SizedBox(width: AppSpacing.s3),
-            Expanded(
-              child: TextField(
-                key: const Key('remote-bible-verse'),
-                controller: _verseCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'remote.bible.verse'.tr(),
-                  isDense: true,
-                ),
-              ),
-            ),
           ],
+          onChanged: (id) {
+            if (id != null) _open(bible, bookId: id, chapter: 1, verse: 1);
+          },
+        ),
+        const SizedBox(height: AppSpacing.s3),
+        _ChevronField(
+          label: 'remote.bible.chapter'.tr(),
+          value: chapter,
+          min: 1,
+          max: maxChapters,
+          keyPrefix: 'chapter',
+          onChanged: (c) => _open(bible, chapter: c, verse: 1),
+        ),
+        const SizedBox(height: AppSpacing.s3),
+        _ChevronField(
+          label: 'remote.bible.verse'.tr(),
+          value: (bible.selectedVerses.isNotEmpty
+              ? bible.selectedVerses.last
+              : 1),
+          min: 1,
+          max: 200,
+          keyPrefix: 'verse',
+          onChanged: (v) => _send(RemoteAction.bibleSelectVerse, verse: v),
         ),
         const SizedBox(height: AppSpacing.s4),
         FilledButton.icon(
-          key: const Key('remote-bible-open'),
-          onPressed: _open,
+          key: const Key('remote-bible-project'),
+          onPressed: selectedBook == null
+              ? null
+              : () => _open(bible, verse: bible.selectedVerses.isNotEmpty
+                  ? bible.selectedVerses.last
+                  : 1),
           icon: const Icon(TablerIcons.book),
           label: Text('remote.bible.open'.tr()),
         ),
         const SizedBox(height: AppSpacing.s2),
         OutlinedButton.icon(
-          onPressed: () =>
-              (widget.send ?? _defaultSend)(RemoteAction.bibleClose),
+          onPressed: () => _send(RemoteAction.bibleClose),
           icon: const Icon(TablerIcons.squareX),
           label: Text('remote.bible.close'.tr()),
+        ),
+      ],
+    );
+  }
+}
+
+/// Campo numérico com navegação por chevron (±).
+class _ChevronField extends StatelessWidget {
+  const _ChevronField({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    required this.keyPrefix,
+  });
+
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: InputDecorator(
+            decoration: InputDecoration(labelText: label, isDense: true),
+            child: Text('$value', style: Theme.of(context).textTheme.titleMedium),
+          ),
+        ),
+        IconButton(
+          key: Key('remote-bible-$keyPrefix-minus'),
+          icon: const Icon(TablerIcons.chevronLeft),
+          onPressed: value > min ? () => onChanged(value - 1) : null,
+        ),
+        IconButton(
+          key: Key('remote-bible-$keyPrefix-plus'),
+          icon: const Icon(TablerIcons.chevronRight),
+          onPressed: value < max ? () => onChanged(value + 1) : null,
         ),
       ],
     );
@@ -468,19 +530,58 @@ class RemoteClockRandomPanel extends StatelessWidget {
           child: Text('remote.project'.tr()),
         ),
       )),
-      Card(child: ListTile(
-        leading: const Icon(TablerIcons.dice),
-        title: Text('remote.random.title'.tr()),
-        subtitle: Text(random == null ? '—' : '${random!.drawnCount} / ${random!.availableCount}'),
-        trailing: FilledButton(
-          onPressed: () => _send(RemoteAction.randomStartDraw),
-          child: Text('remote.draw'.tr()),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.s3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(TablerIcons.dice),
+                  const SizedBox(width: AppSpacing.s2),
+                  Expanded(child: Text('remote.random.title'.tr())),
+                  Text(random == null
+                      ? '—'
+                      : '${random!.drawnCount} / ${random!.availableCount}'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s3),
+              FilledButton.icon(
+                key: const Key('remote-random-draw'),
+                // Sem lista = botão continua seguro, mas gera 1–100 primeiro.
+                onPressed: () => _send(RemoteAction.randomStartDraw),
+                icon: const Icon(TablerIcons.dice),
+                label: Text('remote.draw'.tr()),
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: const Key('remote-random-numbers'),
+                onPressed: () => _send(RemoteAction.randomGenerateNumberRange),
+                icon: const Icon(TablerIcons.numbers),
+                label: Text('remote.random.generateNumbers'.tr()),
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: const Key('remote-random-projection'),
+                onPressed: () => _send(RemoteAction.randomToggleProjection),
+                icon: Icon(random?.isProjecting == true
+                    ? TablerIcons.square
+                    : TablerIcons.deviceTv),
+                label: Text(random?.isProjecting == true
+                    ? 'remote.stopProjection'.tr()
+                    : 'remote.project'.tr()),
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              OutlinedButton.icon(
+                key: const Key('remote-random-stop'),
+                onPressed: () => _send(RemoteAction.randomCancelDraw),
+                icon: const Icon(TablerIcons.playerStop),
+                label: Text('remote.stop'.tr()),
+              ),
+            ],
+          ),
         ),
-      )),
-      OutlinedButton.icon(
-        onPressed: () => _send(RemoteAction.randomCancelDraw),
-        icon: const Icon(TablerIcons.playerStop),
-        label: Text('remote.stop'.tr()),
       ),
     ],
   );

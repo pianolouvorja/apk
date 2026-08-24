@@ -47,38 +47,45 @@ void main() {
 
   setUp(() => sent.clear());
 
-  testWidgets('RemoteBiblePanel envia bible.open com livro/cap/versículo',
+  const bibleState = RemotePlayerState(
+    playing: false,
+    position: Duration.zero,
+    duration: Duration.zero,
+    slideIndex: 0,
+    slideCount: 0,
+    volume: 0,
+    canPrevious: false,
+    canNext: false,
+    bibleModule: RemoteBibleState(
+      bookId: 1,
+      chapter: 1,
+      selectedVerses: [1],
+      isProjecting: false,
+      versionId: 1,
+      books: [
+        RemoteBibleBook(id: 1, name: 'Gênesis', chapters: 50, number: 1),
+        RemoteBibleBook(id: 2, name: 'Êxodo', chapters: 40, number: 2),
+      ],
+      versions: [RemoteBibleVersion(id: 1, abbreviation: 'ARA')],
+    ),
+  );
+
+  testWidgets('RemoteBiblePanel seleciona livro por nome e navega capítulo',
       (tester) async {
     await tester.pumpWidget(
-      wrap(RemoteBiblePanel(send: fakeSend)),
+      wrap(RemoteBiblePanel(send: fakeSend, state: bibleState)),
     );
-    await tester.enterText(
-      find.byKey(const Key('remote-bible-book')),
-      '1',
-    );
-    await tester.enterText(
-      find.byKey(const Key('remote-bible-chapter')),
-      '3',
-    );
-    await tester.enterText(
-      find.byKey(const Key('remote-bible-verse')),
-      '5',
-    );
-    await tester.tap(find.byKey(const Key('remote-bible-open')));
+    expect(find.byKey(const Key('remote-bible-book-select')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('remote-bible-chapter-plus')));
     await tester.pump();
-
-    expect(sent, hasLength(1));
     expect(sent.single.action, RemoteAction.bibleOpen);
-    expect(sent.single.bookId, 1);
-    expect(sent.single.chapter, 3);
-    expect(sent.single.verse, 5);
-  });
+    expect(sent.single.chapter, 2);
 
-  testWidgets('RemoteBiblePanel com livro vazio NÃO envia', (tester) async {
-    await tester.pumpWidget(wrap(RemoteBiblePanel(send: fakeSend)));
-    await tester.tap(find.byKey(const Key('remote-bible-open')));
+    sent.clear();
+    await tester.tap(find.byKey(const Key('remote-bible-verse-plus')));
     await tester.pump();
-    expect(sent, isEmpty);
+    expect(sent.single.action, RemoteAction.bibleSelectVerse);
+    expect(sent.single.verse, 2);
   });
 
   testWidgets('RemoteHymnsPanel busca via media.search e abre com hit do desktop',

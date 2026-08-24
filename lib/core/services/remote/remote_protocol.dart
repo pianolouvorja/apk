@@ -62,6 +62,7 @@ enum RemoteAction {
   randomCancelDraw('random.cancelDraw'),
   randomClearHistory('random.clearHistory'),
   randomResetAll('random.resetAll'),
+  randomToggleProjection('random.toggleProjection'),
   // Fase 3 — hinos/mídia.
   mediaOpen('media.open'),
   mediaSearch('media.search');
@@ -281,18 +282,45 @@ class RemotePlayerState extends RemoteMessage {
 }
 
 /// Estado da Bíblia do alvo (v2). Null em peers v1.
+class RemoteBibleBook {
+  const RemoteBibleBook({
+    required this.id,
+    required this.name,
+    required this.chapters,
+    required this.number,
+  });
+
+  final int id;
+  final String name;
+  final int chapters;
+  final int number;
+}
+
+class RemoteBibleVersion {
+  const RemoteBibleVersion({required this.id, required this.abbreviation});
+
+  final int id;
+  final String abbreviation;
+}
+
 class RemoteBibleState {
   const RemoteBibleState({
     this.bookId,
     this.chapter,
     this.selectedVerses = const [],
     required this.isProjecting,
+    this.versionId,
+    this.books = const [],
+    this.versions = const [],
   });
 
   final int? bookId;
   final int? chapter;
   final List<int> selectedVerses;
   final bool isProjecting;
+  final int? versionId;
+  final List<RemoteBibleBook> books;
+  final List<RemoteBibleVersion> versions;
 }
 
 /// Estado do timer/cronômetro do alvo (v2).
@@ -718,6 +746,8 @@ class RemoteProtocol {
     if (raw is! Map) return null;
     final bookId = raw['bookId'];
     final verses = raw['selectedVerses'];
+    final rawBooks = raw['books'];
+    final rawVersions = raw['versions'];
     return RemoteBibleState(
       bookId: bookId is num ? bookId.toInt() : null,
       chapter: raw['chapter'] is num ? (raw['chapter'] as num).toInt() : null,
@@ -725,6 +755,41 @@ class RemoteProtocol {
           ? verses.whereType<num>().map((v) => v.toInt()).toList()
           : const [],
       isProjecting: raw['isProjecting'] == true,
+      versionId: raw['versionId'] is num
+          ? (raw['versionId'] as num).toInt()
+          : null,
+      books: rawBooks is List
+          ? rawBooks
+                .whereType<Map>()
+                .where(
+                  (b) => b['id'] is num && b['name'] is String,
+                )
+                .map(
+                  (b) => RemoteBibleBook(
+                    id: (b['id'] as num).toInt(),
+                    name: b['name'] as String,
+                    chapters: b['chapters'] is num
+                        ? (b['chapters'] as num).toInt()
+                        : 0,
+                    number: b['number'] is num
+                        ? (b['number'] as num).toInt()
+                        : 0,
+                  ),
+                )
+                .toList()
+          : const [],
+      versions: rawVersions is List
+          ? rawVersions
+                .whereType<Map>()
+                .where((v) => v['id'] is num && v['abbreviation'] is String)
+                .map(
+                  (v) => RemoteBibleVersion(
+                    id: (v['id'] as num).toInt(),
+                    abbreviation: v['abbreviation'] as String,
+                  ),
+                )
+                .toList()
+          : const [],
     );
   }
 
