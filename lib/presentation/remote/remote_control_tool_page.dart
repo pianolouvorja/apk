@@ -25,17 +25,21 @@ class RemoteControlToolPage extends StatefulWidget {
   State<RemoteControlToolPage> createState() => _RemoteControlToolPageState();
 }
 
-class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
+class _RemoteControlToolPageState extends State<RemoteControlToolPage>
+    with SingleTickerProviderStateMixin {
   StreamSubscription? _sub;
   RemotePlayerState? _state;
   double? _dragVolume;
-  // ignore: unused_field — setado via onTap da TabBar
-  // (analyze sugeriu final; precisa ser mutável)
-  int _tab = 0;
+  TabController? _tabCtrl;
 
   @override
   void initState() {
     super.initState();
+    // TabBar exige controller (sem ele lança e a view fica cinza).
+    _tabCtrl = TabController(length: 5, vsync: this);
+    _tabCtrl!.addListener(() {
+      if (!_tabCtrl!.indexIsChanging && mounted) setState(() {});
+    });
     // Tool pode abrir depois do state push inicial: hidrata do cache.
     _state = RemoteSession.instance.lastState;
     _sub = RemoteSession.instance.states.listen((s) {
@@ -45,6 +49,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
 
   @override
   void dispose() {
+    _tabCtrl?.dispose();
     _sub?.cancel();
     super.dispose();
   }
@@ -114,8 +119,8 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
               children: [
                 // Abas v2: liturgia (padrão) + módulos do controle total.
                 TabBar(
+                  controller: _tabCtrl,
                   isScrollable: true,
-                  onTap: (i) => setState(() => _tab = i),
                   tabs: [
                     Tab(icon: const Icon(TablerIcons.clipboardText), text: 'remote.tabLiturgy'.tr()),
                     Tab(icon: const Icon(TablerIcons.music), text: 'remote.tabHymns'.tr()),
@@ -126,7 +131,7 @@ class _RemoteControlToolPageState extends State<RemoteControlToolPage> {
                 ),
                 Expanded(
                   child: IndexedStack(
-                    index: _tab,
+                    index: _tabCtrl?.index ?? 0,
                     children: [
                       // aba 0: status liturgia + player (conteúdo original)
                       _liturgyAndPlayer(context, theme, st),
