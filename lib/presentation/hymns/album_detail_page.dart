@@ -179,7 +179,14 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       }
       // Detail completo (lyricRaw) pro reabrir via mini player —
       // hymn do catálogo não tem letra (bug 2026-08-21).
-      final detailFull = await _repository().getHymnDetails(hymn.id);
+      // Offline-first: faixa baixada toca MESMO sem rede — detail aqui é
+      // best-effort (mini player perde a letra até reconectar; play nunca falha).
+      Hymn detailFull = hymn;
+      try {
+        detailFull = await _repository().getHymnDetails(hymn.id);
+      } catch (_) {
+        if (local == null) rethrow;
+      }
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
