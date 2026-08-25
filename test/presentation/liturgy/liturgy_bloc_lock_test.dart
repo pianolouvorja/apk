@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:louvorja_piano_mobile/data/repositories/liturgy_repository.dart';
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
-import 'package:louvorja_piano_mobile/presentation/liturgy/weekday_math.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/bloc/liturgy_bloc.dart';
 
 void main() {

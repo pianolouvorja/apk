@@ -34,7 +34,7 @@ abstract final class JaLiturgyParser {
       final sec = _sectionRe.firstMatch(line);
       if (sec != null) {
         current = sec.group(1)!.toLowerCase();
-        sections[current!] = {};
+        sections[current] = {};
         continue;
       }
       if (current == null) continue;

@@ -11,10 +11,19 @@ import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // Reproduz o import COMPLETO com o .ja real da igreja. O arquivo fica fora
+  // do repo (dado real): teste só roda onde o arquivo existe (padrão do repo
+  // — igual media_duration_reader_test).
+  const realFile =
+      '/media/rafaelejosi/NovoVolume/nvme-mint/Downloads/liturgia.ja';
+
   test('import real: sáb (ES) em saturday, culto sex em friday', () async {
-    final bytes = File(
-      '/media/rafaelejosi/NovoVolume/nvme-mint/Downloads/liturgia.ja',
-    ).readAsBytesSync();
+    if (!File(realFile).existsSync()) {
+      // ignore: avoid_print
+      print('skip: arquivo de teste ausente');
+      return;
+    }
+    final bytes = File(realFile).readAsBytesSync();
     final imported = JaLiturgyParser.parse(decodeJaFile(bytes));
 
     SharedPreferences.setMockInitialValues({});
