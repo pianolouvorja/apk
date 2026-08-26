@@ -43,8 +43,10 @@ class PalcoOrchestrator extends ChangeNotifier {
       for (final item in list) {
         final id = item['id'] as String?;
         final label = item['label'] as String?;
-        if (id != null && label != null)
-          addSlot(id: id, label: label, persist: false);
+        final slotIndex = item['slotIndex'] as int?;
+        if (id != null && label != null) {
+          addSlot(id: id, label: label, slotIndex: slotIndex, persist: false);
+        }
       }
     }
     final active = prefs.getString(_activeKey);
@@ -67,11 +69,22 @@ class PalcoOrchestrator extends ChangeNotifier {
     await prefs.setString(
       _slotsKey,
       jsonEncode(
-        _slots.values.map((s) => {'id': s.id, 'label': s.label}).toList(),
+        _slots.values
+            .map(
+              (s) => {
+                'id': s.id,
+                'label': s.label,
+                'slotIndex': s.slotIndex,
+                'httpPort': s.httpPort,
+                'wsPort': s.wsPort,
+              },
+            )
+            .toList(),
       ),
     );
-    if (_activeSlotId != null)
+    if (_activeSlotId != null) {
       await prefs.setString(_activeKey, _activeSlotId!);
+    }
   }
 
   /// Slot ativo — onde as projeções dos módulos vão.
@@ -103,10 +116,24 @@ class PalcoOrchestrator extends ChangeNotifier {
   // ===== Gerenciamento de Slots =====
 
   /// Cria um novo slot. Retorna false se atingiu o limite.
-  bool addSlot({required String id, String? label, bool persist = true}) {
+  bool addSlot({
+    required String id,
+    String? label,
+    int? slotIndex,
+    bool persist = true,
+  }) {
     if (_slots.length >= maxSlots) return false;
     if (_slots.containsKey(id)) return false;
-    final index = _slots.length;
+    // A porta é identidade do slot: nunca recalcular pela ordem do Map ao
+    // restaurar. Slots antigos sem índice usam primeiro índice livre.
+    final used = _slots.values.map((s) => s.slotIndex).toSet();
+    final index =
+        slotIndex ??
+        List<int>.generate(
+          maxSlots,
+          (i) => i,
+        ).firstWhere((i) => !used.contains(i), orElse: () => -1);
+    if (index < 0 || index >= maxSlots || used.contains(index)) return false;
     final slot = PalcoSlot(id: id, label: label ?? id, slotIndex: index);
     slot.addListener(_onSlotChanged);
     _slots[id] = slot;

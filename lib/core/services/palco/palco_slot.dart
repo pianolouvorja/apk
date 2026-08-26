@@ -18,6 +18,8 @@ class PalcoSlot extends ChangeNotifier {
       sender: PalcoSender(
         httpPortFixed: _baseHttpPort,
         wsPortFixed: _baseWsPort,
+        slotId: id,
+        slotLabel: label,
       ),
     );
     _settingsRepo = StageSettingsRepository(scope: 'global');
@@ -37,6 +39,7 @@ class PalcoSlot extends ChangeNotifier {
   /// Slot 0: 7080/7081, Slot 1: 7082/7083, etc.
   int get _baseHttpPort => 7080 + (_slotIndex * 2);
   int get _baseWsPort => 7081 + (_slotIndex * 2);
+  int get slotIndex => _slotIndex;
   int get httpPort => _baseHttpPort;
   int get wsPort => _baseWsPort;
 
