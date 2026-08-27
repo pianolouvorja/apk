@@ -1,0 +1,168 @@
+library;
+
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as image;
+
+import 'dart:ui' as ui;
+
+import 'ssdp_discovery.dart';
+import 'cast_controller.dart';
+import 'stage_slide_painter.dart';
+import 'stage_settings_repository.dart';
+
+/// Palco global: sessão de cast PERSISTENTE entre telas.
+///
+/// Quando ligado, a TV mostra o background/personalização definida e
+/// AGUARDA conteúdo — qualquer módulo (liturgia, bíblia, player) projeta
+/// nele via [project]. Desligar = desconecta da TV.
+class StageSession extends ChangeNotifier {
+  StageSession._();
+  static final StageSession instance = StageSession._();
+
+  final CastController _cast = CastController();
+  final StageSettingsRepository _settingsRepo = StageSettingsRepository();
+
+  StageSettings settings = const StageSettings();
+  DlnaRenderer? renderer;
+  bool _busy = false;
+  ui.Image? _backgroundImage;
+
+  bool get isOn => _cast.isConnected;
+  String? get rendererName => _cast.rendererName;
+  String? get castLastError => _cast.lastError;
+
+  /// Liga o palco: conecta na TV e projeta o IDLE (background definido).
+  Future<bool> turnOn(DlnaRenderer tv) async {
+    settings = await _settingsRepo.load();
+    final ok = await _cast.connect(tv);
+    if (!ok) return false;
+    renderer = tv;
+    settings = settings.copyWith(capability: tv.screenCapability);
+    await _loadBackground();
+    await _projectIdle();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> turnOff() async {
+    await _cast.disconnect();
+    renderer = null;
+    _backgroundImage?.dispose();
+    _backgroundImage = null;
+    notifyListeners();
+  }
+
+  /// Carrega a imagem de fundo personalizada (persistida) em memória.
+  Future<void> _loadBackground() async {
+    final bytes = await _settingsRepo.loadBackgroundImage();
+    if (bytes == null) {
+      _backgroundImage = null;
+      return;
+    }
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _backgroundImage?.dispose();
+      _backgroundImage = frame.image;
+    } catch (_) {
+      _backgroundImage = null;
+    }
+  }
+
+  /// Define nova imagem de fundo (path escolhido pelo usuário),
+  /// persiste e re-projeta se ligado.
+  Future<void> setBackgroundFromFile(String path) async {
+    final saved = await _settingsRepo.saveBackgroundImage(path);
+    if (saved == null) return;
+    await _loadBackground();
+    await refresh();
+  }
+
+  Future<void> updateSettings(StageSettings s) async {
+    settings = s;
+    await _settingsRepo.save(s);
+    await refresh();
+  }
+
+  /// Re-projeta o que estiver em cena (ou idle).
+  Future<void> refresh() async {
+    if (!isOn) return;
+    final current = _lastContent;
+    if (current != null) {
+      await _project(current);
+    } else {
+      await _projectIdle();
+    }
+  }
+
+  // Conteúdo atual em cena (para refresh pós-mudança de visual).
+  _StageContent? _lastContent;
+
+  /// Projeta conteúdo no palco. Sobrescreve o anterior.
+  Future<bool> project({
+    required String title,
+    String? body,
+    String? footer,
+  }) async {
+    if (!isOn) return false;
+    final content = _StageContent(title: title, body: body, footer: footer);
+    _lastContent = content;
+    return _project(content);
+  }
+
+  /// Volta ao idle (background aguardando mídia).
+  Future<void> clearContent() async {
+    _lastContent = null;
+    if (isOn) await _projectIdle();
+  }
+
+  Future<bool> _project(_StageContent c) async {
+    if (_busy) return true; // projeção em andamento: mantém a última
+    _busy = true;
+    try {
+      var bytes = await StageSlidePainter.renderGeneric(
+        title: c.title,
+        body: c.body,
+        footer: c.footer,
+        settings: settings,
+        backgroundImage: _backgroundImage,
+      );
+      // Compatibilidade máxima: sinks sem PNG recebem JPEG (universal).
+      if (_cast.imageFormat == StageImageFormat.jpeg) {
+        bytes = _encodeJpeg(bytes);
+      }
+      return await _cast.projectSlide(bytes, title: c.title);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  /// PNG (RGBA do rasterizador) → JPEG (qualidade 90) via pacote image.
+  static Uint8List _encodeJpeg(Uint8List pngBytes) {
+    final img = image.decodePng(pngBytes);
+    if (img == null) return pngBytes; // improvável: segue PNG
+    return Uint8List.fromList(image.encodeJpg(img, quality: 90));
+  }
+
+  Future<void> _projectIdle() async {
+    var bytes = await StageSlidePainter.renderGeneric(
+      title: '',
+      body: '',
+      footer: 'stage.waiting'.tr(),
+      settings: settings,
+      backgroundImage: _backgroundImage,
+    );
+    if (_cast.imageFormat == StageImageFormat.jpeg) {
+      bytes = _encodeJpeg(bytes);
+    }
+    await _cast.projectSlide(bytes, title: 'Palco');
+  }
+}
+
+class _StageContent {
+  final String title;
+  final String? body;
+  final String? footer;
+  const _StageContent({required this.title, this.body, this.footer});
+}

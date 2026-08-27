@@ -14,6 +14,13 @@ abstract class HymnAudioPlayer {
 
   Stream<bool> get playingStream;
 
+  /// Posição atual (ms) e duração (ms) da faixa em reprodução.
+  Stream<Duration> get positionStream;
+  Stream<Duration> get durationStream;
+
+  /// Move a reprodução para [position].
+  Future<void> seek(Duration position);
+
   Future<void> toggleUrl(String url);
   Future<void> playUrl(String url);
   Future<void> pause();

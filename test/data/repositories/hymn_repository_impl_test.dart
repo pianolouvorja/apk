@@ -23,6 +23,7 @@ class _MockApi implements LouvorjaApiClient {
   List<Hymn> hymnal1996Result = const [];
   Hymn? musicDetail;
   bool shouldFail = false;
+  bool shouldFailHymnal1996 = false; // API ES nao possui esse arquivo (404). 
 
   @override
   Future<List<AlbumCategory>> fetchCategories() async {
@@ -50,7 +51,7 @@ class _MockApi implements LouvorjaApiClient {
 
   @override
   Future<List<Hymn>> fetchHymnal1996() async {
-    if (shouldFail) throw Exception('network error');
+    if (shouldFail || shouldFailHymnal1996) throw Exception('network error');
     return hymnal1996Result;
   }
 
@@ -99,6 +100,42 @@ void main() {
     expect(result.first.albums.first.id, -1);
     expect(result.first.albums.first.subtitle, '2 hinos');
     expect(result.first.albums.first.trackCount, 2);
+  });
+
+  test('getCategories preserva catalogo e hinario atual quando 1996 indisponivel (API ES 404)', () async {
+    api.languagePrefix = 'es';
+    api.categoriesResult = [
+      AlbumCategory(id: 1, name: 'Cat ES', albums: [
+        const Album(id: 100, name: 'Album ES'),
+      ]),
+    ];
+    api.hymnalResult = [const Hymn(id: 1, title: 'Himno actual')];
+    api.shouldFailHymnal1996 = true;
+
+    final result = await HymnRepositoryImpl(api, cache).getCategories();
+
+    expect(result.any((c) => c.name == 'Cat ES'), isTrue);
+    expect(result.expand((c) => c.albums).any((a) => a.id == -1), isTrue);
+    expect(result.expand((c) => c.albums).any((a) => a.id == -2), isFalse);
+  });
+
+  test('hinario atual usa cache quando API cai (offline-first)', () async {
+    api.hymnalResult = [
+      const Hymn(id: 1, title: 'Nosso Sol é Jesus'),
+    ];
+    final repo = HymnRepositoryImpl(api, cache);
+
+    // Primeira visita online popula album_-1 no CatalogCache.
+    final online = await repo.getHymnsByAlbum(-1);
+    expect(online.single.title, 'Nosso Sol é Jesus');
+
+    // Nova instancia simula reinicio; rede indisponivel.
+    api.shouldFail = true;
+    final restarted = HymnRepositoryImpl(api, cache);
+    final offline = await restarted.getHymnsByAlbum(-1);
+
+    expect(offline.single.id, 1);
+    expect(offline.single.title, 'Nosso Sol é Jesus');
   });
 
   test('getCategories nao injeta hinario quando vazio', () async {

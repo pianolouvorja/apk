@@ -1,8 +1,8 @@
 library;
 
+import 'package:louvorja_piano_mobile/core/errors/louvorja_api_exception.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:louvorja_piano_mobile/core/utils/scripture_format.dart';
-import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_version.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/bible_repository.dart';

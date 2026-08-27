@@ -36,7 +36,11 @@
     "start": "Start",
     "pause": "Pause",
     "stop": "Stop",
-    "reset": "Reset"
+    "reset": "Reset",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "clearSearch": "Clear search",
+    "back": "Back"
   },
   "hymns": {
     "title": "Hymns",
@@ -117,7 +121,14 @@
       "scheduledFor": "Scheduled for"
     },
     "totalDuration": "Total duration",
-    "setStartTime": "Set start time"
+    "setStartTime": "Set start time",
+    "clone": {
+      "action": "Clone Liturgy"
+    },
+    "messages": {
+      "confirmDelete": "Remove this item?",
+      "toggleCollapse": "Expand or collapse"
+    }
   },
   "bible": {
     "title": "Bible",
@@ -204,5 +215,77 @@
     "bibleSubtitle": "Books, chapters and verses",
     "timer": "Timer",
     "timerSubtitle": "Stopwatch and countdown"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search hymns and verses...",
+    "hymnsGroup": "Hymns",
+    "bibleGroup": "Bible"
+  },
+  "downloads": {
+    "trackError": "Failed to download \"{title}\". Check your connection.",
+    "albumErrors": "{count} of {total} hymns failed to download.",
+    "downloadAll": "Download all collections",
+    "downloadAllProgress": "Downloading collections: {current}/{total}",
+    "downloading": "Downloading...",
+    "offlineEmpty": "No connection and no downloaded songs in this collection.",
+    "noneDownloaded": "No downloaded songs in this collection."
+  },
+  "stage": {
+    "title": "Stage — cast to TV",
+    "active": "Stage active",
+    "waiting": "LouvorJA — waiting for content",
+    "noTvs": "No TVs found. Check the TV is on the same network with DLNA enabled.",
+    "connectFail": "Could not connect to the TV.",
+    "disconnected": "TV disconnected — projection stopped.",
+    "background": "Background image",
+    "backgroundHint": "Pick from gallery (optimized for TV)",
+    "backgroundUpdated": "Stage background updated.",
+    "customize": "Customize",
+    "customizeHint": "Colors, font, size",
+    "turnOff": "Turn stage off",
+    "castOn": "Stage active",
+    "castOff": "Cast to TV"
+  },
+  "sync": {
+    "sectionTitle": "Synchronization",
+    "cardTitle": "Transfer data",
+    "hint": "Export your liturgy, settings and presets to another device (web or desktop) — or import a .louvorja package.",
+    "export": "Export",
+    "import": "Import",
+    "exported": "Package exported.",
+    "exportCancelled": "Export cancelled.",
+    "imported": "Synced: {applied}.",
+    "importedNone": "Nothing to update (local is already newer).",
+    "importInvalid": "Invalid file or not a .louvorja package.",
+    "importCancelled": "Import cancelled."
+  },
+  "remote": {
+    "title": "Remote Control",
+    "subtitle": "Control Piano on the desktop or browser from your phone",
+    "mode_idle": "Disconnected",
+    "mode_desktop": "Desktop (Electron)",
+    "mode_web": "Browser (web)",
+    "desktop_host": "Desktop address",
+    "desktop_hint": "IP:port (e.g. 192.168.1.50:7070)",
+    "token_label": "Pairing token",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "start_weblink": "Control the browser",
+    "weblink_url": "Open on the desktop browser:",
+    "weblink_waiting": "Waiting for the browser to connect…",
+    "connected_to": "Connected to {target}",
+    "status_disconnected": "Disconnected",
+    "status_connecting": "Connecting…",
+    "status_connected": "Connected",
+    "status_listening": "Waiting for browser",
+    "no_state": "No media playing on the target",
+    "cmd_failed": "Target did not acknowledge the command",
+    "play": "Play",
+    "pause": "Pause",
+    "previous": "Previous",
+    "next": "Next",
+    "stop": "Stop",
+    "volume": "Volume"
   }
 }

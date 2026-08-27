@@ -11,7 +11,14 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
+import 'package:louvorja_piano_mobile/app/theme/app_radius.dart';
+import 'package:louvorja_piano_mobile/core/services/global_search_service.dart';
 import 'package:louvorja_piano_mobile/domain/entities/bible_book.dart';
+import 'package:louvorja_piano_mobile/core/services/bible_offline_versions.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/book_colors.dart';
+import 'package:louvorja_piano_mobile/presentation/bible/bible_download_button.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 
 class BiblePage extends StatelessWidget {
@@ -75,7 +82,10 @@ class _BibleViewState extends State<_BibleView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('bible.title'.tr())),
+      appBar: AppBar(
+        title: Text('bible.title'.tr()),
+        actions: const [StageCastButton(), BibleDownloadButton()],
+      ),
       body: BlocBuilder<BibleBloc, BibleState>(
         builder: (context, state) {
           if (state is BibleLoading || state is BibleInitial) {
@@ -249,9 +259,12 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final versionLanguage = context.locale.languageCode == 'es' ? 'es' : 'pt';
-    final visibleVersions = state.versions
+    final langVersions = state.versions
         .where((version) => version.languageId == versionLanguage)
         .toList();
+    // Offline: só versões com download completo no disco (marcadas pelo
+    // BibleDownloadButton). Pedido Rafael 2026-08-16.
+    final visibleVersions = BibleOfflineVersions.filter(langVersions);
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
@@ -455,54 +468,10 @@ class _BookTile extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _parseHex(String value) {
-    final hex = value.replaceFirst('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
-  }
+  Color get _toneColor => BookColors.tone(book, theme, selected: isSelected);
 
-  Color get _toneColor {
-    final isLight = theme.brightness == Brightness.light;
-    if (isSelected) return isLight ? const Color(0xFF78350F) : const Color(0xFFFEF08A);
-    if (book.color != null && isLight) {
-      return _parseHex(book.color!);
-    }
-    switch (book.tone) {
-      case BibleBookTone.law:
-        return isLight ? const Color(0xFF1D4ED8) : const Color(0xFF93C5FD);
-      case BibleBookTone.history:
-        return isLight ? const Color(0xFF15803D) : const Color(0xFF86EFAC);
-      case BibleBookTone.prophets:
-        return isLight ? const Color(0xFFA16207) : const Color(0xFFFDE68A);
-      case BibleBookTone.gospels:
-        return isLight ? const Color(0xFF7E22CE) : const Color(0xFFD8B4FE);
-      case BibleBookTone.letters:
-      case BibleBookTone.neutral:
-        return theme.colorScheme.onSurface;
-    }
-  }
-
-  Color get _bgColor {
-    final isLight = theme.brightness == Brightness.light;
-    if (isSelected) return const Color(0xFFCA8A04).withValues(alpha: isLight ? 0.25 : 0.4);
-    if (book.color != null && isLight) {
-      return _parseHex(book.color!).withValues(alpha: 0.16);
-    }
-    switch (book.tone) {
-      case BibleBookTone.law:
-        return const Color(0xFF3B82F6).withValues(alpha: isLight ? 0.15 : 0.18);
-      case BibleBookTone.history:
-        return const Color(0xFF22C55E).withValues(alpha: isLight ? 0.15 : 0.12);
-      case BibleBookTone.prophets:
-        return const Color(0xFFCA8A04).withValues(alpha: isLight ? 0.18 : 0.14);
-      case BibleBookTone.gospels:
-        return const Color(0xFFA855F7).withValues(alpha: isLight ? 0.15 : 0.12);
-      case BibleBookTone.letters:
-      case BibleBookTone.neutral:
-        return isLight
-            ? theme.colorScheme.surfaceContainerHigh
-            : theme.colorScheme.surfaceContainerHighest;
-    }
-  }
+  Color get _bgColor =>
+      BookColors.background(book, theme, selected: isSelected);
 
   @override
   Widget build(BuildContext context) {
@@ -613,20 +582,61 @@ class _ChapterGridSection extends StatelessWidget {
 
 // --- Verse List ---
 
-class _VerseList extends StatelessWidget {
+class _VerseList extends StatefulWidget {
   final BibleLoaded state;
   final ThemeData theme;
 
   const _VerseList({required this.state, required this.theme});
 
   @override
+  State<_VerseList> createState() => _VerseListState();
+}
+
+class _VerseListState extends State<_VerseList> {
+  /// Palco: projeta os versículos selecionados na TV (se ligado).
+  Future<void> _projectSelectedVerses(BibleLoaded state, int toggledVerse) async {
+    final stage = StageSession.instance;
+    if (!stage.isOn) return;
+    final selected = [...state.selectedVerses]..sort();
+    final versesToShow = selected.contains(toggledVerse)
+        ? selected
+        : [toggledVerse];
+    final text = versesToShow
+        .map((n) => state.verses[n.toString()] ?? '')
+        .join(' ');
+    final book = state.books
+        .where((b) => b.id == state.selectedBookId)
+        .firstOrNull;
+    await stage.project(
+      title: text,
+      footer:
+          '${book?.name ?? ''} ${state.selectedChapter}:${versesToShow.join('-')}',
+    );
+  }
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final theme = widget.theme;
     final book = state.selectedBook;
     final title = book != null
         ? '${book.name} ${state.selectedChapter}'
         : 'bible.title'.tr();
 
-    final entries = state.verses.entries
+    // Busca local com normalizacao de acentos (mesma logica da global).
+    final visibleVerses = _searchQuery.isEmpty
+        ? state.verses
+        : GlobalSearchService.filterVerses(state.verses, _searchQuery);
+
+    final entries = visibleVerses.entries
         .map((e) => MapEntry(int.tryParse(e.key) ?? 0, e.value))
         .where((e) => e.key > 0)
         .toList()
@@ -670,6 +680,25 @@ class _VerseList extends StatelessWidget {
             ],
           ),
         ),
+        // Busca no capitulo (numero ou texto, com normalizacao)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'search.placeholder'.tr(),
+              prefixIcon: const Icon(TablerIcons.search, size: 18),
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(
+                borderRadius: AppRadius.sm,
+              ),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s2),
         // Versiculos
         Expanded(
           child: entries.isEmpty
@@ -690,6 +719,7 @@ class _VerseList extends StatelessWidget {
                       onTap: () {
                         context.read<BibleBloc>()
                             .add(BibleSelectVerse(verseNum));
+                        _projectSelectedVerses(state, verseNum);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -792,3 +822,4 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+

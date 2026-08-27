@@ -2,6 +2,8 @@
 ///
 /// Fonte: pianolouvorja/app/src/design-system/themes/ethereal.ts + luminous.ts
 library;
+
+import 'contrast.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -41,7 +43,9 @@ abstract final class AppTheme {
   static ThemeData light({AccentColor accent = AppAccents.defaultAccent}) {
     final colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: accent.primary,
+      // WCAG AA: primary do accent pode ter < 4.5:1 sobre surface clara
+      // (ex: #2196F3 = 2.97:1) — escurece preservando a matiz ate passar.
+      primary: ensureReadableOnLight(accent.primary),
       onPrimary: LuminousClarityColors.onPrimary,
       secondary: LuminousClarityColors.secondary,
       onSecondary: LuminousClarityColors.onSurface,

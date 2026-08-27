@@ -441,6 +441,7 @@ class _NumberStepper extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              tooltip: 'common.decrease'.tr(),
               icon: const Icon(TablerIcons.minus, size: 20),
               onPressed: value > 0 ? () => onChanged(value - 1) : null,
             ),
@@ -455,6 +456,7 @@ class _NumberStepper extends StatelessWidget {
               ),
             ),
             IconButton(
+              tooltip: 'common.increase'.tr(),
               icon: const Icon(TablerIcons.plus, size: 20),
               onPressed: value < max ? () => onChanged(value + 1) : null,
             ),

@@ -45,7 +45,17 @@ class HymnRepositoryImpl implements HymnRepository {
     try {
       final categories = await _api.fetchCategories();
       final hymnal = await _api.fetchHymnal();
-      final hymnal1996 = await _api.fetchHymnal1996();
+      // A API nao publica es_hymnal_1996 (404). Não requisitar para ES:
+      // é um catálogo opcional e não pode poluir o console nem derrubar
+      // categorias/hinário atual. Outros idiomas mantêm o fetch tolerante.
+      List<Hymn> hymnal1996 = const [];
+      if (_api.languagePrefix != 'es') {
+        try {
+          hymnal1996 = await _api.fetchHymnal1996();
+        } catch (_) {
+          // Sem Hinário 1996 para o idioma atual — ocultar a categoria.
+        }
+      }
 
       // Hinários como categorias virtuais, quando a API retornou dados.
       final categoriesWithHymnals = <AlbumCategory>[
@@ -82,6 +92,13 @@ class HymnRepositoryImpl implements HymnRepository {
 
       _categoriesCache = categoriesWithHymnals;
       _flatAlbumsCache = null;
+      // Persiste em disco: cold start SEM internet serve daqui (offline-first).
+      // Sem isto o cache só existia em memória e o app fechado+offline
+      // mostrava "verifique sua conexão" mesmo com conteúdo baixado.
+      _cache.write(
+        'categories',
+        categoriesWithHymnals.map((c) => c.toJson()).toList(),
+      );
       return _categoriesCache!;
     } catch (_) {
       // Fallback: cache expirado
@@ -99,15 +116,9 @@ class HymnRepositoryImpl implements HymnRepository {
 
   @override
   Future<List<Hymn>> getHymnsByAlbum(int albumId) async {
-    // Hinário atual usa endpoint dedicado
-    if (albumId == _hymnalCurrentId) {
-      return _api.fetchHymnal();
-    }
-    // Hinário 1996 usa endpoint dedicado
-    if (albumId == _hymnal1996Id) {
-      return _api.fetchHymnal1996();
-    }
-
+    // TODO offline-first: hinários também precisam de cache. Antes desta
+    // correção eles retornavam direto da API; com internet desligada a tela
+    // quebrava ANTES de o PlaybackResolver alcançar o MP3 já baixado.
     final cacheKey = 'album_$albumId';
 
     final cached = _cache.read(cacheKey);
@@ -117,11 +128,21 @@ class HymnRepositoryImpl implements HymnRepository {
     }
 
     try {
-      final hymns = await _api.fetchAlbumHymns(albumId);
+      final hymns = albumId == _hymnalCurrentId
+          ? await _api.fetchHymnal()
+          : albumId == _hymnal1996Id
+          ? await _api.fetchHymnal1996()
+          : await _api.fetchAlbumHymns(albumId);
       _cache.write(cacheKey, hymns.map((h) => h.toJson()).toList());
       return hymns;
     } catch (_) {
-      if (cached != null) return _parseHymns(cached);
+      // API fora: cache fresco primeiro, depois STALE (expirado) — melhor
+      // catálogo velho do que tela de erro (incidente API 429 2026-08-16).
+      final fresh = cached ?? _cache.readStale(cacheKey);
+      if (fresh != null) {
+        final parsed = _parseHymns(fresh);
+        if (parsed.isNotEmpty) return parsed;
+      }
       rethrow;
     }
   }

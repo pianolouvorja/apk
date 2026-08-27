@@ -16,6 +16,8 @@ class _WebAudioPlayer implements HymnAudioPlayer {
   bool _isPlaying = false;
 
   final _controller = StreamController<bool>.broadcast();
+  final _positions = StreamController<Duration>.broadcast();
+  final _durations = StreamController<Duration>.broadcast();
 
   @override
   String? get currentUrl => _currentUrl;
@@ -25,6 +27,18 @@ class _WebAudioPlayer implements HymnAudioPlayer {
 
   @override
   Stream<bool> get playingStream => _controller.stream;
+
+  @override
+  Stream<Duration> get positionStream => _positions.stream;
+
+  @override
+  Stream<Duration> get durationStream => _durations.stream;
+
+  @override
+  Future<void> seek(Duration position) async {
+    _ensure();
+    if (_audio != null) _audio!.currentTime = position.inMilliseconds / 1000.0;
+  }
 
   void _ensure() {
     _audio ??= AudioElement()
@@ -44,6 +58,17 @@ class _WebAudioPlayer implements HymnAudioPlayer {
         _isPlaying = false;
         _controller.add(false);
       });
+
+    // Timeline: emite posição (1x/s do browser) e duração quando conhecida.
+    Timer.periodic(const Duration(seconds: 1), (_) {
+      final a = _audio;
+      if (a == null) return;
+      _positions.add(Duration(milliseconds: a.currentTime * 1000 ~/ 1));
+      final d = a.duration;
+      if (d.isFinite && d > 0) {
+        _durations.add(Duration(milliseconds: (d * 1000).toInt()));
+      }
+    });
   }
 
   @override

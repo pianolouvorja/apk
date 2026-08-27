@@ -1,0 +1,31 @@
+name: CI (Forgejo ARM64)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    container:
+      image: node:24-bookworm
+    steps:
+      - name: Instalar deps base (git, xz)
+        run: |
+          apt-get update -qq
+          apt-get install -yqq --no-install-recommends git xz-utils ca-certificates unzip
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Clonar Flutter SDK (stable, ARM64-compatible)
+        run: |
+          git clone --depth 1 -b stable https://github.com/flutter/flutter.git /opt/flutter
+          git config --global --add safe.directory /opt/flutter
+          export PATH="/opt/flutter/bin:$PATH"
+          flutter --version
+      - name: Pub get
+        run: /opt/flutter/bin/flutter pub get
+      - name: Analyze
+        run: /opt/flutter/bin/flutter analyze --fatal-warnings
+      - name: Test
+        run: /opt/flutter/bin/flutter test -j 2
