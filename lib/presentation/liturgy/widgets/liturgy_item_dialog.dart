@@ -5,6 +5,8 @@ library;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:file_picker/file_picker.dart';
+
+import 'package:louvorja_piano_mobile/core/services/liturgy/media_duration_reader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -125,6 +127,7 @@ void showLiturgyItemDialog(
   LiturgyItem? existing,
   String? parentCategoryId,
   bool isCategory = false,
+  void Function(LiturgyItem item)? onSubmit,
 }) {
   final isEditing = existing != null;
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
@@ -395,10 +398,19 @@ void showLiturgyItemDialog(
                           allowMultiple: type.value == LiturgyItemType.images,
                         );
                         if (result != null && result.files.isNotEmpty) {
+                          final path = result.files.first.path;
+                          // Duração automática de vídeo/áudio local (MP4).
+                          var probed = 0;
+                          if (path != null) {
+                            probed = await MediaDurationReader.readMs(path);
+                          }
                           setModalState(() {
-                            filePathCtrl.text = result.files.first.path ?? '';
+                            filePathCtrl.text = path ?? '';
                             if (nameCtrl.text.isEmpty) {
                               nameCtrl.text = result.files.first.name;
+                            }
+                            if (probed > 0) {
+                              durationMinutes.value = probed ~/ 60000;
                             }
                           });
                         }
@@ -536,7 +548,9 @@ void showLiturgyItemDialog(
                                 ? scheduledAt.value!.toIso8601String()
                                 : null,
                           );
-                          if (isEditing) {
+                          if (onSubmit != null) {
+                            onSubmit(item);
+                          } else if (isEditing) {
                             context.read<LiturgyBloc>().add(
                               LiturgyUpdateItem(item),
                             );

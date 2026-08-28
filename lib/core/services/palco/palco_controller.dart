@@ -54,10 +54,10 @@ class PalcoController extends ChangeNotifier {
     _eventsSub?.cancel();
     // F3.3x: qualquer evento do receiver notifica — isConnected/receiverIp
     // mudam quando a TV conecta, e a UI precisa reagir.
-    _eventsSub = _sender.events.listen(
-      (_) => notifyListeners(),
-      onError: (_) {},
-    );
+    _eventsSub = _sender.events.listen((m) {
+      _handleRemoteEvent(m);
+      notifyListeners();
+    }, onError: (_) {});
     debugPrint('[PALCO] conectado (sender ativo, TV=$tv.ip)');
     notifyListeners();
     return true;
@@ -185,6 +185,65 @@ class PalcoController extends ChangeNotifier {
       fields: {'action': 'seek', 'position': seconds},
     ),
   );
+
+  // ---- Controle remoto (receivers desktop/web) ----
+
+  final Map<String, Completer<Map<String, dynamic>>> _ackWaiters = {};
+
+  /// Estado do último player reportado por receiver desktop/web.
+  Map<String, dynamic> _remoteState = const {};
+  Map<String, dynamic> get remotePlayerState => _remoteState;
+
+  /// Roles conectados agora (ex: {'tv': 1, 'desktop': 1}).
+  Map<String, int> get receiverRoles => _sender.roleCounts;
+
+  /// Emite quando receivers/roles mudam (UI atualiza lista de alvos).
+  Stream<void> get receiversChanged => _sender.rolesChanged;
+
+  void _handleRemoteEvent(PalcoMessage m) {
+    if (m.type == 'remote.ack') {
+      final id = m.remoteAckId;
+      if (id != null) {
+        final waiter = _ackWaiters.remove(id);
+        if (waiter != null && !waiter.isCompleted) {
+          waiter.complete(m.remoteState);
+        }
+      }
+      if (m.remoteState.isNotEmpty) {
+        _remoteState = m.remoteState;
+        notifyListeners();
+      }
+    } else if (m.type == 'remote.state') {
+      _remoteState = m.remoteState;
+      notifyListeners();
+    }
+  }
+
+  /// Envia comando de controle remoto a receivers [role] ('desktop'|'web').
+  /// Retorna o estado reportado no ack, ou null se não há receiver/timeout.
+  Future<Map<String, dynamic>?> sendRemoteCommand(
+    String command, {
+    String role = 'desktop',
+    double? value,
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final id = 'rc_${DateTime.now().microsecondsSinceEpoch}';
+    final waiter = Completer<Map<String, dynamic>>();
+    _ackWaiters[id] = waiter;
+    final sent = _sender.sendToRole(
+      role,
+      PalcoMessage.remoteCommand(command, id: id, value: value),
+    );
+    if (!sent) {
+      _ackWaiters.remove(id);
+      return null;
+    }
+    try {
+      return await waiter.future.timeout(timeout, onTimeout: () => const {});
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Vídeo: URL já servida pelo sender (/media) NÃO passa pelo proxy;
   /// externa (http/https de fora) é envelopada. Bug duplo-wrap quebrava

@@ -58,6 +58,24 @@ class StageSession extends ChangeNotifier {
       isPalcoMode && _palco!.isConnected ? _palco!.receiverIp : null;
   String? get castLastError => _cast.lastError;
 
+  /// Controle remoto: receivers conectados por role (desktop/web/tv).
+  Map<String, int> get receiverRoles =>
+      isPalcoMode ? _palco!.receiverRoles : const {};
+
+  /// Controle remoto: último estado de player reportado por receiver.
+  Map<String, dynamic> get remotePlayerState =>
+      isPalcoMode ? _palco!.remotePlayerState : const {};
+
+  /// Controle remoto: envia comando (play/pause/stop/volume/seek) ao
+  /// receiver do role dado. Retorna estado do ack ou null.
+  Future<Map<String, dynamic>?> sendRemoteCommand(
+    String command, {
+    String role = 'desktop',
+    double? value,
+  }) => isPalcoMode
+      ? _palco!.sendRemoteCommand(command, role: role, value: value)
+      : Future.value(null);
+
   /// Liga o palco no modo Palco WS (receiver LouvorJA na TV).
   /// A TV conecta no sender do celular ao abrir o app dela.
   Future<bool> turnOnPalco(PalcoTarget tv) async {

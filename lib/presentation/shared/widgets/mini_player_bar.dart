@@ -8,6 +8,7 @@ import '../../../../core/services/now_playing.dart';
 import '../../../../core/services/dlna/stage_session.dart';
 import '../../../../core/services/palco/palco_controller.dart'
     show PalcoAudioRoute;
+import '../../palco/remote_control_sheet.dart';
 import 'player_timeline.dart';
 
 /// Miniplayer fixo (issue #90): barra acima da nav com a faixa ativa.
@@ -157,6 +158,20 @@ class _MiniPlayerBarState extends State<MiniPlayerBar> {
                 color: theme.colorScheme.onSurfaceVariant,
                 onPressed: _stop,
                 tooltip: 'common.stop'.tr(),
+              ),
+              // Controle remoto: comanda o player do desktop/web
+              // conectado ao Palco (mesma sessão WS).
+              IconButton(
+                key: const Key('miniplayer-remote'),
+                icon: const Icon(TablerIcons.deviceTv),
+                color: theme.colorScheme.onSurfaceVariant,
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const RemoteControlSheet(),
+                ),
+                tooltip: 'remote.title'.tr(),
               ),
             ],
           ),

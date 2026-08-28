@@ -30,10 +30,24 @@ class PalcoSender {
   final Set<WebSocket> _clients = {};
   final _events = StreamController<PalcoMessage>.broadcast();
 
+  /// Role declarado por cada receiver via `hello` ('tv' | 'desktop' |
+  /// 'web'). Receivers que não declaram ficam como 'tv' (comportamento
+  /// atual das TVs).
+  final Map<WebSocket, String> _clientRoles = {};
+
   /// Eventos receiver→sender (unlocked, ended, remote-key, ...).
   Stream<PalcoMessage> get events => _events.stream;
   int get clientCount => _clients.length;
   bool get isRunning => _ws != null;
+
+  /// Quantos receivers de cada role estão conectados.
+  Map<String, int> get roleCounts {
+    final counts = <String, int>{};
+    for (final role in _clientRoles.values) {
+      counts[role] = (counts[role] ?? 0) + 1;
+    }
+    return counts;
+  }
 
   /// F3.3x: IP do último receiver conectado (visto pelo socket WS).
   /// Nulo até a TV conectar pela primeira vez.
@@ -103,6 +117,7 @@ class PalcoSender {
       await c.close();
     }
     _clients.clear();
+    _clientRoles.clear();
     await _http?.close(force: true);
     await _ws?.close(force: true);
     _http = null;
@@ -144,15 +159,25 @@ class PalcoSender {
                   final m = PalcoMessage.fromJson(
                     jsonDecode(data as String) as Map<String, dynamic>,
                   );
+                  // hello: registra o role do receiver (desktop/web/tv).
+                  if (m.type == 'hello' && m.helloRole != null) {
+                    _clientRoles[ws] = m.helloRole!;
+                    debugPrint('[PALCO] receiver role: ${m.helloRole}');
+                    notifyRoleChange();
+                  }
                   _events.add(m);
                 } catch (_) {}
               },
               onDone: () {
                 _clients.remove(ws);
+                _clientRoles.remove(ws);
                 debugPrint('[PALCO] receiver saiu (${_clients.length})');
+                notifyRoleChange();
               },
               onError: (_) {
                 _clients.remove(ws);
+                _clientRoles.remove(ws);
+                notifyRoleChange();
               },
               // SEM ping: webOS 4.x não responde (lição do spike).
               cancelOnError: false,
@@ -163,6 +188,31 @@ class PalcoSender {
       req.response.statusCode = 404;
       req.response.close();
     }
+  }
+
+  final _rolesChanged = StreamController<void>.broadcast();
+
+  /// Emite quando a lista de receivers/roles muda (conexão, saída, hello).
+  Stream<void> get rolesChanged => _rolesChanged.stream;
+
+  void notifyRoleChange() {
+    if (!_rolesChanged.isClosed) _rolesChanged.add(null);
+  }
+
+  /// Envia mensagem apenas a receivers com o role dado.
+  /// Retorna false se nenhum receiver desse role está conectado.
+  bool sendToRole(String role, PalcoMessage msg) {
+    final targets = _clients
+        .where((c) => (_clientRoles[c] ?? 'tv') == role)
+        .toList();
+    if (targets.isEmpty) return false;
+    final data = jsonEncode(msg.toJson());
+    for (final c in targets) {
+      try {
+        c.add(data);
+      } catch (_) {}
+    }
+    return true;
   }
 
   /// Broadcast de mensagem para todos os receivers conectados.

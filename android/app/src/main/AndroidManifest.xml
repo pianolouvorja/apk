@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Internet -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Leitor de QR de emparelhamento (controle remoto/palcos) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- Storage (Android <13) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
