@@ -120,21 +120,13 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
   void _onLoad(LiturgyLoadRequested event, Emitter<LiturgyState> emit) {
     final items = _repo.loadItems(event.day);
     final notes = _repo.loadNotes(event.day);
-    emit(LiturgyLoaded(
-      selectedDay: event.day,
-      items: items,
-      notes: notes,
-    ));
+    emit(LiturgyLoaded(selectedDay: event.day, items: items, notes: notes));
   }
 
   void _onDayChanged(LiturgyDayChanged event, Emitter<LiturgyState> emit) {
     final items = _repo.loadItems(event.day);
     final notes = _repo.loadNotes(event.day);
-    emit(LiturgyLoaded(
-      selectedDay: event.day,
-      items: items,
-      notes: notes,
-    ));
+    emit(LiturgyLoaded(selectedDay: event.day, items: items, notes: notes));
   }
 
   void _onAddItem(LiturgyAddItem event, Emitter<LiturgyState> emit) {
@@ -148,7 +140,9 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
   void _onUpdateItem(LiturgyUpdateItem event, Emitter<LiturgyState> emit) {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
-    final items = state.items.map((e) => e.id == event.item.id ? event.item : e).toList();
+    final items = state.items
+        .map((e) => e.id == event.item.id ? event.item : e)
+        .toList();
     _repo.saveItems(state.selectedDay, items);
     emit(state.copyWith(items: items));
   }
@@ -183,7 +177,9 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
     final items = [...state.items];
-    final adjustedNew = event.newIndex > event.oldIndex ? event.newIndex - 1 : event.newIndex;
+    final adjustedNew = event.newIndex > event.oldIndex
+        ? event.newIndex - 1
+        : event.newIndex;
     if (adjustedNew < 0 || adjustedNew >= items.length) return;
     final item = items.removeAt(event.oldIndex);
     items.insert(adjustedNew, item);
@@ -191,7 +187,10 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     emit(state.copyWith(items: items));
   }
 
-  Future<void> _onCloneDay(LiturgyCloneDay event, Emitter<LiturgyState> emit) async {
+  Future<void> _onCloneDay(
+    LiturgyCloneDay event,
+    Emitter<LiturgyState> emit,
+  ) async {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
     await _repo.cloneDay(event.from, state.selectedDay);
@@ -200,7 +199,10 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     emit(state.copyWith(items: items, notes: notes));
   }
 
-  Future<void> _onClearDay(LiturgyClearDay event, Emitter<LiturgyState> emit) async {
+  Future<void> _onClearDay(
+    LiturgyClearDay event,
+    Emitter<LiturgyState> emit,
+  ) async {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
     await _repo.clearDay(state.selectedDay);

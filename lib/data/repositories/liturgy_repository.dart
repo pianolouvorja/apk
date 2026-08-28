@@ -1,9 +1,13 @@
 library;
 
+import '../../core/services/liturgy_widget_updater.dart';
+
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:louvorja_piano_mobile/core/services/sync/sync_timestamps.dart';
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
 
 /// Persistencia de liturgia por dia da semana usando SharedPreferences.
@@ -33,9 +37,11 @@ class LiturgyRepository {
   }
 
   /// Salva itens de um dia.
-  Future<void> saveItems(LiturgyWeekday day, List<LiturgyItem> items) {
+  Future<void> saveItems(LiturgyWeekday day, List<LiturgyItem> items) async {
     final json = jsonEncode(items.map((e) => e.toJson()).toList());
-    return _prefs.setString(_itemsKey(day), json);
+    await _prefs.setString(_itemsKey(day), json);
+    unawaited(SyncTimestamps.touch('liturgy'));
+    unawaited(LiturgyWidgetUpdater.notify());
   }
 
   /// Carrega notas de um dia.
@@ -44,8 +50,10 @@ class LiturgyRepository {
   }
 
   /// Salva notas de um dia.
-  Future<void> saveNotes(LiturgyWeekday day, String notes) {
-    return _prefs.setString(_notesKey(day), notes);
+  Future<void> saveNotes(LiturgyWeekday day, String notes) async {
+    await _prefs.setString(_notesKey(day), notes);
+    unawaited(SyncTimestamps.touch('liturgy'));
+    unawaited(LiturgyWidgetUpdater.notify());
   }
 
   /// Clona liturgia de um dia para outro.

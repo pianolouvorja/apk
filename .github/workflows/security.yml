@@ -1,0 +1,41 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, staging]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  osv:
+    name: OSV dependency scan (OWASP A03)
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.1
+    with:
+      scan-args: |-
+        --lockfile=pubspec.lock
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+
+  secret-patterns:
+    name: Secret pattern scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Block common credential formats
+        run: |
+          ! grep -RInE --exclude-dir=.git \
+            '(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]+|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' \
+            .
+      - name: Ensure build secrets use dart-define
+        run: |
+          grep -A3 -q "String.fromEnvironment" lib/core/services/update_service.dart
+          grep -A3 "String.fromEnvironment" lib/core/services/update_service.dart | grep -q "GH_TOKEN"
+          ! grep -RInE --exclude-dir=.git "Authorization: token ghp_" lib

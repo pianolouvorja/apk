@@ -15,8 +15,37 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   bool _isPlaying = false;
 
   final _controller = StreamController<bool>.broadcast();
+  final _positions = StreamController<Duration>.broadcast();
+  final _durations = StreamController<Duration>.broadcast();
 
   _NativeAudioPlayer() {
+    // AudioContext explicito (F3.3b): sem usage=media o One UI classifica a
+    // reproducao como nao-midia em background ("AudioHardening ... would be
+    // muted") e muta/pausa o player — que e o relógio dos slides do Palco.
+    // stayAwake mantem o wake lock do audio (letra sincronizada em bg).
+    unawaited(
+      _player.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            usageType: AndroidUsageType.media,
+            contentType: AndroidContentType.music,
+            audioFocus: AndroidAudioFocus.gain,
+            stayAwake: true,
+          ),
+        ),
+      ),
+    );
+    _player.onPositionChanged.listen((pos) => _positions.add(pos));
+    // Cache + replay: duração pode chegar antes do NowPlayingPage assinar
+    // (broadcast stream sem replay = evento perdido = slider em 0).
+    Duration? cached;
+    _player.onDurationChanged.listen((dur) {
+      cached = dur;
+      _durations.add(dur);
+    });
+    _durations.onListen = () {
+      if (cached != null) _durations.add(cached!);
+    };
     _player.onPlayerStateChanged.listen((state) {
       _isPlaying = state == PlayerState.playing;
       _controller.add(_isPlaying);
@@ -33,6 +62,18 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   Stream<bool> get playingStream => _controller.stream;
 
   @override
+  Stream<Duration> get positionStream => _positions.stream;
+
+  @override
+  Stream<Duration> get durationStream => _durations.stream;
+
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> setVolume(double v) => _player.setVolume(v);
+
+  @override
   Future<void> toggleUrl(String url) async {
     if (_currentUrl == url && _isPlaying) {
       await _player.pause();
@@ -44,7 +85,13 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   @override
   Future<void> playUrl(String url) async {
     _currentUrl = url;
-    await _player.play(UrlSource(url));
+    // Offline-first: caminho local (arquivo baixado) usa DeviceFileSource;
+    // URL http(s) mantem streaming.
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      await _player.play(UrlSource(url));
+    } else {
+      await _player.play(DeviceFileSource(url));
+    }
   }
 
   @override

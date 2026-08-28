@@ -70,6 +70,8 @@ class _ToolsPageState extends State<ToolsPage> {
           onPressed: () => setState(() => _activeView = null),
         ),
         title: Text(view.label.tr()),
+        // F3.3l: o botão do Palco vive na AppBar da PRÓPRIA ferramenta
+        // (Bíblia/Liturgia/Timer já têm StageCastButton) — um cast só.
       ),
       body: switch (view) {
         _ToolView.liturgy => const LiturgyPage(),
@@ -141,10 +143,11 @@ class _ToolCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: const BorderRadius.only(
@@ -152,17 +155,19 @@ class _ToolCard extends StatelessWidget {
                     bottomRight: Radius.circular(14),
                   ),
                 ),
-                child: Icon(icon, size: 28, color: color),
+                child: Icon(icon, size: 26, color: color),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
