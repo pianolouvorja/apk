@@ -2,6 +2,7 @@ name: Security
 
 on:
   pull_request:
+    branches: [main, master, staging]
   push:
     branches: [main, master, staging]
   schedule:
@@ -10,23 +11,25 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   osv:
     name: OSV dependency scan (OWASP A03)
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.0
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.1
     with:
       scan-args: |-
         --lockfile=pubspec.lock
     permissions:
       contents: read
       actions: read
+      security-events: write
 
   secret-patterns:
     name: Secret pattern scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Block common credential formats
         run: |
           ! grep -RInE --exclude-dir=.git \
