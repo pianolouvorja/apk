@@ -20,10 +20,10 @@ dependencies:
   crypto: ^3.0.6
 
   # Routing
-  go_router: ^16.0.0
+  go_router: ^17.5.0
 
   # Fonts
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
 
   # Internationalization
   easy_localization: ^3.0.7
@@ -35,7 +35,7 @@ dependencies:
   provider: ^6.1.2
 
   # Connectivity checking
-  connectivity_plus: ^6.1.1
+  connectivity_plus: ^7.3.1
 
   # Icons (mesma lib do Electron/web, v3.44.0 ≈ v3.45.0)
   tabler_icons_plus: ^3.44.0
@@ -48,7 +48,7 @@ dependencies:
   flutter_native_splash: ^2.4.6
 
   # App version info (lê version do pubspec em runtime)
-  package_info_plus: ^8.3.0
+  package_info_plus: ^9.0.1
   device_info_plus: ^11.5.0
 
   # Media
@@ -64,7 +64,9 @@ dependencies:
   audioplayers: ^6.8.1
 
   # Seleção de mídia local para itens da liturgia (mobile/web)
-  file_picker: ^10.3.2
+  # 10.3.9+ quebra registro Android (FilePickerPlugin ausente).
+  # ponytail: remover pin quando upstream corrigir regressão #1960.
+  file_picker: 10.3.8
 
   # Abrir URLs externas (site, video online) da liturgia
   url_launcher: ^6.3.1
@@ -90,7 +92,7 @@ dev_dependencies:
     sdk: flutter
 
   # Lint
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
   # Code generation
   build_runner: ^2.4.13
