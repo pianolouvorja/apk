@@ -15,7 +15,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 /// depende de multicast e atravessa qualquer AP.
 ///
 /// Não substitui o SSDP (que dá friendlyName) — é o FALLBACK quando o
-/// multicast falha: "tem uma TV webOS em <ip>" já basta pra orientar o
+/// multicast falha: "tem uma TV webOS em `<ip>`" já basta pra orientar o
 /// operador a abrir o Palco.
 class WebosTvTcpProbe {
   /// Varre a sub-rede /24 procurando hosts com a porta 3001 aberta.

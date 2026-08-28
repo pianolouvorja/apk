@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:louvorja_piano_mobile/core/services/palco/palco_sender.dart';
 
 /// F3.4: o APK serve o receiver em `/` — qualquer dispositivo na rede
-/// (browser do PC/celular) abre http://<ip>:7080/ e vira Palco de teste.
+/// (browser do PC/celular) abre `http://<ip>:7080/` e vira Palco de teste.
 ///
 /// HTTP via socket TCP cru: o TestWidgetsFlutterBinding bloqueia HttpClient
 /// (retorna 400 fake), mas socket direto passa.
