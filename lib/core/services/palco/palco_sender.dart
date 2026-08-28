@@ -63,6 +63,8 @@ class PalcoSender {
   PalcoSender({
     this.httpPortFixed = httpPort,
     this.wsPortFixed = wsPort,
+    this.slotId = 'principal',
+    this.slotLabel = 'Principal (espelho)',
     Uint8List? receiverPage,
   }) : _receiverPage = receiverPage;
 
@@ -74,6 +76,10 @@ class PalcoSender {
   /// Portas fixas em produção; 0 (efêmera) em teste.
   final int httpPortFixed;
   final int wsPortFixed;
+
+  /// Identidade persistente do slot; receiver mostra no idle para o operador.
+  final String slotId;
+  final String slotLabel;
 
   int get effectiveHttpPort => _http?.port ?? httpPortFixed;
   int get effectiveWsPort => _ws?.port ?? wsPortFixed;
@@ -147,7 +153,11 @@ class PalcoSender {
                   jsonEncode(
                     PalcoMessage(
                       type: 'youare',
-                      fields: {'ip': remoteIp},
+                      fields: {
+                        'ip': remoteIp,
+                        'slot': slotId,
+                        'slotLabel': slotLabel,
+                      },
                     ).toJson(),
                   ),
                 );
