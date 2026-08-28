@@ -9,6 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
+import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
+import 'package:louvorja_piano_mobile/core/services/palco/palco_controller.dart'
+    show PalcoAudioRoute;
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_catalog_provider.dart';
@@ -68,6 +71,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   int? _loadingMusicId;
   int? _expandedHymnId;
   int? _playingHymnId;
+  bool _playingInstrumental = false; // modo corrente (F3.3 UX toggle)
   StreamSubscription<bool>? _playingSubscription;
   final Set<int> _downloadedIds = {};
   final Set<int> _downloadingIds = {};
@@ -94,12 +98,23 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   Future<void> _togglePlay(Hymn hymn, {required bool instrumental}) async {
     final player = _player;
 
-    // Mesmo hino em execução: alterna para pausa.
+    // Mesmo hino em execução:
+    // - mesmo modo -> pausa (toggle play/pause clássico)
+    // - outro modo (cantado <-> playback) -> TROCA o modo sem pausar
+    //   (UX 2026-08-18: clicar no playback quando já toca cantado volta
+    //   pro playback e vice-versa — o usuário espera alternância).
     if (_playingHymnId == hymn.id) {
-      await player.pause();
-      nowPlaying.pause();
-      if (mounted) setState(() => _playingHymnId = null);
-      return;
+      if (_playingInstrumental != instrumental) {
+        await player.stop();
+        nowPlaying.stop();
+        if (mounted) setState(() => _playingHymnId = null);
+        // cai através pro fluxo normal iniciar o novo modo
+      } else {
+        await player.pause();
+        nowPlaying.pause();
+        if (mounted) setState(() => _playingHymnId = null);
+        return;
+      }
     }
 
     setState(() => _loadingMusicId = hymn.id);
@@ -112,10 +127,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         offline: _offline,
       );
       String source;
+      Hymn? fullDetail;
       if (local != null) {
         source = local;
       } else {
         final detail = await _repository().getHymnDetails(hymn.id);
+        fullDetail = detail;
         final relativeUrl = instrumental
             ? detail.urlInstrumental
             : detail.urlMusic;
@@ -144,12 +161,37 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       }
       // Atualiza o ícone imediatamente no clique. O evento onPlay do browser
       // pode chegar após alguns frames, mas a intenção do usuário é inequívoca.
+      _playingInstrumental = instrumental;
       if (mounted) setState(() => _playingHymnId = hymn.id);
+      // F3.4: roteia áudio ao Palco também no play direto da lista
+      // (antes só roteava abrindo o NowPlayingPage — bug 2026-08-18).
+      if (StageSession.instance.isOn) {
+        StageSession.instance.playHymnAudio(
+          source,
+          title: hymn.title ?? '',
+          subtitle: instrumental ? 'Instrumental' : null,
+          cover: hymn.imageUrl,
+        );
+        if (StageSession.instance.audioRoute == PalcoAudioRoute.tv) {
+          // F3.3e: mudo, não pausado — player local é o relógio dos slides.
+          await player.setVolume(0);
+        } else {
+          await player.setVolume(1);
+        }
+      }
+      // Online usa detail completo; offline preserva fluxo sem API.
+      final detailForReopen = fullDetail ?? hymn;
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
+        durationMs: hymn.durationMs,
+        detail: detailForReopen,
+        instrumental: instrumental,
+        albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
+        audioSource: source,
+        audioIsLocal: local != null,
       );
       await player.playUrl(source);
     } catch (_) {
@@ -183,38 +225,57 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         instrumental: instrumental,
         offline: _offline,
       );
-      final relativeUrl =
-          instrumental ? detail.urlInstrumental : detail.urlMusic;
+      final relativeUrl = instrumental
+          ? detail.urlInstrumental
+          : detail.urlMusic;
       if (local == null && (relativeUrl == null || relativeUrl.isEmpty)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('errors.notFound'.tr())));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('errors.notFound'.tr())));
         }
         return;
       }
       final source = local ?? DownloadUrlBuilder.build(relativeUrl!);
 
+      // Detail completo (lyricRaw) pro reabrir via mini player —
+      // hymn do catálogo não tem letra (bug 2026-08-21).
+      final detailFull = await _repository().getHymnDetails(hymn.id);
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
+        durationMs: hymn.durationMs,
+        detail: detailFull,
+        instrumental: instrumental,
+        albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
+        audioSource: source,
+        audioIsLocal: local != null,
       );
       await _player.playUrl(source);
 
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => NowPlayingPage(
-          detail: detail,
-          instrumental: instrumental,
-          player: HymnPlayerAdapter(_player),
-          filesUrl: 'https://api.louvorja.com.br/file',
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => NowPlayingPage(
+            detail: detail,
+            instrumental: instrumental,
+            // Cover do ALBUM pro now-playing do Palco (quadradinho na TV).
+            albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
+            player: HymnPlayerAdapter(_player),
+            filesUrl: 'https://api.louvorja.com.br/file',
+            audioSource: source, // F3.2: roteamento de áudio no Palco
+            audioIsLocal: local != null,
+            catalogDurationMs: hymn.durationMs,
+          ),
         ),
-      ));
+      );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
       }
     } finally {
       if (mounted) setState(() => _loadingMusicId = null);
@@ -222,10 +283,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   }
   // coverage:ignore-end
 
-    OfflineMusicPort get _offline =>
-        widget.offlineService ?? createOfflineMusicService();
+  OfflineMusicPort get _offline =>
+      widget.offlineService ?? createOfflineMusicService();
 
-    Future<void> _downloadTrack(Hymn hymn) async {
+  Future<void> _downloadTrack(Hymn hymn) async {
     if (!_offline.isSupported) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Downloads disponíveis apenas no app.')),
@@ -303,11 +364,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         final detail = await repo.getHymnDetails(hymn.id);
         final url = detail.urlMusic ?? '';
         if (url.isNotEmpty) {
-          items.add(DownloadQueueItem(
-            musicId: hymn.id,
-            title: hymn.title ?? '${hymn.id}',
-            url: DownloadUrlBuilder.build(url),
-          ));
+          items.add(
+            DownloadQueueItem(
+              musicId: hymn.id,
+              title: hymn.title ?? '${hymn.id}',
+              url: DownloadUrlBuilder.build(url),
+            ),
+          );
         }
       } catch (_) {
         // detalhe falhou: item nao entra na fila agora (proximo lote)
@@ -340,8 +403,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     if (failed > 0) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('downloads.albumErrors'.tr(
-              namedArgs: {'count': '$failed', 'total': '$total'}))),
+          content: Text(
+            'downloads.albumErrors'.tr(
+              namedArgs: {'count': '$failed', 'total': '$total'},
+            ),
+          ),
+        ),
       );
     }
   }
@@ -676,12 +743,23 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                                     ),
                                     if (hymn.hasInstrumental)
                                       IconButton(
-                                        tooltip: 'Instrumental',
-                                        icon: const Icon(TablerIcons.piano),
+                                        tooltip:
+                                            isPlaying && _playingInstrumental
+                                            ? 'Voltar ao cantado'
+                                            : 'Playback instrumental',
+                                        icon: Icon(
+                                          TablerIcons.piano,
+                                          color:
+                                              isPlaying && _playingInstrumental
+                                              ? theme.colorScheme.primary
+                                              : null,
+                                        ),
                                         // coverage:ignore-line
                                         onPressed: () => _togglePlay(
                                           hymn,
-                                          instrumental: true,
+                                          instrumental:
+                                              !(isPlaying &&
+                                                  _playingInstrumental),
                                         ),
                                       ),
                                     // Modo vídeo (slides sincronizados)

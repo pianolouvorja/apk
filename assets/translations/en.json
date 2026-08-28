@@ -245,7 +245,13 @@
     "customizeHint": "Colors, font, size",
     "turnOff": "Turn stage off",
     "castOn": "Stage active",
-    "castOff": "Cast to TV"
+    "castOff": "Cast to TV",
+    "yourIp": "Your IP (enter on TV)",
+    "ipHint": "Open Palco app on TV → enter this IP",
+    "dlnaSection": "DLNA TVs (hymns/slides)",
+    "palcoSection": "Palco LouvorJA (webOS receiver)",
+    "palcoManual": "Connect Palco manually",
+    "palcoManualHint": "IP of TV where receiver is already open"
   },
   "sync": {
     "sectionTitle": "Synchronization",
@@ -267,7 +273,7 @@
     "mode_desktop": "Desktop (Electron)",
     "mode_web": "Browser (web)",
     "desktop_host": "Desktop address",
-    "desktop_hint": "IP:port (e.g. 192.168.1.50:7070)",
+    "desktop_hint": "IP or IP:port (e.g. 192.168.1.50 or 192.168.1.50:7071)",
     "token_label": "Pairing token",
     "connect": "Connect",
     "disconnect": "Disconnect",

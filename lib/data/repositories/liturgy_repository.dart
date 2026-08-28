@@ -1,5 +1,7 @@
 library;
 
+import '../../core/services/liturgy_widget_updater.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -39,6 +41,7 @@ class LiturgyRepository {
     final json = jsonEncode(items.map((e) => e.toJson()).toList());
     await _prefs.setString(_itemsKey(day), json);
     unawaited(SyncTimestamps.touch('liturgy'));
+    unawaited(LiturgyWidgetUpdater.notify());
   }
 
   /// Carrega notas de um dia.
@@ -50,6 +53,7 @@ class LiturgyRepository {
   Future<void> saveNotes(LiturgyWeekday day, String notes) async {
     await _prefs.setString(_notesKey(day), notes);
     unawaited(SyncTimestamps.touch('liturgy'));
+    unawaited(LiturgyWidgetUpdater.notify());
   }
 
   /// Clona liturgia de um dia para outro.

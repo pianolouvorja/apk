@@ -1,5 +1,7 @@
 library;
 
+import "dart:async";
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -12,6 +14,7 @@ import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album.dart';
+import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/entities/album_category.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart';
 import 'package:louvorja_piano_mobile/core/services/download_url_builder.dart';
@@ -21,7 +24,12 @@ import 'package:louvorja_piano_mobile/core/services/offline_music_port.dart';
 import 'package:louvorja_piano_mobile/core/services/offline_music_service.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
+import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
+import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
 import 'bloc/hymns_bloc.dart';
+import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 const _apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
@@ -129,10 +137,105 @@ class _HymnsView extends StatefulWidget {
 class _HymnsViewState extends State<_HymnsView> {
   String _searchQuery = '';
   bool _isSearching = false;
+  List<Hymn> _searchResults = const [];
+  bool _searchLoading = false;
   bool _downloadingAll = false;
   int? _downloadAllProgress; // 0..100
   int? _downloadAllCurrent;
   int? _downloadAllTotal;
+
+  Timer? _debounce;
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    final q = value.trim();
+    setState(() => _searchQuery = q);
+    if (q.length < 3) {
+      setState(() {
+        _searchResults = const [];
+        _searchLoading = false;
+      });
+      return;
+    }
+    setState(() => _searchLoading = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () => _doSearch(q));
+  }
+
+  Future<void> _doSearch(String query) async {
+    if (!mounted) return;
+    try {
+      final repo = context.read<HymnsBloc>().repository;
+      final results = await repo.searchHymns(query);
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _searchLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _searchResults = const [];
+        _searchLoading = false;
+      });
+    }
+  }
+
+  // coverage:ignore-start
+  Future<void> _openSearchResult(BuildContext context, Hymn hymn) async {
+    try {
+      final repo = context.read<HymnsBloc>().repository;
+      final detail = await repo.getHymnDetails(hymn.id);
+      if (!context.mounted) return;
+
+      final url = detail.urlMusic ?? '';
+      if (url.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('errors.notFound'.tr())));
+        return;
+      }
+
+      final source = DownloadUrlBuilder.build(url);
+      final player = HymnAudioPlayer.instance;
+      final adapter = HymnPlayerAdapter(player);
+
+      nowPlaying.start(
+        hymnId: hymn.id,
+        title: detail.title ?? '',
+        album: '',
+        albumId: 0,
+        durationMs: detail.durationMs,
+        detail: detail,
+        audioSource: source,
+      );
+      await player.playUrl(source);
+
+      if (!context.mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => NowPlayingPage(
+            detail: detail,
+            instrumental: false,
+            player: adapter,
+            filesUrl: 'https://api.louvorja.com.br/file',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
+    }
+  }
+  // coverage:ignore-end
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   /// Baixa todas as coletaneas disponiveis (feature herdada do desktop:
   /// download sob demanda de toda a biblioteca).
@@ -203,8 +306,12 @@ class _HymnsViewState extends State<_HymnsView> {
       if (failed > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('downloads.albumErrors'.tr(
-              namedArgs: {'count': '$failed', 'total': '${albums.length}'}))),
+            content: Text(
+              'downloads.albumErrors'.tr(
+                namedArgs: {'count': '$failed', 'total': '${albums.length}'},
+              ),
+            ),
+          ),
         );
       }
     }
@@ -228,8 +335,7 @@ class _HymnsViewState extends State<_HymnsView> {
                   ),
                 ),
                 style: theme.textTheme.bodyLarge,
-                onChanged: (value) =>
-                    setState(() => _searchQuery = value.trim()),
+                onChanged: _onSearchChanged,
               )
             : Text('hymns.title'.tr()),
         actions: [
@@ -251,10 +357,17 @@ class _HymnsViewState extends State<_HymnsView> {
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
-                if (!_isSearching) _searchQuery = '';
+                if (!_isSearching) {
+                  _searchQuery = '';
+                  _searchResults = const [];
+                  _searchLoading = false;
+                }
               });
             },
           ),
+          // Cast no AppBar dos hinos: operador configura o Palco (TV,
+          // rota de áudio, BG) ANTES de projetar o culto.
+          const StageCastButton(),
         ],
       ),
       body: BlocBuilder<HymnsBloc, HymnsState>(
@@ -294,10 +407,62 @@ class _HymnsViewState extends State<_HymnsView> {
             );
           }
           if (state is HymnsLoaded) {
-            // Busca com normalizacao de acentos (mesma logica da busca global).
+            // Busca por musicas quando ha 3+ caracteres.
+            if (_searchQuery.length >= 3) {
+              if (_searchLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (_searchResults.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        TablerIcons.musicOff,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: AppSpacing.s2),
+                      Text(
+                        'Nenhuma musica encontrada',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.all(AppSpacing.s4),
+                itemCount: _searchResults.length,
+                itemBuilder: (context, i) {
+                  final h = _searchResults[i];
+                  return ListTile(
+                    leading: Text(
+                      h.number != null ? '#${h.number}' : '${h.id}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    title: Text(
+                      h.title ?? 'Hino #${h.id}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Icon(
+                      TablerIcons.chevronRight,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    onTap: () => _openSearchResult(context, h),
+                  );
+                },
+              );
+            }
+
+            // Sem busca: lista coletaneas (comportamento original).
             final filteredCategories = GlobalSearchService.filterAlbums(
               state.categories,
-              _searchQuery,
+              '',
             );
 
             final allAlbums = <Album>[];
@@ -506,7 +671,6 @@ class _CoverPlaceholder extends StatelessWidget {
     );
   }
 }
-
 
 /// Botao "Baixar todas as coletaneas" na AppBar da aba Hinos.
 /// Mostra progresso durante o download em lote.

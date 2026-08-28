@@ -35,6 +35,9 @@ class HymnPlayerAdapter implements HymnPlayerLike {
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
+  Future<void> setVolume(double v) => _player.setVolume(v);
+
+  @override
   Future<void> pause() => _player.pause();
 
   @override
