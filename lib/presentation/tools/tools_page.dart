@@ -70,6 +70,8 @@ class _ToolsPageState extends State<ToolsPage> {
           onPressed: () => setState(() => _activeView = null),
         ),
         title: Text(view.label.tr()),
+        // F3.3l: o botão do Palco vive na AppBar da PRÓPRIA ferramenta
+        // (Bíblia/Liturgia/Timer já têm StageCastButton) — um cast só.
       ),
       body: switch (view) {
         _ToolView.liturgy => const LiturgyPage(),

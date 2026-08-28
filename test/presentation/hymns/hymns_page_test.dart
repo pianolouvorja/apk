@@ -128,7 +128,7 @@ void main() {
     expect(find.byIcon(TablerIcons.playlist), findsOneWidget);
   });
 
-  testWidgets('busca filtra coletaneas por nome', (tester) async {
+  testWidgets('busca com menos de 3 chars mostra coletaneas (sem chamar API)', (tester) async {
     final bloc = _bloc();
     bloc.add(HymnsLoadRequested());
 
@@ -146,13 +146,13 @@ void main() {
     await tester.tap(find.byKey(const Key('hymns-search-toggle')));
     await tester.pump();
 
-    // Digitar filtro que so match Album X
-    await tester.enterText(find.byType(TextField), 'Album X');
-    await tester.pump();
+    // Digitar filtro curto (<3 chars): NAO dispara busca de musicas;
+    // lista de coletaneas continua visivel.
+    await tester.enterText(find.byType(TextField), 'Al');
+    await tester.pump(const Duration(milliseconds: 500));
 
-    // O texto do album na lista deve aparecer (excluindo o proprio TextField)
     expect(find.descendant(of: find.byType(ListView), matching: find.text('Album X')), findsOneWidget);
-    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album Y')), findsNothing);
+    expect(find.descendant(of: find.byType(ListView), matching: find.text('Album Y')), findsOneWidget);
 
     // Fechar busca
     await tester.tap(find.byKey(const Key('hymns-search-toggle')));

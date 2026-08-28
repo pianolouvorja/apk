@@ -55,8 +55,9 @@ class _RemoteSectionState extends State<RemoteSection> {
 
   void _validateHost() {
     final raw = _hostCtrl.text.trim();
+    // Aceita: IP (ex: 192.168.1.192) ou IP:porta (ex: 192.168.1.192:7070)
     final valid = RegExp(
-      r'^\d{1,3}(\.\d{1,3}){3}:\d{2,5}$',
+      r'^\d{1,3}(\.\d{1,3}){3}(:\d{2,5})?$',
     ).hasMatch(raw);
     if (valid != _hostValid) setState(() => _hostValid = valid);
   }
@@ -71,10 +72,12 @@ class _RemoteSectionState extends State<RemoteSection> {
 
   Future<void> _connectDesktop() async {
     final parts = _hostCtrl.text.trim().split(':');
+    final host = parts[0];
+    final port = parts.length > 1 ? int.parse(parts[1]) : 7071;
     setState(() => _busy = true);
     final ok = await _session.connectDesktop(
-      host: parts[0],
-      port: int.parse(parts[1]),
+      host: host,
+      port: port,
       token: RemotePairing.generateToken(),
     );
     if (!mounted) return;

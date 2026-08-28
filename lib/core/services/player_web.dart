@@ -1,6 +1,7 @@
 // coverage:ignore-file
 /// Player Web usando dart:html AudioElement.
 library;
+
 // ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 
 import 'dart:async';
@@ -40,6 +41,12 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     if (_audio != null) _audio!.currentTime = position.inMilliseconds / 1000.0;
   }
 
+  @override
+  Future<void> setVolume(double v) async {
+    _ensure();
+    if (_audio != null) _audio!.volume = v;
+  }
+
   void _ensure() {
     _audio ??= AudioElement()
       ..onPlay.listen((_) {
@@ -59,16 +66,22 @@ class _WebAudioPlayer implements HymnAudioPlayer {
         _controller.add(false);
       });
 
-    // Timeline: emite posição (1x/s do browser) e duração quando conhecida.
+    // Timeline: emite posicao (1x/s do browser) e duracao quando conhecida.
+    // Cache + replay da duracao (broadcast sem replay = slider em 0).
+    Duration? cachedDur;
     Timer.periodic(const Duration(seconds: 1), (_) {
       final a = _audio;
       if (a == null) return;
       _positions.add(Duration(milliseconds: a.currentTime * 1000 ~/ 1));
       final d = a.duration;
       if (d.isFinite && d > 0) {
-        _durations.add(Duration(milliseconds: (d * 1000).toInt()));
+        cachedDur = Duration(milliseconds: (d * 1000).toInt());
+        _durations.add(cachedDur!);
       }
     });
+    _durations.onListen = () {
+      if (cachedDur != null) _durations.add(cachedDur!);
+    };
   }
 
   @override
@@ -113,3 +126,5 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     _controller.close();
   }
 }
+
+// volume: no-op em web

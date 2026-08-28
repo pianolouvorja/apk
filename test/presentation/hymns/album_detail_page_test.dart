@@ -80,6 +80,9 @@ class _FakePlayer implements HymnAudioPlayer {
   @override
   Future<void> seek(Duration position) async {}
 
+  @override
+  Future<void> setVolume(double v) async {}
+
   final _stream = StreamController<bool>.broadcast();
   bool paused = false;
   String? playedUrl;
