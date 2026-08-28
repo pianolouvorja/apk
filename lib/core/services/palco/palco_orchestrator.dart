@@ -43,8 +43,9 @@ class PalcoOrchestrator extends ChangeNotifier {
       for (final item in list) {
         final id = item['id'] as String?;
         final label = item['label'] as String?;
-        if (id != null && label != null)
+        if (id != null && label != null) {
           addSlot(id: id, label: label, persist: false);
+        }
       }
     }
     final active = prefs.getString(_activeKey);
@@ -70,8 +71,9 @@ class PalcoOrchestrator extends ChangeNotifier {
         _slots.values.map((s) => {'id': s.id, 'label': s.label}).toList(),
       ),
     );
-    if (_activeSlotId != null)
+    if (_activeSlotId != null) {
       await prefs.setString(_activeKey, _activeSlotId!);
+    }
   }
 
   /// Slot ativo — onde as projeções dos módulos vão.

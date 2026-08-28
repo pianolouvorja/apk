@@ -127,10 +127,12 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         offline: _offline,
       );
       String source;
+      Hymn? fullDetail;
       if (local != null) {
         source = local;
       } else {
         final detail = await _repository().getHymnDetails(hymn.id);
+        fullDetail = detail;
         final relativeUrl = instrumental
             ? detail.urlInstrumental
             : detail.urlMusic;
@@ -177,16 +179,15 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           await player.setVolume(1);
         }
       }
-      // Detail completo (lyricRaw) pro reabrir via mini player —
-      // hymn do catálogo não tem letra (bug 2026-08-21).
-      final detailFull = await _repository().getHymnDetails(hymn.id);
+      // Online usa detail completo; offline preserva fluxo sem API.
+      final detailForReopen = fullDetail ?? hymn;
       nowPlaying.start(
         hymnId: hymn.id,
         title: hymn.title ?? '',
         album: hymnCatalogProvider.albumNameById(widget.albumId) ?? '',
         albumId: widget.albumId,
         durationMs: hymn.durationMs,
-        detail: detailFull,
+        detail: detailForReopen,
         instrumental: instrumental,
         albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
         audioSource: source,

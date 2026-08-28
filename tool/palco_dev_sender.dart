@@ -19,8 +19,8 @@ Future<void> main(List<String> args) async {
     stderr.writeln('falhou ao subir sender (portas em uso?)');
     exit(1);
   }
-  print('[dev-sender] HTTP :7080 · WS :7081 · base=${ctrl.httpBase}');
-  print('[dev-sender] receiver: http://127.0.0.1:7080/receiver.html (ou da TV)');
+  stderr.writeln('[dev-sender] HTTP :7080 · WS :7081 · base=${ctrl.httpBase}');
+  stderr.writeln('[dev-sender] receiver: http://127.0.0.1:7080/receiver.html (ou da TV)');
 
   // aguarda 1s por receiver conectar
   await Future<void>.delayed(const Duration(seconds: 1));
@@ -46,7 +46,7 @@ Future<void> main(List<String> args) async {
 
   if (audio != null) {
     ctrl.playAudio(audio, title: title ?? '', subtitle: sub ?? '');
-    print('[dev-sender] audio enviado (clients=${ctrl.clientCount})');
+    stderr.writeln('[dev-sender] audio enviado (clients=${ctrl.clientCount})');
   } else {
     final text = textParts.join(' ');
     final pipe = text.split('|');
@@ -55,7 +55,7 @@ Future<void> main(List<String> args) async {
       footer: pipe.length > 1 ? pipe[1].trim() : '',
       background: bg,
     );
-    print('[dev-sender] projection enviada (clients=${ctrl.clientCount})');
+    stderr.writeln('[dev-sender] projection enviada (clients=${ctrl.clientCount})');
   }
   await Future<void>.delayed(const Duration(milliseconds: 500));
   exit(0);
