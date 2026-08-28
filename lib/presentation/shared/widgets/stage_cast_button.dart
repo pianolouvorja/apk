@@ -152,7 +152,7 @@ class _StageCastButtonState extends State<StageCastButton> {
                       final scope = widget.module.name;
                       final moduleRepo = StageSettingsRepository(scope: scope);
                       final initial = await moduleRepo.load();
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       await showModalBottomSheet<void>(
                         context: context,
                         isScrollControlled: true,

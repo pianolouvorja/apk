@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 /// F3.3ab: detecção de TVs webOS via HTTP unicast na porta 1926 (dd.xml).
 ///
 /// Como o Google/Netflix identificam (a parte pública do que fazem):
-/// a LG expõe a descrição UPnP em http://<tv>:1926/ — HTTP comum, sem
+/// a LG expõe a descrição UPnP em `http://<tv>:1926/` — HTTP comum, sem
 /// multicast, imune a APs que bloqueiam multicast em Wi-Fi (que é exatamente
 /// o que cegava o SSDP/DLNA do celular; caso real 17/08 e 19/08).
 ///

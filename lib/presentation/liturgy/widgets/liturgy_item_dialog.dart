@@ -338,8 +338,9 @@ void showLiturgyItemDialog(
                             selectedMusicId.value = result.id;
                             selectedMusicLabel.value =
                                 result.title ?? 'Hino ${result.id}';
-                            if (nameCtrl.text.isEmpty)
+                            if (nameCtrl.text.isEmpty) {
                               nameCtrl.text = result.title ?? '';
+                            }
                             if (result.durationMs != null &&
                                 result.durationMs! > 0) {
                               durationMinutes.value =
@@ -405,8 +406,9 @@ void showLiturgyItemDialog(
                           }
                           setModalState(() {
                             filePathCtrl.text = path ?? '';
-                            if (nameCtrl.text.isEmpty)
+                            if (nameCtrl.text.isEmpty) {
                               nameCtrl.text = result.files.first.name;
+                            }
                             if (probed > 0) {
                               durationMinutes.value = probed ~/ 60000;
                             }
