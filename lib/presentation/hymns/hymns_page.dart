@@ -365,9 +365,6 @@ class _HymnsViewState extends State<_HymnsView> {
               });
             },
           ),
-          // Cast no AppBar dos hinos: operador configura o Palco (TV,
-          // rota de áudio, BG) ANTES de projetar o culto.
-          const StageCastButton(),
         ],
       ),
       body: BlocBuilder<HymnsBloc, HymnsState>(
