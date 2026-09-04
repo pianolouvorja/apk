@@ -29,6 +29,7 @@ class _MockApi implements LouvorjaApiClient {
   final Hymn? detail;
   final bool fail;
   final bool failDetail;
+  int fetchMusicCalls = 0;
 
   _MockApi({
     this.hymns = const [],
@@ -45,6 +46,7 @@ class _MockApi implements LouvorjaApiClient {
 
   @override
   Future<Hymn> fetchMusic(int musicId) async {
+    fetchMusicCalls++;
     if (fail || failDetail) throw Exception('network');
     return detail ??
         Hymn(id: musicId, title: 'Test', urlMusic: '/musics/test.mp3');
@@ -360,6 +362,8 @@ void _offlineGroup() {
 
       expect(player.playedUrl, '/local/1.mp3',
           reason: 'baixado deve tocar do disco sem consultar a API');
+      expect(api.fetchMusicCalls, 0,
+          reason: 'play offline não deve requisitar o detalhe na API');
     });
 
     testWidgets('icone de baixado aparece ao abrir pagina com faixa no disco',

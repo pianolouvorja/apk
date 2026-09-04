@@ -179,7 +179,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           await player.setVolume(1);
         }
       }
-      // Online usa detail completo; offline preserva fluxo sem API.
+      // Online usa detalhe completo; offline preserva fluxo sem API.
       final detailForReopen = fullDetail ?? hymn;
       nowPlaying.start(
         hymnId: hymn.id,
