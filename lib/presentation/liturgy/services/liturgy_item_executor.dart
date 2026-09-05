@@ -12,6 +12,7 @@ import 'package:louvorja_piano_mobile/core/services/palco/palco_controller.dart'
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 /// Monta a URL de stream do hino da liturgia (percent-encode por segmento).
 ///
@@ -34,8 +35,8 @@ class LiturgyItemExecutor {
   LiturgyItemExecutor._();
 
   static final _api = LouvorjaApiImpl(
-    baseUrl: 'https://api.louvorja.com.br/json_db',
-    filesUrl: 'https://api.louvorja.com.br/file',
+    baseUrl: ApiConfig.urlDatabase,
+    filesUrl: ApiConfig.urlFiles,
     apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
   );
 

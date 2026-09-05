@@ -33,6 +33,7 @@ import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dar
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/hymn_repository.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/hymn_list_tile.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import 'bloc/hymns_bloc.dart';
 
 // coverage:ignore-start
@@ -264,7 +265,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             // Cover do ALBUM pro now-playing do Palco (quadradinho na TV).
             albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
             player: HymnPlayerAdapter(_player),
-            filesUrl: 'https://api.louvorja.com.br/file',
+            filesUrl: ApiConfig.urlFiles,
             audioSource: source, // F3.2: roteamento de áudio no Palco
             audioIsLocal: local != null,
             catalogDurationMs: hymn.durationMs,
@@ -428,8 +429,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return context.read<HymnsBloc>().repository;
     } catch (_) {
       final api = LouvorjaApiImpl(
-        baseUrl: 'https://api.louvorja.com.br/json_db',
-        filesUrl: 'https://api.louvorja.com.br/file',
+        baseUrl: ApiConfig.urlDatabase,
+        filesUrl: ApiConfig.urlFiles,
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         languagePrefix: _languageCode(context),
       );
@@ -518,8 +519,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Fallback: cria repository localmente (nao testavel em unit test)
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: 'https://api.louvorja.com.br/json_db',
-      filesUrl: 'https://api.louvorja.com.br/file',
+      baseUrl: ApiConfig.urlDatabase,
+      filesUrl: ApiConfig.urlFiles,
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
     );
 

@@ -32,6 +32,7 @@ import 'package:louvorja_piano_mobile/presentation/liturgy/bloc/liturgy_bloc.dar
 import 'package:louvorja_piano_mobile/presentation/liturgy/services/liturgy_item_executor.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/widgets/liturgy_item_dialog.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/liturgy_avulsa_page.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 /// Converte LiturgyItemType enum para a chave snake_case do i18n.
 String _typeToKey(dynamic type) {
@@ -258,8 +259,8 @@ class _LiturgyViewState extends State<_LiturgyView> {
     if (musicIds.isNotEmpty) {
       try {
         final api = LouvorjaApiImpl(
-          baseUrl: 'https://api.louvorja.com.br/json_db',
-          filesUrl: 'https://api.louvorja.com.br/file',
+          baseUrl: ApiConfig.urlDatabase,
+          filesUrl: ApiConfig.urlFiles,
           apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         );
         final index = await api.fetchMusicIndex();

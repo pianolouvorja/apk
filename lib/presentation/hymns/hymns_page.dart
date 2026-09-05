@@ -28,6 +28,7 @@ import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import 'bloc/hymns_bloc.dart';
 
 const _apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
@@ -77,8 +78,8 @@ class _HymnsPageState extends State<HymnsPage> {
   Future<void> _initBloc(String languagePrefix) async {
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: 'https://api.louvorja.com.br/json_db',
-      filesUrl: 'https://api.louvorja.com.br/file',
+      baseUrl: ApiConfig.urlDatabase,
+      filesUrl: ApiConfig.urlFiles,
       apiToken: _apiToken,
       languagePrefix: languagePrefix,
     );
@@ -217,7 +218,7 @@ class _HymnsViewState extends State<_HymnsView> {
             detail: detail,
             instrumental: false,
             player: adapter,
-            filesUrl: 'https://api.louvorja.com.br/file',
+            filesUrl: ApiConfig.urlFiles,
           ),
         ),
       );
@@ -537,7 +538,7 @@ class _AlbumCard extends StatelessWidget {
     final isAsset = hasCover && coverUrl.startsWith('asset:');
     final assetName = isAsset ? coverUrl.substring('asset:'.length) : null;
     final fullCoverUrl = hasCover && !isAsset
-        ? 'https://api.louvorja.com.br/file/$coverUrl'
+        ? '${ApiConfig.urlFiles}/$coverUrl'
         : null;
     // coverage:ignore-end
 

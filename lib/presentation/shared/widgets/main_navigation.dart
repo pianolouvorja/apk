@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 import '../../../../core/services/hymn_audio_player.dart';
 import '../../../../core/services/hymn_player_adapter.dart';
@@ -62,7 +63,7 @@ class MainNavigation extends StatelessWidget {
                     instrumental: track?.instrumental ?? false,
                     albumCoverUrl: track?.albumCoverUrl,
                     player: _miniPlayerAdapter,
-                    filesUrl: 'https://api.louvorja.com.br/file',
+                    filesUrl: ApiConfig.urlFiles,
                     audioSource: track?.audioSource,
                     audioIsLocal: track?.audioIsLocal ?? false,
                   ),
