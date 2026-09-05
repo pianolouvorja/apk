@@ -538,7 +538,7 @@ class _AlbumCard extends StatelessWidget {
     final isAsset = hasCover && coverUrl.startsWith('asset:');
     final assetName = isAsset ? coverUrl.substring('asset:'.length) : null;
     final fullCoverUrl = hasCover && !isAsset
-        ? '${ApiConfig.urlFiles}/$coverUrl'
+        ? DownloadUrlBuilder.build(coverUrl)
         : null;
     // coverage:ignore-end
 

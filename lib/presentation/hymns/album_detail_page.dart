@@ -3,7 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -195,11 +195,14 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         audioIsLocal: local != null,
       );
       await player.playUrl(source);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Não ocultar falha de streaming/local: logcat deve mostrar a causa
+      // real (URL remota, ExoPlayer ou MP3 local) para diagnóstico.
+      debugPrint('Falha ao tocar hino: $error\n$stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
+        ).showSnackBar(SnackBar(content: Text('errors.playback'.tr())));
       }
     } finally {
       if (mounted) setState(() => _loadingMusicId = null);
