@@ -29,7 +29,6 @@ import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
 import 'bloc/hymns_bloc.dart';
-import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 const _apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
