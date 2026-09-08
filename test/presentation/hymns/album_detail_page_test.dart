@@ -80,6 +80,9 @@ class _FakePlayer implements HymnAudioPlayer {
   Stream<Duration> get durationStream => const Stream.empty();
 
   @override
+  Stream<void> get completionStream => const Stream.empty();
+
+  @override
   Future<void> seek(Duration position) async {}
 
   @override
@@ -210,8 +213,8 @@ void main() {
     await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
-    // Botao play
-    expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
+    // Botao play (row + botao Tocar tudo do AppBar usam o mesmo icone)
+    expect(find.byIcon(TablerIcons.playerPlayFilled), findsAtLeastNWidgets(1));
     // Botao instrumental (piano)
     expect(find.byIcon(TablerIcons.piano), findsOneWidget);
   });
@@ -230,7 +233,7 @@ void main() {
     await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
+    expect(find.byIcon(TablerIcons.playerPlayFilled), findsAtLeastNWidgets(1));
     expect(find.byIcon(TablerIcons.piano), findsNothing);
   });
 

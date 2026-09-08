@@ -49,6 +49,7 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
     _player.onPlayerStateChanged.listen((state) {
       _isPlaying = state == PlayerState.playing;
       _controller.add(_isPlaying);
+      if (state == PlayerState.completed) _completions.add(null);
     });
   }
 
@@ -60,6 +61,11 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
 
   @override
   Stream<bool> get playingStream => _controller.stream;
+
+  final _completions = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get completionStream => _completions.stream;
 
   @override
   Stream<Duration> get positionStream => _positions.stream;
@@ -109,5 +115,6 @@ class _NativeAudioPlayer implements HymnAudioPlayer {
   void dispose() {
     _player.dispose();
     _controller.close();
+    _completions.close();
   }
 }

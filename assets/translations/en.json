@@ -415,5 +415,8 @@
       "empty": "Search by number or name"
     },
     "stopProjection": "Stop projection"
+  },
+  "albums": {
+    "playAll": "Play all"
   }
 }

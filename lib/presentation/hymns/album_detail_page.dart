@@ -81,6 +81,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   int _batchTrackReceived = 0;
   int _batchTrackTotal = 0;
 
+  /// Fila de "Tocar tudo": hinos restantes do álbum na ordem da tracklist.
+  /// Ao terminar uma faixa (completionStream), avança automaticamente.
+  List<Hymn> _playbackQueue = [];
+  StreamSubscription<void>? _completionSubscription;
+
   HymnAudioPlayer get _player => widget.audioPlayer ?? HymnAudioPlayer.instance;
 
   @override
@@ -92,6 +97,26 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         setState(() => _playingHymnId = null);
       }
     });
+    // Tocar tudo: ao completar a faixa atual, pula para a próxima da fila.
+    _completionSubscription = _player.completionStream.listen((_) {
+      _playNextInQueue();
+    });
+  }
+
+  /// Avança para a próxima faixa da fila (Tocar tudo). Fim da fila encerra
+  /// o modo fila silenciosamente.
+  Future<void> _playNextInQueue() async {
+    if (!mounted || _playbackQueue.isEmpty) return;
+    final next = _playbackQueue.first;
+    _playbackQueue = _playbackQueue.sublist(1);
+    await _togglePlay(next, instrumental: false);
+  }
+
+  /// Toca o álbum inteiro na ordem da tracklist (Tocar tudo).
+  Future<void> _playAll(List<Hymn> hymns) async {
+    if (hymns.isEmpty) return;
+    _playbackQueue = hymns.toList();
+    await _playNextInQueue();
   }
 
   // Bloco depende de HymnAudioPlayer.instance (plataforma)
@@ -475,6 +500,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   @override
   void dispose() {
     _playingSubscription?.cancel();
+    _completionSubscription?.cancel();
     super.dispose();
   }
 
@@ -559,6 +585,27 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         ),
         // coverage:ignore-start
         actions: [
+          // Tocar tudo: paridade com web/Electron (botão de play da tracklist).
+          // FilledButton com ícone + label, estilo primário do tema.
+          if (!_batchDownloading)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FutureBuilder<List<Hymn>>(
+                future: _hymnsFuture,
+                builder: (context, snapshot) {
+                  final hymns = snapshot.data;
+                  final canPlay = hymns != null && hymns.isNotEmpty;
+                  return Tooltip(
+                    message: 'albums.playAll'.tr(),
+                    child: FilledButton.tonalIcon(
+                      onPressed: canPlay ? () => _playAll(hymns) : null,
+                      icon: const Icon(TablerIcons.playerPlayFilled, size: 18),
+                      label: Text('albums.playAll'.tr()),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (_batchDownloading)
             Padding(
               padding: const EdgeInsets.only(right: 14),

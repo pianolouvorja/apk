@@ -29,6 +29,11 @@ class _WebAudioPlayer implements HymnAudioPlayer {
   @override
   Stream<bool> get playingStream => _controller.stream;
 
+  final _completions = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get completionStream => _completions.stream;
+
   @override
   Stream<Duration> get positionStream => _positions.stream;
 
@@ -60,6 +65,7 @@ class _WebAudioPlayer implements HymnAudioPlayer {
       ..onEnded.listen((_) {
         _isPlaying = false;
         _controller.add(false);
+        _completions.add(null);
       })
       ..onError.listen((_) {
         _isPlaying = false;
@@ -124,6 +130,7 @@ class _WebAudioPlayer implements HymnAudioPlayer {
     _audio?.pause();
     _audio = null;
     _controller.close();
+    _completions.close();
   }
 }
 
