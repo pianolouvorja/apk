@@ -12,6 +12,8 @@ class _StubAudioPlayer implements HymnAudioPlayer {
   @override
   Stream<bool> get playingStream => Stream.empty();
   @override
+  Stream<void> get completionStream => Stream.empty();
+  @override
   Stream<Duration> get positionStream => Stream.empty();
   @override
   Stream<Duration> get durationStream => Stream.empty();

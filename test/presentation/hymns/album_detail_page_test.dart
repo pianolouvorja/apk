@@ -29,6 +29,7 @@ class _MockApi implements LouvorjaApiClient {
   final Hymn? detail;
   final bool fail;
   final bool failDetail;
+  int fetchMusicCalls = 0;
 
   _MockApi({
     this.hymns = const [],
@@ -45,6 +46,7 @@ class _MockApi implements LouvorjaApiClient {
 
   @override
   Future<Hymn> fetchMusic(int musicId) async {
+    fetchMusicCalls++;
     if (fail || failDetail) throw Exception('network');
     return detail ??
         Hymn(id: musicId, title: 'Test', urlMusic: '/musics/test.mp3');
@@ -76,6 +78,9 @@ class _FakePlayer implements HymnAudioPlayer {
 
   @override
   Stream<Duration> get durationStream => const Stream.empty();
+
+  @override
+  Stream<void> get completionStream => const Stream.empty();
 
   @override
   Future<void> seek(Duration position) async {}
@@ -208,8 +213,8 @@ void main() {
     await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
-    // Botao play
-    expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
+    // Botao play (row + botao Tocar tudo do AppBar usam o mesmo icone)
+    expect(find.byIcon(TablerIcons.playerPlayFilled), findsAtLeastNWidgets(1));
     // Botao instrumental (piano)
     expect(find.byIcon(TablerIcons.piano), findsOneWidget);
   });
@@ -228,7 +233,7 @@ void main() {
     await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(TablerIcons.playerPlayFilled), findsOneWidget);
+    expect(find.byIcon(TablerIcons.playerPlayFilled), findsAtLeastNWidgets(1));
     expect(find.byIcon(TablerIcons.piano), findsNothing);
   });
 
@@ -360,6 +365,8 @@ void _offlineGroup() {
 
       expect(player.playedUrl, '/local/1.mp3',
           reason: 'baixado deve tocar do disco sem consultar a API');
+      expect(api.fetchMusicCalls, 0,
+          reason: 'play offline não deve requisitar o detalhe na API');
     });
 
     testWidgets('icone de baixado aparece ao abrir pagina com faixa no disco',

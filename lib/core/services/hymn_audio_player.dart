@@ -14,6 +14,10 @@ abstract class HymnAudioPlayer {
 
   Stream<bool> get playingStream;
 
+  /// Emitido quando a faixa atual TERMINA (completou, não pausa/stop).
+  /// Usado pela fila de "Tocar tudo" do álbum para avançar automaticamente.
+  Stream<void> get completionStream;
+
   /// Posição atual (ms) e duração (ms) da faixa em reprodução.
   Stream<Duration> get positionStream;
   Stream<Duration> get durationStream;

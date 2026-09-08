@@ -29,6 +29,7 @@ import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_stop_vid
 import 'package:louvorja_piano_mobile/core/services/dlna/stage_session.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bible_reference_parser.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 class BiblePage extends StatelessWidget {
   final BibleBloc? testBloc;
@@ -45,8 +46,8 @@ class BiblePage extends StatelessWidget {
     }
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: 'https://api.louvorja.com.br/json_db',
-      filesUrl: 'https://api.louvorja.com.br/file',
+      baseUrl: ApiConfig.urlDatabase,
+      filesUrl: ApiConfig.urlFiles,
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       // API possui catálogo espanhol; EN faz fallback para catálogo PT.
       languagePrefix: context.locale.languageCode == 'es' ? 'es' : 'pt',

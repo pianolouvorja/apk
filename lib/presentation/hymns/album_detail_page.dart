@@ -3,7 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -33,6 +33,7 @@ import 'package:louvorja_piano_mobile/data/repositories/hymn_repository_impl.dar
 import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/repositories/hymn_repository.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/hymn_list_tile.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import 'bloc/hymns_bloc.dart';
 
 // coverage:ignore-start
@@ -80,6 +81,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   int _batchTrackReceived = 0;
   int _batchTrackTotal = 0;
 
+  /// Fila de "Tocar tudo": hinos restantes do álbum na ordem da tracklist.
+  /// Ao terminar uma faixa (completionStream), avança automaticamente.
+  List<Hymn> _playbackQueue = [];
+  StreamSubscription<void>? _completionSubscription;
+
   HymnAudioPlayer get _player => widget.audioPlayer ?? HymnAudioPlayer.instance;
 
   @override
@@ -91,6 +97,26 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         setState(() => _playingHymnId = null);
       }
     });
+    // Tocar tudo: ao completar a faixa atual, pula para a próxima da fila.
+    _completionSubscription = _player.completionStream.listen((_) {
+      _playNextInQueue();
+    });
+  }
+
+  /// Avança para a próxima faixa da fila (Tocar tudo). Fim da fila encerra
+  /// o modo fila silenciosamente.
+  Future<void> _playNextInQueue() async {
+    if (!mounted || _playbackQueue.isEmpty) return;
+    final next = _playbackQueue.first;
+    _playbackQueue = _playbackQueue.sublist(1);
+    await _togglePlay(next, instrumental: false);
+  }
+
+  /// Toca o álbum inteiro na ordem da tracklist (Tocar tudo).
+  Future<void> _playAll(List<Hymn> hymns) async {
+    if (hymns.isEmpty) return;
+    _playbackQueue = hymns.toList();
+    await _playNextInQueue();
   }
 
   // Bloco depende de HymnAudioPlayer.instance (plataforma)
@@ -179,7 +205,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           await player.setVolume(1);
         }
       }
-      // Online usa detail completo; offline preserva fluxo sem API.
+      // Online usa detalhe completo; offline preserva fluxo sem API.
       final detailForReopen = fullDetail ?? hymn;
       nowPlaying.start(
         hymnId: hymn.id,
@@ -194,11 +220,14 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         audioIsLocal: local != null,
       );
       await player.playUrl(source);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Não ocultar falha de streaming/local: logcat deve mostrar a causa
+      // real (URL remota, ExoPlayer ou MP3 local) para diagnóstico.
+      debugPrint('Falha ao tocar hino: $error\n$stackTrace');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('errors.connection'.tr())));
+        ).showSnackBar(SnackBar(content: Text('errors.playback'.tr())));
       }
     } finally {
       if (mounted) setState(() => _loadingMusicId = null);
@@ -264,7 +293,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             // Cover do ALBUM pro now-playing do Palco (quadradinho na TV).
             albumCoverUrl: hymnCatalogProvider.albumCoverById(widget.albumId),
             player: HymnPlayerAdapter(_player),
-            filesUrl: 'https://api.louvorja.com.br/file',
+            filesUrl: ApiConfig.urlFiles,
             audioSource: source, // F3.2: roteamento de áudio no Palco
             audioIsLocal: local != null,
             catalogDurationMs: hymn.durationMs,
@@ -428,8 +457,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return context.read<HymnsBloc>().repository;
     } catch (_) {
       final api = LouvorjaApiImpl(
-        baseUrl: 'https://api.louvorja.com.br/json_db',
-        filesUrl: 'https://api.louvorja.com.br/file',
+        baseUrl: ApiConfig.urlDatabase,
+        filesUrl: ApiConfig.urlFiles,
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         languagePrefix: _languageCode(context),
       );
@@ -471,6 +500,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   @override
   void dispose() {
     _playingSubscription?.cancel();
+    _completionSubscription?.cancel();
     super.dispose();
   }
 
@@ -518,8 +548,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Fallback: cria repository localmente (nao testavel em unit test)
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: 'https://api.louvorja.com.br/json_db',
-      filesUrl: 'https://api.louvorja.com.br/file',
+      baseUrl: ApiConfig.urlDatabase,
+      filesUrl: ApiConfig.urlFiles,
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
     );
 
@@ -555,6 +585,27 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         ),
         // coverage:ignore-start
         actions: [
+          // Tocar tudo: paridade com web/Electron (botão de play da tracklist).
+          // FilledButton com ícone + label, estilo primário do tema.
+          if (!_batchDownloading)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FutureBuilder<List<Hymn>>(
+                future: _hymnsFuture,
+                builder: (context, snapshot) {
+                  final hymns = snapshot.data;
+                  final canPlay = hymns != null && hymns.isNotEmpty;
+                  return Tooltip(
+                    message: 'albums.playAll'.tr(),
+                    child: FilledButton.tonalIcon(
+                      onPressed: canPlay ? () => _playAll(hymns) : null,
+                      icon: const Icon(TablerIcons.playerPlayFilled, size: 18),
+                      label: Text('albums.playAll'.tr()),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (_batchDownloading)
             Padding(
               padding: const EdgeInsets.only(right: 14),
