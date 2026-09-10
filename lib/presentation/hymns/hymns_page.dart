@@ -339,6 +339,12 @@ class _HymnsViewState extends State<_HymnsView> {
               )
             : Text('hymns.title'.tr()),
         actions: [
+          // Coletâneas da comunidade (custom da API)
+          IconButton(
+            icon: const Icon(Icons.groups),
+            tooltip: 'Coletâneas da Comunidade',
+            onPressed: () => context.push('/hymns/custom'),
+          ),
           BlocBuilder<HymnsBloc, HymnsState>(
             builder: (context, state) {
               if (state is! HymnsLoaded) return const SizedBox.shrink();

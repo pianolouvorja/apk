@@ -18,6 +18,7 @@ import '../domain/entities/hymn.dart';
 import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
 import '../presentation/hymns/album_detail_page.dart';
+import '../presentation/custom/custom_collections_page.dart';
 import '../presentation/search/global_search_page.dart';
 import '../presentation/settings/settings_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
@@ -54,6 +55,10 @@ final appRouter = GoRouter(
                         int.tryParse(state.pathParameters['albumId'] ?? '') ??
                         0,
                   ),
+                ),
+                GoRoute(
+                  path: 'custom',
+                  builder: (context, state) => const CustomCollectionsPage(),
                 ),
               ],
             ),
