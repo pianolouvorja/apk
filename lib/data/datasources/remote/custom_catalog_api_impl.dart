@@ -138,6 +138,8 @@ class CustomCatalogApiImpl {
   }
 
   Map<String, dynamic> _decode(dynamic raw) {
+    // Dio real devolve Response<dynamic>; os fakes de teste devolvem o Map puro.
+    if (raw is Response) return _decode(raw.data);
     if (raw is Map<String, dynamic>) return raw;
     if (raw is String) return jsonDecode(raw) as Map<String, dynamic>;
     throw ArgumentError('Resposta inesperada da API custom: ${raw.runtimeType}');

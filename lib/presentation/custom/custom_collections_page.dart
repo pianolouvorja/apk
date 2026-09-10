@@ -10,7 +10,19 @@ import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 /// Lista coletâneas públicas da API custom, permite ver o detalhe
 /// (músicas) e baixar uma coletânea inteira para uso offline.
 class CustomCollectionsPage extends StatefulWidget {
-  const CustomCollectionsPage({super.key});
+  /// Injeção opcional de Dio (testes). Null = Dio padrão com timeouts.
+  final Dio? dio;
+
+  const CustomCollectionsPage({super.key, this.dio});
+
+  /// Dio padrão da página. Visível p/ testes (RF-01: timeouts 8s/15s).
+  @visibleForTesting
+  static Dio buildDefaultDio() => Dio(BaseOptions(
+        // Sem timeout o request fica pendurado quando o host não responde
+        // (ex.: saiu do Wi-Fi de casa) — falha rápida com erro claro.
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 15),
+      ));
 
   @override
   State<CustomCollectionsPage> createState() => _CustomCollectionsPageState();
@@ -25,7 +37,7 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
   void initState() {
     super.initState();
     _api = CustomCatalogApiImpl.withDio(
-      dio: Dio(),
+      dio: widget.dio ?? CustomCollectionsPage.buildDefaultDio(),
       apiBaseUrl: _apiBase(),
       filesBaseUrl: ApiConfig.urlFiles,
     );
@@ -49,8 +61,16 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
         _error = null;
       });
     } catch (e) {
+      // Diagnóstico: sem este log o catch engole a exceção e fica impossível
+      // distinguir timeout de DNS de conexão recusada no logcat.
+      // ignore: avoid_print
+      print('[custom-collections] erro ao carregar: $e');
       if (!mounted) return;
-      setState(() => _error = 'Não foi possível carregar as coletâneas.\nVerifique sua conexão e tente novamente.');
+      final detalhe = e is DioException
+          ? ' (${e.type.name})'
+          : '';
+      setState(() =>
+          _error = 'Não foi possível carregar as coletâneas$detalhe.\nVerifique sua conexão e tente novamente.');
     }
   }
 
