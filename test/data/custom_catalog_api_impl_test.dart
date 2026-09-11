@@ -12,7 +12,7 @@ class _FakeNet {
   _FakeNet(this.responses);
 
   Future<dynamic> fetch(String method, String url,
-      {Map<String, dynamic>? body}) async {
+      {Map<String, dynamic>? body, String? bearerToken}) async {
     calls.add('$method $url');
     return responses[url];
   }

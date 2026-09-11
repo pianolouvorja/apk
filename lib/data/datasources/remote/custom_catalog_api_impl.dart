@@ -14,6 +14,7 @@ typedef CustomFetch = Future<dynamic> Function(
   String method,
   String url, {
   Map<String, dynamic>? body,
+  String? bearerToken,
 });
 
 class CustomCatalogApiImpl {
@@ -53,11 +54,14 @@ class CustomCatalogApiImpl {
       String method,
       String url, {
       Map<String, dynamic>? body,
+      String? bearerToken,
     }) {
       return dio.request<dynamic>(
         url,
         data: body,
-        options: Options(method: method),
+        options: Options(method: method, headers: {
+          if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
+        }),
       );
     };
   }
@@ -109,6 +113,40 @@ class CustomCatalogApiImpl {
     final ids = (prefs.getStringList(_joinedKey) ?? const <String>[]).toSet();
     ids.add('${collection.id}');
     await prefs.setStringList(_joinedKey, ids.toList());
+  }
+
+  /// Cria uma coletânea nova (requer auth). Retorna o id criado.
+  Future<int> createCollection({
+    required String name,
+    String? description,
+    String? bearerToken,
+  }) async {
+    final response = await _fetch('POST', _api('/collections'), body: {
+      'name': name,
+      if (description != null && description.isNotEmpty) 'description': description,
+    }, bearerToken: bearerToken);
+    final data = _decode(response);
+    return (data['id_collection'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Adiciona um hino OFICIAL a uma coletânea custom (atalho por
+  /// official_music_id — não copia letra/áudio). Requer auth + ser dono.
+  Future<void> addMusicToCollection({
+    required int collectionId,
+    required int officialMusicId,
+    String? bearerToken,
+  }) async {
+    await _fetch('POST', _api('/collections/$collectionId/musics'), body: {
+      'official_music_id': officialMusicId,
+    }, bearerToken: bearerToken);
+  }
+
+  /// Remove uma música de uma coletânea custom (dono apenas).
+  Future<void> removeMusicFromCollection({
+    required int musicId,
+    String? bearerToken,
+  }) async {
+    await _fetch('DELETE', _api('/musics/$musicId'), bearerToken: bearerToken);
   }
 
   /// IDs das coletâneas baixadas localmente.

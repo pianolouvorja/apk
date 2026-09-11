@@ -10,6 +10,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:louvorja_piano_mobile/presentation/custom/save_to_collection_sheet.dart';
+
 import '../../core/services/now_playing.dart';
 import '../../core/services/palco/palco_foreground.dart';
 import '../../core/services/pip_controller.dart';
@@ -376,6 +378,19 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                     ),
                     const StageStopVideoButton(),
+                    // Salvar este hino numa coletânea custom (v2: playlists).
+                    IconButton(
+                      tooltip: 'Salvar em coletânea',
+                      icon: const Icon(
+                        TablerIcons.playlistAdd,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => showSaveToCollectionSheet(
+                        context,
+                        officialMusicId: widget.detail.id,
+                        hymnTitle: widget.detail.title ?? 'Hino',
+                      ),
+                    ),
                     // Cast só no AppBar (hinos/sub-módulos) — nunca abaixo.
                     // Configura uma vez; cada hino não repete o controle.
                     if (widget.detail.hasInstrumental)
