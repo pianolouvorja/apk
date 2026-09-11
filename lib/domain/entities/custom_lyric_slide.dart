@@ -50,3 +50,11 @@ T? effectiveSlideBg<T>(Map<int, T> backgrounds, int i) {
   if (i > 0 && backgrounds.containsKey(0)) return backgrounds[0];
   return null;
 }
+
+/// Milissegundos → formato de tempo do DB/.slja: 'MM:SS.mmm'.
+String msToDbTime(int ms) {
+  final mm = (ms ~/ 60000).toString().padLeft(2, '0');
+  final ss = ((ms % 60000) ~/ 1000).toString().padLeft(2, '0');
+  final mmm = (ms % 1000).toString().padLeft(3, '0');
+  return '$mm:$ss.$mmm';
+}

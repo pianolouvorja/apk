@@ -12,9 +12,7 @@ void main() {
 
   group('PlaylistsPage widget', () {
     testWidgets('vazio mostra orientação + FAB Nova playlist', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: PlaylistsPage()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: PlaylistsPage()));
       await tester.pumpAndSettle();
 
       expect(find.text('Nova playlist'), findsOneWidget);
@@ -27,9 +25,7 @@ void main() {
     });
 
     testWidgets('criar playlist pelo FAB aparece na lista', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: PlaylistsPage()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: PlaylistsPage()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Nova playlist'));
@@ -52,11 +48,12 @@ void main() {
     testWidgets('playlist com itens mostra contagem de hinos', (tester) async {
       final storage = PlaylistStorage();
       final p = await storage.create('Minha seleção');
-      await storage.addItem(p.id, const PlaylistItem(musicId: 12, title: 'Hino 12'));
-
-      await tester.pumpWidget(
-        const MaterialApp(home: PlaylistsPage()),
+      await storage.addItem(
+        p.id,
+        const PlaylistItem(musicId: 12, title: 'Hino 12'),
       );
+
+      await tester.pumpWidget(const MaterialApp(home: PlaylistsPage()));
       await tester.pumpAndSettle();
 
       expect(find.text('Minha seleção'), findsOneWidget);

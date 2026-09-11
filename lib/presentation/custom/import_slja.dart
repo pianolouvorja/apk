@@ -7,6 +7,8 @@ import 'package:louvorja_piano_mobile/core/services/slja.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
+import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart'
+    show msToDbTime;
 
 /// Importa um .slja (LouvorJA Delphi) como música custom na coletânea.
 ///
@@ -68,7 +70,7 @@ Future<void> importSljaIntoCollection(
         musicId: musicId,
         lyric: s.lyric,
         auxLyric: s.auxiliaryLyric,
-        time: s.timeMs > 0 ? _msToDbTime(s.timeMs) : '00:00.000',
+        time: s.timeMs > 0 ? msToDbTime(s.timeMs) : '00:00.000',
         order: i,
         bearerToken: bearerToken,
       );
@@ -91,9 +93,4 @@ Future<void> importSljaIntoCollection(
 }
 
 /// ms → formato do DB custom: MM:SS.mmm
-String _msToDbTime(int ms) {
-  final mm = (ms ~/ 60000).toString().padLeft(2, '0');
-  final ss = ((ms % 60000) ~/ 1000).toString().padLeft(2, '0');
-  final mmm = (ms % 1000).toString().padLeft(3, '0');
-  return '$mm:$ss.$mmm';
-}
+
