@@ -236,7 +236,8 @@
     "languagePortuguese": "Portugues (BR)",
     "languageEnglish": "English",
     "languageSpanish": "Espanol",
-    "version": "Version"
+    "version": "Version",
+    "privacyPolicy": "Política de Privacidad"
   },
   "timer": {
     "title": "Temporizador",

@@ -235,7 +235,8 @@
     "languagePortuguese": "Portugues (BR)",
     "languageEnglish": "English",
     "languageSpanish": "Espanol",
-    "version": "Versao"
+    "version": "Versao",
+    "privacyPolicy": "Política de Privacidade"
   },
   "timer": {
     "title": "Cronômetro",

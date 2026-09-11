@@ -70,8 +70,9 @@ class CustomCatalogApiImpl {
   String _api(String path) => '$apiBaseUrl/v1/custom$path';
 
   /// Lista coletâneas custom públicas da comunidade.
-  Future<List<CustomCollection>> fetchCollections() async {
-    final response = await _fetch('GET', _api('/collections'));
+  Future<List<CustomCollection>> fetchCollections({String? bearerToken}) async {
+    final response =
+        await _fetch('GET', _api('/collections'), bearerToken: bearerToken);
     final data = _decode(response);
     final list = (data['data'] as List<dynamic>? ?? const []);
     return list
@@ -120,11 +121,13 @@ class CustomCatalogApiImpl {
   Future<int> createCollection({
     required String name,
     String? description,
+    String? authorName,
     String? bearerToken,
   }) async {
     final response = await _fetch('POST', _api('/collections'), body: {
       'name': name,
       if (description != null && description.isNotEmpty) 'description': description,
+      if (authorName != null && authorName.isNotEmpty) 'author_name': authorName,
     }, bearerToken: bearerToken);
     final data = _decode(response);
     return (data['id_collection'] as num?)?.toInt() ?? 0;

@@ -21,6 +21,7 @@ import '../presentation/hymns/album_detail_page.dart';
 import '../presentation/custom/custom_collections_page.dart';
 import '../presentation/search/global_search_page.dart';
 import '../presentation/settings/settings_page.dart';
+import '../presentation/settings/terms_page.dart';
 import '../presentation/shared/widgets/main_navigation.dart';
 import '../presentation/tools/tools_page.dart';
 
@@ -84,6 +85,17 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/settings',
               builder: (context, state) => SettingsPage(),
+              routes: [
+                GoRoute(
+                  path: 'terms',
+                  builder: (context, state) =>
+                      const TermsPage(isPrivacy: false),
+                ),
+                GoRoute(
+                  path: 'privacy',
+                  builder: (context, state) => const TermsPage(isPrivacy: true),
+                ),
+              ],
             ),
           ],
         ),

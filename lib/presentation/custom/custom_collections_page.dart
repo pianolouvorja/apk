@@ -18,7 +18,11 @@ class CustomCollectionsPage extends StatefulWidget {
   /// Injeção opcional de Dio (testes). Null = Dio padrão com timeouts.
   final Dio? dio;
 
-  const CustomCollectionsPage({super.key, this.dio});
+  /// Injeção opcional do controller de auth (testes). Null = real
+  /// (secure storage + API) — só em runtime, nunca em widget test.
+  final CustomAuthController? authController;
+
+  const CustomCollectionsPage({super.key, this.dio, this.authController});
 
   /// Dio padrão da página. Visível p/ testes (RF-01: timeouts 8s/15s).
   @visibleForTesting
@@ -49,15 +53,15 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
       apiBaseUrl: _apiBase(),
       filesBaseUrl: ApiConfig.urlFiles,
     );
-    _auth = CustomAuthController(
-      CustomAuthApiImpl(
-        fetch: _dioFetch,
-        apiBaseUrl: _apiBase(),
-        sessionStore: CustomSessionStore(),
-      ),
-    );
-    _auth.restore();
-    _load();
+    _auth = widget.authController ??
+        CustomAuthController(
+          CustomAuthApiImpl(
+            fetch: _dioFetch,
+            apiBaseUrl: _apiBase(),
+            sessionStore: CustomSessionStore(),
+          ),
+        );
+    _auth.restore().then((_) => _load());
   }
 
   /// Ponte Dio → assinatura CustomFetch (usada pelo auth).
@@ -90,7 +94,9 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
 
   Future<void> _load() async {
     try {
-      final collections = await _api.fetchCollections();
+      final collections = await _api.fetchCollections(
+        bearerToken: _auth.session?.token,
+      );
       if (!mounted) return;
       setState(() {
         _collections = collections;
@@ -170,6 +176,7 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
       await _api.createCollection(
         name: name,
         description: descController.text.trim(),
+        authorName: _auth.session?.user.displayName,
         bearerToken: token,
       );
       if (!mounted) return;
@@ -202,7 +209,9 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                   icon: const Icon(Icons.logout),
                   onPressed: () async {
                     await _auth.logout();
-                    if (mounted) setState(() {});
+                    if (mounted) {
+                      await _load(); // recarrega sem Bearer (is_owner zera)
+                    }
                   },
                 );
               }
@@ -211,7 +220,9 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                 icon: const Icon(Icons.login),
                 onPressed: () async {
                   await CustomAuthSheet.show(context, _auth);
-                  if (mounted) setState(() {});
+                  if (mounted) {
+                    await _load(); // recarrega com Bearer → is_owner correto
+                  }
                 },
               );
             },
