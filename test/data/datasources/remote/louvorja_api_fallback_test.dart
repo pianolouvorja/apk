@@ -55,7 +55,10 @@ void main() {
         return '[{"id_hymn": 1, "title": "T", "number": 1, "category": "hino"}]';
       });
       final api = LouvorjaApiImpl(
-        baseUrls: ['https://primary.test/json_db', 'https://backup.test/json_db'],
+        baseUrls: [
+          'https://primary.test/json_db',
+          'https://backup.test/json_db',
+        ],
         filesUrls: ['https://primary.test/file', 'https://backup.test/file'],
         apiToken: '',
       )..dio.httpClientAdapter = adapter;
@@ -64,8 +67,14 @@ void main() {
 
       expect(data, isNotNull);
       // falhou na primaria e foi pra backup
-      expect(adapter.requested.first.startsWith('https://primary.test'), isTrue);
-      expect(adapter.requested.any((u) => u.startsWith('https://backup.test')), isTrue);
+      expect(
+        adapter.requested.first.startsWith('https://primary.test'),
+        isTrue,
+      );
+      expect(
+        adapter.requested.any((u) => u.startsWith('https://backup.test')),
+        isTrue,
+      );
       expect(api.activeUrlIndex, 1);
     });
 
@@ -75,7 +84,10 @@ void main() {
         return '[{"id_hymn": 2, "title": "T2", "number": 2, "category": "hino"}]';
       });
       final api = LouvorjaApiImpl(
-        baseUrls: ['https://primary.test/json_db', 'https://backup.test/json_db'],
+        baseUrls: [
+          'https://primary.test/json_db',
+          'https://backup.test/json_db',
+        ],
         filesUrls: ['https://primary.test/file', 'https://backup.test/file'],
         apiToken: '',
       )..dio.httpClientAdapter = adapter;
@@ -86,16 +98,24 @@ void main() {
     });
 
     test('primaria saudavel → fallback nunca acionado', () async {
-      final adapter = _ScriptedAdapter((url) =>
-          '[{"id_hymn": 3, "title": "T3", "number": 3, "category": "hino"}]');
+      final adapter = _ScriptedAdapter(
+        (url) =>
+            '[{"id_hymn": 3, "title": "T3", "number": 3, "category": "hino"}]',
+      );
       final api = LouvorjaApiImpl(
-        baseUrls: ['https://primary.test/json_db', 'https://backup.test/json_db'],
+        baseUrls: [
+          'https://primary.test/json_db',
+          'https://backup.test/json_db',
+        ],
         filesUrls: ['https://primary.test/file', 'https://backup.test/file'],
         apiToken: '',
       )..dio.httpClientAdapter = adapter;
 
       await api.fetchHymnal1996();
-      expect(adapter.requested.every((u) => u.startsWith('https://primary.test')), isTrue);
+      expect(
+        adapter.requested.every((u) => u.startsWith('https://primary.test')),
+        isTrue,
+      );
       expect(api.activeUrlIndex, 0);
     });
 
@@ -105,7 +125,10 @@ void main() {
         return '[{"id_hymn": 4, "title": "T4", "number": 4, "category": "hino"}]';
       });
       final api = LouvorjaApiImpl(
-        baseUrls: ['https://primary.test/json_db', 'https://backup.test/json_db'],
+        baseUrls: [
+          'https://primary.test/json_db',
+          'https://backup.test/json_db',
+        ],
         filesUrls: ['https://primary.test/file', 'https://backup.test/file'],
         apiToken: '',
       )..dio.httpClientAdapter = adapter;
@@ -123,8 +146,10 @@ void main() {
       expect(dbs, contains('https://api.louvorja.com.br/json_db'));
       expect(dbs, contains('https://api.louvorja.workers.dev/json_db'));
       // primaria vem primeiro
-      expect(dbs.indexOf('https://api.louvorja.com.br/json_db'),
-          lessThan(dbs.indexOf('https://api.louvorja.workers.dev/json_db')));
+      expect(
+        dbs.indexOf('https://api.louvorja.com.br/json_db'),
+        lessThan(dbs.indexOf('https://api.louvorja.workers.dev/json_db')),
+      );
 
       final files = ApiConfig.filesUrls();
       expect(files.first, ApiConfig.urlFiles);

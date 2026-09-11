@@ -25,22 +25,22 @@ void main() {
     final api = CustomFileApi(dio: dio, apiBaseUrl: 'https://api.test');
 
     final tmp = File(
-        '${Directory.systemTemp.path}/custom_file_test_${DateTime.now().millisecondsSinceEpoch}.mp3');
+      '${Directory.systemTemp.path}/custom_file_test_${DateTime.now().millisecondsSinceEpoch}.mp3',
+    );
     tmp.writeAsBytesSync(List.filled(64, 7));
 
-    final result = await api.upload(
-      tmp,
-      kind: 'audio',
-      bearerToken: 'tok',
-    );
+    final result = await api.upload(tmp, kind: 'audio', bearerToken: 'tok');
 
     expect(result.idFile, 42);
     expect(result.url, '/custom/audio/musica.mp3');
     expect(captured!.method, 'POST');
     expect(captured!.url, 'https://api.test/v1/custom/files');
     expect(captured!.auth, 'Bearer tok');
-    expect(captured!.body, isNotEmpty,
-        reason: 'multipart tem corpo (arquivo + campos)');
+    expect(
+      captured!.body,
+      isNotEmpty,
+      reason: 'multipart tem corpo (arquivo + campos)',
+    );
     expect(captured!.auth, 'Bearer tok');
     tmp.deleteSync();
   });
@@ -83,9 +83,12 @@ class _CaptureAdapter implements HttpClientAdapter {
       }
     }
     final body = String.fromCharCodes(chunks);
-    return ResponseBody.fromString(_responder(options, body), 201,
-        headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-        });
+    return ResponseBody.fromString(
+      _responder(options, body),
+      201,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
   }
 }

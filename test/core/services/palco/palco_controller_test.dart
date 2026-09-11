@@ -34,12 +34,13 @@ void main() {
     bindings.clear();
   });
 
-  test('PalcoController start + receiver conecta + projection chega',
-      () async {
+  test('PalcoController start + receiver conecta + projection chega', () async {
     final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+      sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+    );
     final ok = await ctrl.connect(
-        const PalcoTarget(name: 'TV fake', ip: '127.0.0.1'));
+      const PalcoTarget(name: 'TV fake', ip: '127.0.0.1'),
+    );
     expect(ok, isTrue, reason: 'sender deve subir');
     expect(ctrl.httpBase, isNotNull);
     bindings.add('ctrl');
@@ -65,15 +66,18 @@ void main() {
 
   test('audio é envelopado no proxy do sender', () async {
     final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+      sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+    );
     await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
 
     final rx = FakeReceiver();
     await rx.connect('127.0.0.1', ctrl.wsPort);
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    ctrl.playAudio('https://api.louvorja.com.br/file/musics/pt/a.mp3',
-        title: 'Hino');
+    ctrl.playAudio(
+      'https://api.louvorja.com.br/file/musics/pt/a.mp3',
+      title: 'Hino',
+    );
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
     final msg = rx.received.last;
@@ -87,33 +91,37 @@ void main() {
     await ctrl.disconnect();
   });
 
-  test('eventos receiver→sender (unlocked/remote-key) chegam no stream',
-      () async {
-    final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
-    await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
+  test(
+    'eventos receiver→sender (unlocked/remote-key) chegam no stream',
+    () async {
+      final ctrl = PalcoController(
+        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+      );
+      await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
 
-    final rx = FakeReceiver();
-    await rx.connect('127.0.0.1', ctrl.wsPort);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+      final rx = FakeReceiver();
+      await rx.connect('127.0.0.1', ctrl.wsPort);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    final eventos = <String>[];
-    final sub = ctrl.events.listen((m) => eventos.add(m.type));
+      final eventos = <String>[];
+      final sub = ctrl.events.listen((m) => eventos.add(m.type));
 
-    rx.sendEvent({'v': 2, 'type': 'unlocked'});
-    rx.sendEvent({'v': 2, 'type': 'remote-key', 'key': 'next'});
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+      rx.sendEvent({'v': 2, 'type': 'unlocked'});
+      rx.sendEvent({'v': 2, 'type': 'remote-key', 'key': 'next'});
+      await Future<void>.delayed(const Duration(milliseconds: 400));
 
-    expect(eventos, containsAll(['unlocked', 'remote-key']));
+      expect(eventos, containsAll(['unlocked', 'remote-key']));
 
-    await sub.cancel();
-    await rx.close();
-    await ctrl.disconnect();
-  });
+      await sub.cancel();
+      await rx.close();
+      await ctrl.disconnect();
+    },
+  );
 
   test('timer e idle', () async {
     final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+      sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+    );
     await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
 
     final rx = FakeReceiver();
@@ -135,14 +143,19 @@ void main() {
 
   test('routing: primitivas de audio (play/pause/stop) espelháveis', () async {
     final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
+      sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+    );
     await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
     final rx = FakeReceiver();
     await rx.connect('127.0.0.1', ctrl.wsPort);
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    ctrl.playAudio('https://api.louvorja.com.br/file/musics/pt/a.mp3',
-        title: 'Hino 1', subtitle: 'Harpa', cover: 'https://x/c.jpg');
+    ctrl.playAudio(
+      'https://api.louvorja.com.br/file/musics/pt/a.mp3',
+      title: 'Hino 1',
+      subtitle: 'Harpa',
+      cover: 'https://x/c.jpg',
+    );
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(rx.received.last['type'], 'audio');
     expect(rx.received.last['action'], 'play');
@@ -161,25 +174,33 @@ void main() {
     await ctrl.disconnect();
   });
 
-  test('projection com background externo passa URL crua (receiver resolve proxy)',
-      () async {
-    final ctrl = PalcoController(
-        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0));
-    await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
-    final rx = FakeReceiver();
-    await rx.connect('127.0.0.1', ctrl.wsPort);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+  test(
+    'projection com background externo passa URL crua (receiver resolve proxy)',
+    () async {
+      final ctrl = PalcoController(
+        sender: PalcoSender(httpPortFixed: 0, wsPortFixed: 0),
+      );
+      await ctrl.connect(const PalcoTarget(name: 'TV', ip: '127.0.0.1'));
+      final rx = FakeReceiver();
+      await rx.connect('127.0.0.1', ctrl.wsPort);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    ctrl.project(text: 'estrofe', footer: 'Hino 10',
-        background: 'https://api.louvorja.com.br/file/images/bg1.jpg');
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+      ctrl.project(
+        text: 'estrofe',
+        footer: 'Hino 10',
+        background: 'https://api.louvorja.com.br/file/images/bg1.jpg',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 300));
 
-    final msg = rx.received.last;
-    expect(msg['type'], 'projection');
-    expect(msg['background'],
-        'https://api.louvorja.com.br/file/images/bg1.jpg');
+      final msg = rx.received.last;
+      expect(msg['type'], 'projection');
+      expect(
+        msg['background'],
+        'https://api.louvorja.com.br/file/images/bg1.jpg',
+      );
 
-    await rx.close();
-    await ctrl.disconnect();
-  });
+      await rx.close();
+      await ctrl.disconnect();
+    },
+  );
 }

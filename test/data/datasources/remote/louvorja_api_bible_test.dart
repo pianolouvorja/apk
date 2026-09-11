@@ -20,9 +20,13 @@ class _OkAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     final bytes = Uint8List.fromList(json.codeUnits);
-    return ResponseBody(Stream.fromIterable([bytes]), 200, headers: {
-      Headers.contentTypeHeader: ['application/json'],
-    });
+    return ResponseBody(
+      Stream.fromIterable([bytes]),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
   }
 }
 

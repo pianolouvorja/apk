@@ -17,7 +17,10 @@ void main() {
 
     test('preserva barras separadoras do path', () {
       final url = DownloadUrlBuilder.build('/musics/pt/pasta/arquivo.mp3');
-      expect(url, 'https://api.louvorja.com.br/file/musics/pt/pasta/arquivo.mp3');
+      expect(
+        url,
+        'https://api.louvorja.com.br/file/musics/pt/pasta/arquivo.mp3',
+      );
     });
 
     test('URL absoluta http retorna inalterada', () {

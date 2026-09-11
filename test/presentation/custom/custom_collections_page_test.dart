@@ -41,12 +41,14 @@ class _FakeStorage implements FlutterSecureStorage {
 
 /// Controller de auth apontando pra API que falha (não interessa pro teste —
 /// só precisa não pendurar o restore()).
-CustomAuthController _fakeAuth() => CustomAuthController(CustomAuthApiImpl(
-      fetch: (method, url, {body, bearerToken}) async =>
-          throw DioException(requestOptions: RequestOptions(path: url)),
-      apiBaseUrl: 'https://api.test',
-      sessionStore: CustomSessionStore(storage: _FakeStorage()),
-    ));
+CustomAuthController _fakeAuth() => CustomAuthController(
+  CustomAuthApiImpl(
+    fetch: (method, url, {body, bearerToken}) async =>
+        throw DioException(requestOptions: RequestOptions(path: url)),
+    apiBaseUrl: 'https://api.test',
+    sessionStore: CustomSessionStore(storage: _FakeStorage()),
+  ),
+);
 
 /// Adapter que lança DioException fixa — simula falha de rede (RF-01/RF-02).
 class _FailingAdapter implements HttpClientAdapter {
@@ -116,17 +118,28 @@ void main() {
   });
 
   group('CustomCollectionsPage RF-02: erro com tipo da falha na UI', () {
-    testWidgets('DioException(connectionTimeout) aparece na tela', (tester) async {
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 15),
-      ))
-        ..httpClientAdapter = _FailingAdapter(DioException(
-          requestOptions: RequestOptions(path: '/v1/custom/collections'),
-          type: DioExceptionType.connectionTimeout,
-        ));
+    testWidgets('DioException(connectionTimeout) aparece na tela', (
+      tester,
+    ) async {
+      final dio =
+          Dio(
+              BaseOptions(
+                connectTimeout: const Duration(seconds: 8),
+                receiveTimeout: const Duration(seconds: 15),
+              ),
+            )
+            ..httpClientAdapter = _FailingAdapter(
+              DioException(
+                requestOptions: RequestOptions(path: '/v1/custom/collections'),
+                type: DioExceptionType.connectionTimeout,
+              ),
+            );
 
-      await tester.pumpWidget(MaterialApp(home: CustomCollectionsPage(dio: dio, authController: _fakeAuth())));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomCollectionsPage(dio: dio, authController: _fakeAuth()),
+        ),
+      );
 
       // initState -> _load async: primeira pump roda frame, depois microtasks
       await tester.pumpAndSettle();
@@ -138,7 +151,11 @@ void main() {
     testWidgets('caminho feliz lista coletâneas sem erro', (tester) async {
       final dio = Dio()..httpClientAdapter = _OkAdapter({'data': []});
 
-      await tester.pumpWidget(MaterialApp(home: CustomCollectionsPage(dio: dio, authController: _fakeAuth())));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomCollectionsPage(dio: dio, authController: _fakeAuth()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Sem conex'), findsNothing);

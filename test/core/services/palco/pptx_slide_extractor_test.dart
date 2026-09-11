@@ -20,8 +20,7 @@ File _makePptx(String path, Map<String, List<int>> media) {
 }
 
 void main() {
-  test('extrai imagens grandes em ordem numérica, ignora ícones pequenos',
-      () {
+  test('extrai imagens grandes em ordem numérica, ignora ícones pequenos', () {
     final f = _makePptx('/tmp/test_slides.pptx', {
       'image10.png': _fakeImage(30 * 1024),
       'image2.jpg': _fakeImage(25 * 1024),
@@ -30,9 +29,11 @@ void main() {
     });
     final slides = PptxSlideExtractor.extract(f.path);
     expect(slides.length, 3, reason: 'logo pequeno filtrado');
-    expect(slides.map((s) => s.name).toList(),
-        ['image1.png', 'image2.jpg', 'image10.png'],
-        reason: 'ordem numérica, não lexicográfica');
+    expect(slides.map((s) => s.name).toList(), [
+      'image1.png',
+      'image2.jpg',
+      'image10.png',
+    ], reason: 'ordem numérica, não lexicográfica');
   });
 
   test('arquivo inexistente retorna vazio', () {
@@ -45,7 +46,9 @@ void main() {
   });
 
   test('sem imagens retorna vazio', () {
-    final f = _makePptx('/tmp/sem_img.pptx', {'slide1.xml': [1, 2, 3]});
+    final f = _makePptx('/tmp/sem_img.pptx', {
+      'slide1.xml': [1, 2, 3],
+    });
     expect(PptxSlideExtractor.extract(f.path), isEmpty);
   });
 }

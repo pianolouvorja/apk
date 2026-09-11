@@ -36,14 +36,51 @@ tempo_hms=00:00:30
 imagem=imagens\\fundo1.png
 imagem_posicao=5
 ''';
-  final zip = ZipEncoder().encode(Archive()
-    ..addFile(ArchiveFile.bytes('slides.lja', latin1.encode(ini)))
-    ..addFile(ArchiveFile.bytes('audio/missao.mp3', List.filled(32, 1)))
-    ..addFile(ArchiveFile.bytes('imagens/fundo1.png', List.filled(16, 2))));
+  final zip = ZipEncoder().encode(
+    Archive()
+      ..addFile(ArchiveFile.bytes('slides.lja', latin1.encode(ini)))
+      ..addFile(ArchiveFile.bytes('audio/missao.mp3', List.filled(32, 1)))
+      ..addFile(ArchiveFile.bytes('imagens/fundo1.png', List.filled(16, 2))),
+  );
   return zip;
 }
 
 void main() {
+  group('.slja.zip (recebido via WhatsApp — zip contendo o .slja)', () {
+    test('aceita .slja.zip: zip externo contendo o .slja interno', () {
+      final innerSlja = ZipEncoder().encode(
+        Archive()
+          ..addFile(ArchiveFile.bytes('musica.slja', buildDelphiFixture())),
+      );
+      final archive = parseSlja(innerSlja);
+      expect(archive.title, 'Missão Para Todos');
+      expect(archive.slides, hasLength(3));
+      expect(archive.audio, isNotNull);
+    });
+
+    test('aceita .slja direto (sem wrapper zip) — compatibilidade', () {
+      final archive = parseSlja(buildDelphiFixture());
+      expect(archive.title, 'Missão Para Todos');
+      expect(archive.slides, hasLength(3));
+    });
+
+    test('.slja.zip com múltiplos arquivos: pega o primeiro .slja', () {
+      final innerSlja = ZipEncoder().encode(
+        Archive()
+          ..addFile(ArchiveFile.bytes('leia-me.txt', utf8.encode('via zap')))
+          ..addFile(ArchiveFile.bytes('missao.slja', buildDelphiFixture())),
+      );
+      final archive = parseSlja(innerSlja);
+      expect(archive.title, 'Missão Para Todos');
+    });
+
+    test('arquivo corrupto nem zip nem slja → FormatException clara', () {
+      expect(
+        () => parseSlja(List<int>.filled(64, 0)),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
   test('parse .slja estilo Delphi: título, áudio, assets, slides', () {
     final archive = parseSlja(buildDelphiFixture());
 
@@ -120,15 +157,17 @@ tipo=LETRA
 letra=a|b
 tempo=176400
 ''';
-    final zip = ZipEncoder().encode(Archive()
-      ..addFile(ArchiveFile.bytes('slides.lja', latin1.encode(ini))));
+    final zip = ZipEncoder().encode(
+      Archive()..addFile(ArchiveFile.bytes('slides.lja', latin1.encode(ini))),
+    );
     final archive = parseSlja(zip);
     expect(archive.slides.single.timeMs, 1000);
   });
 
   test('ZIP sem slides.lja → FormatException clara', () {
-    final zip = ZipEncoder().encode(Archive()
-      ..addFile(ArchiveFile.bytes('outro.txt', utf8.encode('x'))));
+    final zip = ZipEncoder().encode(
+      Archive()..addFile(ArchiveFile.bytes('outro.txt', utf8.encode('x'))),
+    );
     expect(() => parseSlja(zip), throwsFormatException);
   });
 }

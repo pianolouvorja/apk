@@ -68,8 +68,7 @@ void main() {
 
   group('updateCollection', () {
     test('PUT /collections/:id com novo nome', () async {
-      await api.updateCollection(6,
-          name: 'Novo nome', bearerToken: 'tok');
+      await api.updateCollection(6, name: 'Novo nome', bearerToken: 'tok');
 
       final c = calls.single;
       expect(c.method, 'PUT');

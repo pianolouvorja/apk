@@ -22,7 +22,7 @@ Future<void> importSljaIntoCollection(
 }) async {
   const typeGroup = XTypeGroup(
     label: 'Apresentação LouvorJA',
-    extensions: ['slja'],
+    extensions: ['slja', 'zip'],
   );
   final file = await openFile(acceptedTypeGroups: [typeGroup]);
   if (file == null || !context.mounted) return;

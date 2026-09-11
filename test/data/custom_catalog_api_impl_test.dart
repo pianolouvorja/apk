@@ -11,8 +11,12 @@ class _FakeNet {
 
   _FakeNet(this.responses);
 
-  Future<dynamic> fetch(String method, String url,
-      {Map<String, dynamic>? body, String? bearerToken}) async {
+  Future<dynamic> fetch(
+    String method,
+    String url, {
+    Map<String, dynamic>? body,
+    String? bearerToken,
+  }) async {
     calls.add('$method $url');
     return responses[url];
   }
@@ -61,34 +65,47 @@ void main() {
       expect(net.calls.single, 'GET https://api.test/v1/custom/collections');
     });
 
-    test('fetchMusicDetail mapeia música + lyrics ordenadas por order', () async {
-      final net = _FakeNet({
-        'https://api.test/v1/custom/musics/7': {
-          'id_music': 7,
-          'name': 'Missão Para Todos',
-          'duration': 210,
-          'audio_url': '/custom/audio/xyz.mp3',
-          'lyrics': [
-            {'id_lyric': 2, 'lyric': 'Estrofe 2', 'time': '00:15.000', 'order': 2},
-            {'id_lyric': 1, 'lyric': 'Estrofe 1', 'time': '00:00.500', 'order': 1},
-          ],
-        },
-      });
-      final api = CustomCatalogApiImpl(
-        fetch: net.fetch,
-        apiBaseUrl: 'https://api.test',
-        filesBaseUrl: 'https://api.test/file',
-      );
+    test(
+      'fetchMusicDetail mapeia música + lyrics ordenadas por order',
+      () async {
+        final net = _FakeNet({
+          'https://api.test/v1/custom/musics/7': {
+            'id_music': 7,
+            'name': 'Missão Para Todos',
+            'duration': 210,
+            'audio_url': '/custom/audio/xyz.mp3',
+            'lyrics': [
+              {
+                'id_lyric': 2,
+                'lyric': 'Estrofe 2',
+                'time': '00:15.000',
+                'order': 2,
+              },
+              {
+                'id_lyric': 1,
+                'lyric': 'Estrofe 1',
+                'time': '00:00.500',
+                'order': 1,
+              },
+            ],
+          },
+        });
+        final api = CustomCatalogApiImpl(
+          fetch: net.fetch,
+          apiBaseUrl: 'https://api.test',
+          filesBaseUrl: 'https://api.test/file',
+        );
 
-      final music = await api.fetchMusicDetail(7);
+        final music = await api.fetchMusicDetail(7);
 
-      expect(music.id, 7);
-      expect(music.name, 'Missão Para Todos');
-      expect(music.audioUrl, 'https://api.test/file/custom/audio/xyz.mp3');
-      expect(music.lyrics, hasLength(2));
-      expect(music.lyrics.first.text, 'Estrofe 1');
-      expect(music.lyrics.last.text, 'Estrofe 2');
-    });
+        expect(music.id, 7);
+        expect(music.name, 'Missão Para Todos');
+        expect(music.audioUrl, 'https://api.test/file/custom/audio/xyz.mp3');
+        expect(music.lyrics, hasLength(2));
+        expect(music.lyrics.first.text, 'Estrofe 1');
+        expect(music.lyrics.last.text, 'Estrofe 2');
+      },
+    );
 
     test('joinCollection registra e fetchJoinedCollectionIds lê', () async {
       final api = CustomCatalogApiImpl(
@@ -97,16 +114,12 @@ void main() {
         filesBaseUrl: 'https://api.test/file',
       );
 
-      await api.joinCollection(const CustomCollection(
-        id: 2,
-        name: 'Teste',
-        isOwner: false,
-      ));
-      await api.joinCollection(const CustomCollection(
-        id: 5,
-        name: 'Outra',
-        isOwner: false,
-      ));
+      await api.joinCollection(
+        const CustomCollection(id: 2, name: 'Teste', isOwner: false),
+      );
+      await api.joinCollection(
+        const CustomCollection(id: 5, name: 'Outra', isOwner: false),
+      );
 
       final joined = await api.fetchJoinedCollectionIds();
       expect(joined, containsAll(<int>[2, 5]));

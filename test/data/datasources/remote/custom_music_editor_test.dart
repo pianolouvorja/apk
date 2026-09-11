@@ -28,8 +28,18 @@ void main() {
         if (method == 'GET' && url.endsWith('/lyrics')) {
           return {
             'data': [
-              {'id_lyric': 1, 'lyric': 'Primeiro slide', 'time': '00:00.000', 'order': 0},
-              {'id_lyric': 2, 'lyric': 'Segundo slide', 'time': '00:04.500', 'order': 1},
+              {
+                'id_lyric': 1,
+                'lyric': 'Primeiro slide',
+                'time': '00:00.000',
+                'order': 0,
+              },
+              {
+                'id_lyric': 2,
+                'lyric': 'Segundo slide',
+                'time': '00:04.500',
+                'order': 1,
+              },
             ],
           };
         }
@@ -64,7 +74,11 @@ void main() {
 
     test('sem áudio → body sem id_file_audio', () async {
       await api.createMusic(
-          collectionId: 6, name: 'X', lyric: 'l', bearerToken: 'tok');
+        collectionId: 6,
+        name: 'X',
+        lyric: 'l',
+        bearerToken: 'tok',
+      );
       expect(calls.single.body, {'name': 'X', 'lyric': 'l'});
     });
   });
@@ -82,7 +96,11 @@ void main() {
       expect(id, 900);
       final c = calls.single;
       expect(c.url, 'https://api.test/v1/custom/musics/55/lyrics');
-      expect(c.body, {'lyric': 'Primeiro slide', 'time': '00:00.000', 'order': 0});
+      expect(c.body, {
+        'lyric': 'Primeiro slide',
+        'time': '00:00.000',
+        'order': 0,
+      });
     });
   });
 

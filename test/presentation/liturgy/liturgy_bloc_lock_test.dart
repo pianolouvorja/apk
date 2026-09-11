@@ -13,11 +13,11 @@ void main() {
   late LiturgyBloc bloc;
 
   LiturgyItem item(String name, {String? categoryId}) => LiturgyItem(
-        id: 'id-$name',
-        type: categoryId == null ? LiturgyItemType.category : LiturgyItemType.music,
-        name: name,
-        categoryId: categoryId,
-      );
+    id: 'id-$name',
+    type: categoryId == null ? LiturgyItemType.category : LiturgyItemType.music,
+    name: name,
+    categoryId: categoryId,
+  );
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,12 +32,14 @@ void main() {
   test('lock persiste no repository e bloqueia mutações', () async {
     bloc.add(LiturgyAddItem(item('Categoria')));
     await bloc.stream.firstWhere(
-        (s) => s is LiturgyLoaded && s.items.isNotEmpty);
+      (s) => s is LiturgyLoaded && s.items.isNotEmpty,
+    );
 
     // lock
     bloc.add(LiturgyLockToggled());
-    final locked = await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.locked);
+    final locked = await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.locked,
+    );
     expect((locked as LiturgyLoaded).locked, isTrue);
     expect(repo.isLocked(LiturgyWeekday.monday), isTrue);
 
@@ -52,44 +54,48 @@ void main() {
 
     // unlock
     bloc.add(LiturgyLockToggled());
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && !s.locked);
+    await bloc.stream.firstWhere((s) => s is LiturgyLoaded && !s.locked);
     expect(repo.isLocked(LiturgyWeekday.monday), isFalse);
   });
 
   test('clearDay limpa itens do dia', () async {
     bloc.add(LiturgyAddItem(item('A')));
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.isNotEmpty);
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.isNotEmpty,
+    );
     bloc.add(LiturgyClearDay());
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.isEmpty);
+    await bloc.stream.firstWhere((s) => s is LiturgyLoaded && s.items.isEmpty);
     expect(repo.loadItems(LiturgyWeekday.monday), isEmpty);
   });
 
   test('reorder por lista completa persiste nova ordem', () async {
     bloc.add(LiturgyAddItem(item('A')));
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.length == 1);
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.length == 1,
+    );
     bloc.add(LiturgyAddItem(item('B')));
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.length == 2);
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.length == 2,
+    );
 
     final current = (bloc.state as LiturgyLoaded).items;
     final reordered = current.reversed.toList();
     bloc.add(LiturgyItemsReordered(reordered));
-    await bloc.stream.firstWhere((s) =>
-        s is LiturgyLoaded && s.items.first.name == 'B');
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.first.name == 'B',
+    );
     expect(repo.loadItems(LiturgyWeekday.monday).first.name, 'B');
   });
 
   test('reorder bloqueado quando lockado', () async {
     bloc.add(LiturgyAddItem(item('A')));
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.length == 1);
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.length == 1,
+    );
     bloc.add(LiturgyAddItem(item('B')));
-    await bloc.stream
-        .firstWhere((s) => s is LiturgyLoaded && s.items.length == 2);
+    await bloc.stream.firstWhere(
+      (s) => s is LiturgyLoaded && s.items.length == 2,
+    );
 
     bloc.add(LiturgyLockToggled());
     await bloc.stream.firstWhere((s) => s is LiturgyLoaded && s.locked);

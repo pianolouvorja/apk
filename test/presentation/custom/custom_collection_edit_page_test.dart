@@ -45,11 +45,15 @@ void main() {
   });
 
   testWidgets('lista músicas da coletânea', (tester) async {
-    await tester.pumpWidget(wrap(CustomCollectionEditPage(
-      api: api,
-      collection: collection,
-      bearerToken: 'tok',
-    )));
+    await tester.pumpWidget(
+      wrap(
+        CustomCollectionEditPage(
+          api: api,
+          collection: collection,
+          bearerToken: 'tok',
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Hino A'), findsOneWidget);
@@ -63,22 +67,32 @@ void main() {
       apiBaseUrl: 'https://api.test',
       filesBaseUrl: 'https://api.test/file',
     );
-    await tester.pumpWidget(wrap(CustomCollectionEditPage(
-      api: api,
-      collection: collection,
-      bearerToken: 'tok',
-    )));
+    await tester.pumpWidget(
+      wrap(
+        CustomCollectionEditPage(
+          api: api,
+          collection: collection,
+          bearerToken: 'tok',
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Coletânea vazia'), findsOneWidget);
   });
 
-  testWidgets('remover: confirm + DELETE /musics/:id + recarrega', (tester) async {
-    await tester.pumpWidget(wrap(CustomCollectionEditPage(
-      api: api,
-      collection: collection,
-      bearerToken: 'tok',
-    )));
+  testWidgets('remover: confirm + DELETE /musics/:id + recarrega', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        CustomCollectionEditPage(
+          api: api,
+          collection: collection,
+          bearerToken: 'tok',
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // dois botões de remover (trailing close)
@@ -102,11 +116,15 @@ void main() {
   });
 
   testWidgets('renomear: PUT com novo nome e AppBar atualiza', (tester) async {
-    await tester.pumpWidget(wrap(CustomCollectionEditPage(
-      api: api,
-      collection: collection,
-      bearerToken: 'tok',
-    )));
+    await tester.pumpWidget(
+      wrap(
+        CustomCollectionEditPage(
+          api: api,
+          collection: collection,
+          bearerToken: 'tok',
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.edit));
@@ -123,27 +141,31 @@ void main() {
     expect(find.text('Nome Novo'), findsOneWidget);
   });
 
-  testWidgets('excluir coletânea: confirm + DELETE + pop(true)', (tester) async {
+  testWidgets('excluir coletânea: confirm + DELETE + pop(true)', (
+    tester,
+  ) async {
     var popped = false;
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            final deleted = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => CustomCollectionEditPage(
-                  api: api,
-                  collection: collection,
-                  bearerToken: 'tok',
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              final deleted = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => CustomCollectionEditPage(
+                    api: api,
+                    collection: collection,
+                    bearerToken: 'tok',
+                  ),
                 ),
-              ),
-            );
-            popped = deleted ?? false;
-          },
-          child: const Text('abrir'),
+              );
+              popped = deleted ?? false;
+            },
+            child: const Text('abrir'),
+          ),
         ),
       ),
-    ));
+    );
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
 
@@ -153,7 +175,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      calls.any((c) => c.method == 'DELETE' && c.url.endsWith('/collections/6')),
+      calls.any(
+        (c) => c.method == 'DELETE' && c.url.endsWith('/collections/6'),
+      ),
       isTrue,
     );
     expect(popped, isTrue);

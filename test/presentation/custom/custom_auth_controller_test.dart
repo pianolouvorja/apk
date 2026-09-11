@@ -6,14 +6,24 @@ import 'package:louvorja_piano_mobile/data/datasources/remote/custom_auth_api_im
 import 'package:louvorja_piano_mobile/domain/entities/custom_auth.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/auth/custom_auth_controller.dart';
 
-const _ok = '{"token":"tok","user":{"id_user":1,"email":"a@b.c","displayName":"R"}}';
+const _ok =
+    '{"token":"tok","user":{"id_user":1,"email":"a@b.c","displayName":"R"}}';
 
 CustomAuthApiImpl _apiWith(
-    Future<dynamic> Function(String, String, {Map<String, dynamic>? body, String? bearerToken})
-        fetch,
-    CustomSessionStore store) {
+  Future<dynamic> Function(
+    String,
+    String, {
+    Map<String, dynamic>? body,
+    String? bearerToken,
+  })
+  fetch,
+  CustomSessionStore store,
+) {
   return CustomAuthApiImpl(
-      fetch: fetch, apiBaseUrl: 'https://api.test', sessionStore: store);
+    fetch: fetch,
+    apiBaseUrl: 'https://api.test',
+    sessionStore: store,
+  );
 }
 
 void main() {
@@ -26,12 +36,16 @@ void main() {
   });
 
   test('estado inicial unknown', () {
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async => _ok, store));
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async => _ok, store),
+    );
     expect(c.status, CustomAuthStatus.unknown);
   });
 
   test('login sucesso → authenticated + notifica', () async {
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async => _ok, store));
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async => _ok, store),
+    );
     var notified = 0;
     c.addListener(() => notified++);
 
@@ -44,9 +58,11 @@ void main() {
   });
 
   test('login 401 → unauthenticated + errorCode', () async {
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async {
-      throw const CustomAuthException('errors.invalidCredentials', 'x');
-    }, store));
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async {
+        throw const CustomAuthException('errors.invalidCredentials', 'x');
+      }, store),
+    );
 
     final ok = await c.login('a@b.c', 'wrong');
 
@@ -56,7 +72,9 @@ void main() {
   });
 
   test('logout → unauthenticated + sessão limpa', () async {
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async => _ok, store));
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async => _ok, store),
+    );
     await c.login('a@b.c', 'secret1');
 
     await c.logout();
@@ -66,14 +84,19 @@ void main() {
   });
 
   test('restore com sessão válida → authenticated', () async {
-    await store.save(const CustomSession(
+    await store.save(
+      const CustomSession(
         token: 't',
-        user: CustomUser(idUser: 1, email: 'a@b.c', displayName: 'R')));
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async {
-      // me() com Bearer válido
-      expect(bearerToken, 't');
-      return _ok;
-    }, store));
+        user: CustomUser(idUser: 1, email: 'a@b.c', displayName: 'R'),
+      ),
+    );
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async {
+        // me() com Bearer válido
+        expect(bearerToken, 't');
+        return _ok;
+      }, store),
+    );
 
     await c.restore();
 
@@ -82,10 +105,12 @@ void main() {
 
   test('restore sem sessão → unauthenticated sem chamar API', () async {
     var called = false;
-    final c = CustomAuthController(_apiWith((m, u, {body, bearerToken}) async {
-      called = true;
-      return _ok;
-    }, store));
+    final c = CustomAuthController(
+      _apiWith((m, u, {body, bearerToken}) async {
+        called = true;
+        return _ok;
+      }, store),
+    );
 
     await c.restore();
 

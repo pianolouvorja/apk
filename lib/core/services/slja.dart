@@ -72,7 +72,23 @@ class SljaArchive {
 
 /// Lê um .slja (bytes do ZIP) e retorna [SljaArchive].
 SljaArchive parseSlja(List<int> zipBytes) {
-  final archive = ZipDecoder().decodeBytes(zipBytes);
+  var bytes = zipBytes;
+
+  // .slja.zip (recebido via WhatsApp/mensageiro): um zip contendo o .slja
+  // (que por sua vez é zip). Detecta e desembrulha um nível.
+  try {
+    final first = ZipDecoder().decodeBytes(bytes);
+    final inner = first.files
+        .where((f) => f.isFile && f.name.toLowerCase().endsWith('.slja'))
+        .toList();
+    if (inner.isNotEmpty) {
+      bytes = inner.first.readBytes()!;
+    }
+  } on FormatException {
+    // Não era zip no primeiro nível — segue (deve ser o próprio .slja).
+  }
+
+  final archive = ZipDecoder().decodeBytes(bytes);
 
   // Normaliza chaves: Delphi pode usar backslash (audio\..., imagens\...).
   final entries = <String, ArchiveFile>{};

@@ -117,6 +117,45 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
     }
   }
 
+  /// Tap no check de coletânea já baixada: confirma e remove o download
+  /// (a coletânea continua visível na lista da comunidade).
+  Future<void> _removeDownload(CustomCollection collection) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Remover download de "${collection.name}"?'),
+        content: const Text(
+          'A coletânea continua disponível na comunidade — só deixa de '
+          'estar marcada como baixada neste dispositivo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _api.leaveCollection(collection);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Download de "${collection.name}" removido.')),
+      );
+      setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Falha ao remover download.')),
+      );
+    }
+  }
+
   Future<void> _download(CustomCollection collection) async {
     try {
       await _api.joinCollection(collection);
@@ -307,16 +346,29 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                                         );
                                     if ((deleted ?? false) && mounted) _load();
                                   }
-                                : null,
+                                : () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Coletânea de outro autor — somente '
+                                          'leitura. Baixe para ouvir offline.',
+                                        ),
+                                      ),
+                                    );
+                                  },
                             trailing: FutureBuilder<Set<int>>(
                               future: _api.fetchJoinedCollectionIds(),
                               builder: (context, snapshot) {
                                 final joined =
                                     snapshot.data?.contains(c.id) ?? false;
                                 return joined
-                                    ? const Icon(
-                                        Icons.download_done,
-                                        color: Colors.green,
+                                    ? IconButton(
+                                        icon: const Icon(
+                                          Icons.download_done,
+                                          color: Colors.green,
+                                        ),
+                                        tooltip: 'Remover download',
+                                        onPressed: () => _removeDownload(c),
                                       )
                                     : IconButton(
                                         icon: const Icon(Icons.download),

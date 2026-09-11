@@ -47,7 +47,7 @@ class _FakeSecureStorage implements FlutterSecureStorage {
 class _ScriptedAdapter implements HttpClientAdapter {
   final List<({String method, String url, String? bearer})> calls = [];
   final Object? Function(String method, String url, Map<String, dynamic>? body)
-      _responder;
+  _responder;
 
   _ScriptedAdapter(this._responder);
 
@@ -66,7 +66,10 @@ class _ScriptedAdapter implements HttpClientAdapter {
     calls.add((
       method: options.method,
       url: options.uri.toString(),
-      bearer: options.headers['Authorization']?.toString().replaceFirst('Bearer ', ''),
+      bearer: options.headers['Authorization']?.toString().replaceFirst(
+        'Bearer ',
+        '',
+      ),
     ));
     final result = _responder(options.method, options.uri.toString(), body);
     if (result == 'network') {
@@ -107,8 +110,9 @@ void main() {
       fetch: (method, url, {body, bearerToken}) async {
         // ponte: usa o adapter p/ registrar chamadas e devolver JSON decodificado
         final req = RequestOptions(path: url, method: method, data: body)
-          ..headers['Authorization'] =
-              bearerToken == null ? null : 'Bearer $bearerToken';
+          ..headers['Authorization'] = bearerToken == null
+              ? null
+              : 'Bearer $bearerToken';
         final rb = await adapter.fetch(req, null, null);
         final chunks = <int>[];
         await for (final c in rb.stream) {
@@ -152,8 +156,13 @@ void main() {
 
       await expectLater(
         auth.login(email: 'a@b.c', password: 'wrong'),
-        throwsA(predicate((e) =>
-            e is CustomAuthException && e.code == 'errors.invalidCredentials')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is CustomAuthException &&
+                e.code == 'errors.invalidCredentials',
+          ),
+        ),
       );
     });
 
@@ -175,8 +184,11 @@ void main() {
 
       await expectLater(
         auth.register(email: 'a@b.c', password: 'secret1', displayName: 'R'),
-        throwsA(predicate((e) =>
-            e is CustomAuthException && e.code == 'errors.emailInUse')),
+        throwsA(
+          predicate(
+            (e) => e is CustomAuthException && e.code == 'errors.emailInUse',
+          ),
+        ),
       );
     });
   });
@@ -201,10 +213,12 @@ void main() {
     });
 
     test('401 → limpa sessão e retorna null', () async {
-      await store.save(const CustomSession(
-        token: 'expired',
-        user: CustomUser(idUser: 1, email: 'a@b.c', displayName: 'A'),
-      ));
+      await store.save(
+        const CustomSession(
+          token: 'expired',
+          user: CustomUser(idUser: 1, email: 'a@b.c', displayName: 'A'),
+        ),
+      );
       auth = CustomAuthApiImpl(
         fetch: (method, url, {body, bearerToken}) => Future.error(
           DioException(

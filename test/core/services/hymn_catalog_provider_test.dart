@@ -17,7 +17,9 @@ void main() {
     test('setCatalog armazena categorias e marca loaded', () async {
       final provider = HymnCatalogProvider();
       await provider.setCatalog(
-        [_category(1, 'Hinário', albums: [_album(1)])],
+        [
+          _category(1, 'Hinário', albums: [_album(1)]),
+        ],
         hymnLoader: _loader({
           1: [_hymn(10, 'Chegado à Cruz'), _hymn(11, 'Lindo Rancho')],
         }),
@@ -48,12 +50,20 @@ void main() {
     test('setCatalog substitui catalogo anterior (refresh)', () async {
       final provider = HymnCatalogProvider();
       await provider.setCatalog(
-        [_category(1, 'Old', albums: [_album(1)])],
-        hymnLoader: _loader({1: [_hymn(10, 'Antigo')]}),
+        [
+          _category(1, 'Old', albums: [_album(1)]),
+        ],
+        hymnLoader: _loader({
+          1: [_hymn(10, 'Antigo')],
+        }),
       );
       await provider.setCatalog(
-        [_category(2, 'New', albums: [_album(2)])],
-        hymnLoader: _loader({2: [_hymn(20, 'Novo')]}),
+        [
+          _category(2, 'New', albums: [_album(2)]),
+        ],
+        hymnLoader: _loader({
+          2: [_hymn(20, 'Novo')],
+        }),
       );
 
       expect(provider.hymns, hasLength(1));
@@ -78,16 +88,17 @@ void main() {
 
     test('albumCoverById resolve cover do album (null quando vazio)', () async {
       final provider = HymnCatalogProvider();
-      await provider.setCatalog(
-        [
-          _category(1, 'Cat', albums: [
+      await provider.setCatalog([
+        _category(
+          1,
+          'Cat',
+          albums: [
             _album(7, coverUrl: 'covers/hinario.jpg'),
             _album(8),
             _album(9, coverUrl: ''),
-          ]),
-        ],
-        hymnLoader: (_) async => [],
-      );
+          ],
+        ),
+      ], hymnLoader: (_) async => []);
 
       expect(provider.albumCoverById(7), 'covers/hinario.jpg');
       expect(provider.albumCoverById(8), isNull);

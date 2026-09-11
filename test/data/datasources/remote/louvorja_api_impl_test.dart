@@ -48,10 +48,7 @@ void main() {
 
     test('dio getter retorna instancia configurada', () {
       expect(api.dio, isA<Dio>());
-      expect(
-        api.dio.options.headers['Api-Token'],
-        'test-token',
-      );
+      expect(api.dio.options.headers['Api-Token'], 'test-token');
     });
   });
 

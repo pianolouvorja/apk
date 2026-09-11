@@ -11,14 +11,20 @@ void main() {
   group('buildLiturgyMusicUrl', () {
     test('encoda path relativo com espaco e acento por segmento', () {
       final url = buildLiturgyMusicUrl(
-          '/musics/pt/1993 - Ja e Tempo/Nosso Sol É Jesus.mp3');
-      expect(url,
-          'https://api.louvorja.com.br/file/musics/pt/1993%20-%20Ja%20e%20Tempo/Nosso%20Sol%20%C3%89%20Jesus.mp3');
+        '/musics/pt/1993 - Ja e Tempo/Nosso Sol É Jesus.mp3',
+      );
+      expect(
+        url,
+        'https://api.louvorja.com.br/file/musics/pt/1993%20-%20Ja%20e%20Tempo/Nosso%20Sol%20%C3%89%20Jesus.mp3',
+      );
     });
 
     test('encoda cada segmento preservando barras', () {
       final url = buildLiturgyMusicUrl('/musics/pt/pasta/arquivo.mp3');
-      expect(url, 'https://api.louvorja.com.br/file/musics/pt/pasta/arquivo.mp3');
+      expect(
+        url,
+        'https://api.louvorja.com.br/file/musics/pt/pasta/arquivo.mp3',
+      );
     });
 
     test('URL absoluta http passa inalterada', () {

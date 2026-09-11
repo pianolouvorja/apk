@@ -41,12 +41,19 @@ void main() {
       final c = calls.single;
       expect(c.method, 'POST');
       expect(c.url, 'https://api.test/v1/custom/collections');
-      expect(c.body, {'name': 'Culto Jovem', 'description': 'Coletânea do sábado'});
+      expect(c.body, {
+        'name': 'Culto Jovem',
+        'description': 'Coletânea do sábado',
+      });
       expect(c.bearerToken, 'tok');
     });
 
     test('description vazia não vai no body', () async {
-      await api.createCollection(name: 'X', description: '', bearerToken: 'tok');
+      await api.createCollection(
+        name: 'X',
+        description: '',
+        bearerToken: 'tok',
+      );
       expect(calls.single.body, {'name': 'X'});
     });
   });

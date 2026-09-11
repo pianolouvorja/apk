@@ -38,9 +38,13 @@ class _OkAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     final bytes = Uint8List.fromList(json.codeUnits);
-    return ResponseBody(Stream.fromIterable([bytes]), 200, headers: {
-      Headers.contentTypeHeader: ['application/json'],
-    });
+    return ResponseBody(
+      Stream.fromIterable([bytes]),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
   }
 }
 
@@ -54,27 +58,36 @@ void main() {
     expect(api.maxRetries, 5);
   });
 
-  test('Exception generica no retry lanca errors.connection apos esgotar', () async {
-    final api = LouvorjaApiImpl.single(
-      baseUrl: 'https://api.example.com',
-      filesUrl: 'https://api.example.com/file',
-      apiToken: 'token',
-      now: () => DateTime(2026, 8, 10),
-    );
-    api.dio.httpClientAdapter = _GenericExceptionAdapter();
+  test(
+    'Exception generica no retry lanca errors.connection apos esgotar',
+    () async {
+      final api = LouvorjaApiImpl.single(
+        baseUrl: 'https://api.example.com',
+        filesUrl: 'https://api.example.com/file',
+        apiToken: 'token',
+        now: () => DateTime(2026, 8, 10),
+      );
+      api.dio.httpClientAdapter = _GenericExceptionAdapter();
 
-    // O retry loop vai tentar 5 vezes com backoff exponencial.
-    // Cada tentativa lanca Exception generica -> cai no on Exception catch.
-    // Apos a ultima tentativa, lanca LouvorjaApiException.
-    expect(
-      () => api.fetchCategories(),
-      throwsA(predicate((e) =>
-          e is LouvorjaApiException &&
-          // adapter lanca Exception crua que o Dio relanca como falha de
-          // rede (sem statusCode); sem fallback disponivel -> serverBusy.
-          (e.code == 'errors.connection' || e.code == 'errors.serverBusy'))),
-    );
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      // O retry loop vai tentar 5 vezes com backoff exponencial.
+      // Cada tentativa lanca Exception generica -> cai no on Exception catch.
+      // Apos a ultima tentativa, lanca LouvorjaApiException.
+      expect(
+        () => api.fetchCategories(),
+        throwsA(
+          predicate(
+            (e) =>
+                e is LouvorjaApiException &&
+                // adapter lanca Exception crua que o Dio relanca como falha de
+                // rede (sem statusCode); sem fallback disponivel -> serverBusy.
+                (e.code == 'errors.connection' ||
+                    e.code == 'errors.serverBusy'),
+          ),
+        ),
+      );
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
   test('cacheBuster formatado corretamente na URL', () async {
     final api = LouvorjaApiImpl.single(

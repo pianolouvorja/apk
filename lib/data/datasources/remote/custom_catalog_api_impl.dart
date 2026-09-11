@@ -131,6 +131,14 @@ class CustomCatalogApiImpl {
     await prefs.setStringList(_joinedKey, ids.toList());
   }
 
+  /// Remove a coletânea da lista de baixadas (undo do join).
+  Future<void> leaveCollection(CustomCollection collection) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = (prefs.getStringList(_joinedKey) ?? const <String>[]).toSet();
+    ids.remove('${collection.id}');
+    await prefs.setStringList(_joinedKey, ids.toList());
+  }
+
   /// Cria uma coletânea nova (requer auth). Retorna o id criado.
   Future<int> createCollection({
     required String name,
