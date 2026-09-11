@@ -8,7 +8,9 @@ import 'package:louvorja_piano_mobile/data/datasources/local/local_custom_store.
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
-import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
+import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart'
+    show CustomLyricSlide, effectiveSlideBg;
+import 'package:louvorja_piano_mobile/presentation/custom/custom_timing_recorder_page.dart';
 
 /// Criador de música custom (v3.1): nome, letra dividida em estrofes,
 /// áudio OBRIGATÓRIO e timing gravado tocando a música.
@@ -118,6 +120,29 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
             ),
           ),
         );
+        // Sincronização letra↔áudio direto: recorder com o arquivo local
+        // (playUrl aceita path via DeviceFileSource).
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CustomTimingRecorderPage(
+              api: widget.api,
+              bearerToken: '',
+              musicId: (saved['id'] as num).toInt(),
+              musicName: name,
+              audioUrl: _audioFile!.path,
+              slides: [
+                for (var i = 0; i < slides.length; i++)
+                  CustomLyricSlide(
+                    id: i + 1,
+                    text: slides[i],
+                    time: '00:00.000',
+                    order: i,
+                  ),
+              ],
+            ),
+          ),
+        );
+        if (!mounted) return;
         Navigator.of(context).pop((saved['id'] as num).toInt());
       } catch (e) {
         if (!mounted) return;
@@ -151,16 +176,26 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
       );
 
       // Fundos por estrofe (opcional): upload das imagens escolhidas.
+      // Upload único por imagem distinta; slides sem BG herdando o slide 0
+      // recebem o MESMO id (padrão da música no servidor).
       final bgIds = <int, int?>{};
-      for (final entry in _bgFiles.entries) {
-        if (entry.key >= slides.length) continue;
+      final uploadedIds = <String, int>{}; // path → id_file
+      for (var i = 0; i < slides.length; i++) {
+        final bg = effectiveSlideBg(_bgFiles, i);
+        if (bg == null) continue;
+        final cached = uploadedIds[bg.path];
+        if (cached != null) {
+          bgIds[i] = cached;
+          continue;
+        }
         final up = await widget.fileApi.upload(
-          entry.value,
+          bg,
           kind: 'imagens',
           bearerToken: bearer!,
           onProgress: (p) => setState(() => _uploadProgress = p),
         );
-        bgIds[entry.key] = up.idFile;
+        uploadedIds[bg.path] = up.idFile;
+        bgIds[i] = up.idFile;
       }
 
       // Estrofes: salvo cada uma com order (timing opcional depois) + BG.
@@ -181,6 +216,35 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
           content: Text('"$name" criada com ${slides.length} estrofes!'),
         ),
       );
+      // Player com preview: abre a sincronização de letra↔áudio direto,
+      // igual ao editor do web — usuário ajusta o timing na hora.
+      if (!mounted) return;
+      final detail = await widget.api.fetchMusicDetail(musicId);
+      if (!mounted) return;
+      if (detail.audioUrl != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CustomTimingRecorderPage(
+              api: widget.api,
+              bearerToken: bearer ?? '',
+              musicId: musicId,
+              musicName: name,
+              audioUrl: detail.audioUrl!,
+              slides: detail.lyrics
+                  .map(
+                    (l) => CustomLyricSlide(
+                      id: l.id,
+                      text: l.text,
+                      time: l.time,
+                      order: l.order,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        );
+      }
+      if (!mounted) return;
       Navigator.of(context).pop(musicId);
     } catch (e) {
       if (!mounted) return;

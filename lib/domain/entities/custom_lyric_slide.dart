@@ -41,3 +41,12 @@ class CustomLyricSlide {
       .where((s) => s.isNotEmpty)
       .toList(growable: false);
 }
+
+/// BG efetivo do slide [i]: o próprio, se escolhido; senão herda o do
+/// slide 0 (padrão da música); slides com BG individual são exceção.
+/// [backgrounds] mapeia índice do slide → caminho/id do BG escolhido.
+T? effectiveSlideBg<T>(Map<int, T> backgrounds, int i) {
+  if (backgrounds.containsKey(i)) return backgrounds[i];
+  if (i > 0 && backgrounds.containsKey(0)) return backgrounds[0];
+  return null;
+}
