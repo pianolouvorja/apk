@@ -321,6 +321,7 @@ class CustomCatalogApiImpl {
     String? time,
     int? order,
     String? auxLyric,
+    int? idFileImage,
     String? bearerToken,
   }) async {
     final response = await _fetch(
@@ -331,6 +332,7 @@ class CustomCatalogApiImpl {
         if (time != null) 'time': time,
         if (order != null) 'order': order,
         if (auxLyric != null) 'aux_lyric': auxLyric,
+        if (idFileImage != null) 'id_file_image': idFileImage,
       },
       bearerToken: bearerToken,
     );

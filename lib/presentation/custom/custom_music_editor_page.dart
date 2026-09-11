@@ -10,9 +10,10 @@ import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
 
 /// Criador de música custom (v3.1): nome, letra dividida em estrofes,
-/// áudio opcional e timing gravado tocando a música.
+/// áudio OBRIGATÓRIO e timing gravado tocando a música.
 ///
-/// Fluxo: salvar música → abre gravação de timing (se houver áudio).
+/// Fluxo: salvar música → abre gravação de timing (áudio sempre presente).
+/// Fundo por estrofe pode ser escolhido na criação (opcional).
 class CustomMusicEditorPage extends StatefulWidget {
   final CustomCatalogApiImpl api;
   final CustomFileApi fileApi;
@@ -38,6 +39,9 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
   double _uploadProgress = 0;
   bool _busy = false;
 
+  /// Fundo escolhido por estrofe (índice do slide → arquivo).
+  final Map<int, File> _bgFiles = {};
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -55,12 +59,35 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
     setState(() => _audioFile = File(file.path));
   }
 
+  /// Escolhe imagem de fundo pra uma estrofe específica (na criação).
+  Future<void> _pickBackground(int slideIndex, String slidePreview) async {
+    const typeGroup = XTypeGroup(
+      label: 'Imagens',
+      extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    );
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+    setState(() => _bgFiles[slideIndex] = File(file.path));
+  }
+
   /// Salva: upload de áudio (se houver) → cria música → cria estrofes com
   /// order sequencial (time vazio = slide manual; timing vem depois).
   Future<void> _save() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty || _busy || !mounted) return;
+    if (_busy || !mounted) return;
+    if (name.isEmpty) {
+      _showSnack('Dá um nome pra música antes de salvar.');
+      return;
+    }
     final slides = CustomLyricSlide.splitIntoSlides(_lyricController.text);
+    if (slides.isEmpty) {
+      _showSnack('Escreve a letra — pelo menos uma estrofe.');
+      return;
+    }
+    if (_audioFile == null) {
+      _showSnack('Escolhe o áudio da música — é obrigatório pra tocar.');
+      return;
+    }
     setState(() => _busy = true);
 
     try {
@@ -83,13 +110,27 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
         bearerToken: widget.bearerToken,
       );
 
-      // Estrofes: salvo cada uma com order (timing opcional depois).
+      // Fundos por estrofe (opcional): upload das imagens escolhidas.
+      final bgIds = <int, int?>{};
+      for (final entry in _bgFiles.entries) {
+        if (entry.key >= slides.length) continue;
+        final up = await widget.fileApi.upload(
+          entry.value,
+          kind: 'imagens',
+          bearerToken: widget.bearerToken,
+          onProgress: (p) => setState(() => _uploadProgress = p),
+        );
+        bgIds[entry.key] = up.idFile;
+      }
+
+      // Estrofes: salvo cada uma com order (timing opcional depois) + BG.
       for (var i = 0; i < slides.length; i++) {
         await widget.api.addLyric(
           musicId: musicId,
           lyric: slides[i],
           order: i,
           time: '00:00.000',
+          idFileImage: bgIds[i],
           bearerToken: widget.bearerToken,
         );
       }
@@ -104,12 +145,16 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Falha ao salvar. Verifica o login e tenta de novo.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Falha ao salvar: $e')));
     }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -165,21 +210,64 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
             ),
           ],
           const SizedBox(height: 20),
+          // Áudio OBRIGATÓRIO — sem ele a música não toca e o timing
+          // não pode ser gravado.
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _busy ? null : _pickAudio,
-                  icon: const Icon(Icons.audiotrack),
+                  icon: Icon(
+                    Icons.audiotrack,
+                    color: _audioFile == null ? theme.colorScheme.error : null,
+                  ),
                   label: Text(
                     _audioFile == null
-                        ? 'Escolher áudio (opcional)'
+                        ? 'Escolher áudio (obrigatório) *'
                         : 'Áudio: ${_audioFile!.path.split('/').last}',
+                    style: _audioFile == null
+                        ? TextStyle(color: theme.colorScheme.error)
+                        : null,
                   ),
                 ),
               ),
             ],
           ),
+          // Fundos por estrofe (opcional): um chip por estrofe detectada.
+          if (slides.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Fundo por estrofe (opcional)',
+              style: theme.textTheme.labelLarge,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < slides.length; i++)
+                  ActionChip(
+                    avatar: Icon(
+                      _bgFiles.containsKey(i)
+                          ? Icons.image
+                          : Icons.image_not_supported,
+                      size: 18,
+                      color: _bgFiles.containsKey(i)
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                    ),
+                    label: Text(
+                      _bgFiles.containsKey(i)
+                          ? 'Estrofe ${i + 1} ✓'
+                          : 'Fundo ${i + 1}',
+                    ),
+                    onPressed: _busy
+                        ? null
+                        : () => _pickBackground(i, slides[i]),
+                  ),
+              ],
+            ),
+          ],
           if (_busy && _audioFile != null && _uploadProgress < 1) ...[
             const SizedBox(height: 8),
             LinearProgressIndicator(value: _uploadProgress),
