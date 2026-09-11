@@ -5,6 +5,7 @@ import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.da
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/custom_music_editor_page.dart';
+import 'package:louvorja_piano_mobile/presentation/custom/custom_timing_recorder_page.dart';
 
 /// Edição de coletânea própria (v2.1): lista músicas, adicionar/remover,
 /// renomear e excluir. Dono apenas — chamada quando collection.isOwner.
@@ -176,6 +177,34 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _openTimingRecorder(CustomCollectionMusic music) async {
+    try {
+      final slides = await widget.api.fetchLyrics(
+        music.id,
+        bearerToken: widget.bearerToken,
+      );
+      if (!mounted) return;
+      if (slides.isEmpty) {
+        _showSnack('Esta música não tem estrofes salvas.');
+        return;
+      }
+      await Navigator.of(context).push<int>(
+        MaterialPageRoute(
+          builder: (_) => CustomTimingRecorderPage(
+            api: widget.api,
+            bearerToken: widget.bearerToken,
+            musicId: music.id,
+            musicName: music.name,
+            audioUrl: music.audioUrl!,
+            slides: slides,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) _showSnack('Falha ao carregar estrofes.');
+    }
+  }
+
   Future<void> _openMusicEditor(BuildContext context) async {
     final fileApi = CustomFileApi();
     if (!mounted) return;
@@ -254,10 +283,21 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
                   subtitle: m.duration != null ? Text(m.duration!) : null,
                   trailing: _busy
                       ? null
-                      : IconButton(
-                          tooltip: 'Remover',
-                          icon: const Icon(Icons.close),
-                          onPressed: () => _removeMusic(m),
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (m.audioUrl != null)
+                              IconButton(
+                                tooltip: 'Gravar timing',
+                                icon: const Icon(Icons.timer),
+                                onPressed: () => _openTimingRecorder(m),
+                              ),
+                            IconButton(
+                              tooltip: 'Remover',
+                              icon: const Icon(Icons.close),
+                              onPressed: () => _removeMusic(m),
+                            ),
+                          ],
                         ),
                 );
               },

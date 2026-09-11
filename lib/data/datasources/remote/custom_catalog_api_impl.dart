@@ -292,6 +292,26 @@ class CustomCatalogApiImpl {
     await _fetch('DELETE', _api('/lyrics/$lyricId'), bearerToken: bearerToken);
   }
 
+  /// Atualiza tempo/texto de uma estrofe — gravação de timing (v3.1c).
+  Future<void> updateLyric(
+    int lyricId, {
+    String? time,
+    String? lyric,
+    int? order,
+    String? bearerToken,
+  }) async {
+    await _fetch(
+      'PUT',
+      _api('/lyrics/$lyricId'),
+      body: {
+        if (time != null) 'time': time,
+        if (lyric != null) 'lyric': lyric,
+        if (order != null) 'order': order,
+      },
+      bearerToken: bearerToken,
+    );
+  }
+
   /// IDs das coletâneas baixadas localmente.
   Future<Set<int>> fetchJoinedCollectionIds() async {
     final prefs = await SharedPreferences.getInstance();

@@ -5,6 +5,7 @@ class CustomCollectionMusic {
   final String name;
   final String? duration;
   final int? officialMusicId;
+  final String? audioUrl;
 
   const CustomCollectionMusic({
     required this.id,
@@ -12,6 +13,7 @@ class CustomCollectionMusic {
     required this.name,
     this.duration,
     this.officialMusicId,
+    this.audioUrl,
   });
 
   factory CustomCollectionMusic.fromJson(Map<String, dynamic> json) =>
@@ -21,5 +23,6 @@ class CustomCollectionMusic {
         name: (json['name'] as String?) ?? '',
         duration: json['duration'] as String?,
         officialMusicId: (json['official_music_id'] as num?)?.toInt(),
+        audioUrl: json['audio_url'] as String?,
       );
 }
