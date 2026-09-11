@@ -6,6 +6,7 @@ import 'package:louvorja_piano_mobile/data/datasources/local/custom_session_stor
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_auth_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
+import 'package:louvorja_piano_mobile/presentation/custom/custom_collection_edit_page.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/auth/custom_auth_controller.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/auth/custom_auth_sheet.dart';
 
@@ -277,6 +278,21 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                             title: Text(c.name),
                             subtitle: c.authorName != null
                                 ? Text('por ${c.authorName}')
+                                : null,
+                            onTap: c.isOwner && _auth.isAuthenticated
+                                ? () async {
+                                    final deleted =
+                                        await Navigator.of(context).push<bool>(
+                                      MaterialPageRoute(
+                                        builder: (_) => CustomCollectionEditPage(
+                                          api: _api,
+                                          collection: c,
+                                          bearerToken: _auth.session!.token,
+                                        ),
+                                      ),
+                                    );
+                                    if ((deleted ?? false) && mounted) _load();
+                                  }
                                 : null,
                             trailing: FutureBuilder<Set<int>>(
                               future: _api.fetchJoinedCollectionIds(),

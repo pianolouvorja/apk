@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
+import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
 
 /// Cliente da API custom (`/v1/custom/*`) para o APK — v1 SOMENTE LEITURA.
 ///
@@ -147,6 +148,44 @@ class CustomCatalogApiImpl {
     String? bearerToken,
   }) async {
     await _fetch('DELETE', _api('/musics/$musicId'), bearerToken: bearerToken);
+  }
+
+  /// Músicas de uma coletânea (dono ou público).
+  Future<List<CustomCollectionMusic>> fetchCollectionMusics(
+    int collectionId, {
+    String? bearerToken,
+  }) async {
+    final response = await _fetch(
+      'GET',
+      _api('/collections/$collectionId/musics'),
+      bearerToken: bearerToken,
+    );
+    final data = _decode(response);
+    final list = data['data'] as List<dynamic>? ?? const [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(CustomCollectionMusic.fromJson)
+        .toList(growable: false);
+  }
+
+  /// Renomeia/descreve uma coletânea (dono apenas).
+  Future<void> updateCollection(
+    int collectionId, {
+    String? name,
+    String? description,
+    String? bearerToken,
+  }) async {
+    await _fetch('PUT', _api('/collections/$collectionId'), body: {
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+    }, bearerToken: bearerToken);
+  }
+
+  /// Exclui a coletânea (cascade em músicas; dono apenas).
+  Future<void> deleteCollection(int collectionId,
+      {String? bearerToken}) async {
+    await _fetch('DELETE', _api('/collections/$collectionId'),
+        bearerToken: bearerToken);
   }
 
   /// IDs das coletâneas baixadas localmente.
