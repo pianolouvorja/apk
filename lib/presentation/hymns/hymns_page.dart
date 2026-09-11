@@ -385,6 +385,12 @@ class _HymnsViewState extends State<_HymnsView> {
               )
             : Text('hymns.title'.tr()),
         actions: [
+          // Playlists (seleção de hinos do acervo, local)
+          IconButton(
+            icon: const Icon(Icons.queue_music),
+            tooltip: 'Playlists',
+            onPressed: () => context.push('/hymns/playlists'),
+          ),
           // Coletâneas da comunidade (custom da API)
           IconButton(
             icon: const Icon(Icons.groups),

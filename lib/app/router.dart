@@ -19,6 +19,7 @@ import '../presentation/home/home_page.dart';
 import '../presentation/hymns/hymns_page.dart';
 import '../presentation/hymns/album_detail_page.dart';
 import '../presentation/custom/custom_collections_page.dart';
+import '../presentation/playlists/playlists_page.dart';
 import '../presentation/search/global_search_page.dart';
 import '../presentation/settings/settings_page.dart';
 import '../presentation/settings/terms_page.dart';
@@ -54,6 +55,10 @@ final appRouter = GoRouter(
                 // primeiro, push('/hymns/custom') casaria com o padrão do
                 // álbum (albumId='custom' → parse falha → 0 → abria o
                 // Hinário Atual). Bug real encontrado em device 10/09.
+                GoRoute(
+                  path: 'playlists',
+                  builder: (context, state) => const PlaylistsPage(),
+                ),
                 GoRoute(
                   path: 'custom',
                   builder: (context, state) => const CustomCollectionsPage(),
