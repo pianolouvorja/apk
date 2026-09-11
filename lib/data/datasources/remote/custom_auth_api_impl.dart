@@ -38,14 +38,13 @@ class CustomAuthApiImpl {
     required String email,
     required String password,
   }) async {
-    return _authenticate('/login', {
-      'email': email,
-      'password': password,
-    });
+    return _authenticate('/login', {'email': email, 'password': password});
   }
 
   Future<CustomSession> _authenticate(
-      String path, Map<String, dynamic> body) async {
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     try {
       final res = await _fetch('POST', _authUrl(path), body: body);
       final map = _decode(res);
@@ -76,7 +75,8 @@ class CustomAuthApiImpl {
       );
       final map = _decode(res);
       final user = CustomUser.fromJson(
-          (map['user'] as Map<String, dynamic>? ?? map));
+        (map['user'] as Map<String, dynamic>? ?? map),
+      );
       final fresh = CustomSession(token: session.token, user: user);
       await sessionStore.save(fresh);
       return fresh;
@@ -96,11 +96,7 @@ class CustomAuthApiImpl {
     final session = await sessionStore.read();
     try {
       if (session != null) {
-        await _fetch(
-          'POST',
-          _authUrl('/logout'),
-          bearerToken: session.token,
-        );
+        await _fetch('POST', _authUrl('/logout'), bearerToken: session.token);
       }
     } catch (_) {
       // logout é best-effort — limpa local de qualquer forma
@@ -109,19 +105,22 @@ class CustomAuthApiImpl {
     }
   }
 
-  CustomAuthException _mapDio(DioException e,
-      {required String fallback}) {
+  CustomAuthException _mapDio(DioException e, {required String fallback}) {
     final status = e.response?.statusCode;
     if (status == 409) {
-      return const CustomAuthException('errors.emailInUse',
-          'E-mail já cadastrado');
+      return const CustomAuthException(
+        'errors.emailInUse',
+        'E-mail já cadastrado',
+      );
     }
     if (status == 401 || status == 422) {
       final msg = e.response?.data is Map
           ? (e.response?.data as Map)['error'] as String?
           : null;
       return CustomAuthException(
-          'errors.invalidCredentials', msg ?? 'Credenciais inválidas');
+        'errors.invalidCredentials',
+        msg ?? 'Credenciais inválidas',
+      );
     }
     return CustomAuthException(fallback, 'Erro: ${e.message ?? e}');
   }
@@ -133,15 +132,18 @@ class CustomAuthApiImpl {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) return decoded;
     }
-    throw const CustomAuthException('errors.unexpected',
-        'Resposta inesperada da API');
+    throw const CustomAuthException(
+      'errors.unexpected',
+      'Resposta inesperada da API',
+    );
   }
 }
 
 /// Assinatura de fetch injetável (mesma do CustomCatalogApiImpl).
-typedef CustomFetch = Future<dynamic> Function(
-  String method,
-  String url, {
-  Map<String, dynamic>? body,
-  String? bearerToken,
-});
+typedef CustomFetch =
+    Future<dynamic> Function(
+      String method,
+      String url, {
+      Map<String, dynamic>? body,
+      String? bearerToken,
+    });

@@ -12,7 +12,10 @@ class CustomAuthSheet extends StatefulWidget {
   const CustomAuthSheet({super.key, required this.controller});
 
   /// Abre o sheet; volta true se autenticou.
-  static Future<bool> show(BuildContext context, CustomAuthController controller) {
+  static Future<bool> show(
+    BuildContext context,
+    CustomAuthController controller,
+  ) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -50,8 +53,11 @@ class _CustomAuthSheetState extends State<CustomAuthSheet> {
     setState(() => _busy = true);
 
     final ok = _isRegister
-        ? await widget.controller
-            .register(_email.text.trim(), _password.text, _displayName.text.trim())
+        ? await widget.controller.register(
+            _email.text.trim(),
+            _password.text,
+            _displayName.text.trim(),
+          )
         : await widget.controller.login(_email.text.trim(), _password.text);
 
     if (!mounted) return;
@@ -102,8 +108,9 @@ class _CustomAuthSheetState extends State<CustomAuthSheet> {
                     labelText: 'Seu nome',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Informe seu nome' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Informe seu nome'
+                      : null,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -150,9 +157,11 @@ class _CustomAuthSheetState extends State<CustomAuthSheet> {
                 onPressed: _busy
                     ? null
                     : () => setState(() => _isRegister = !_isRegister),
-                child: Text(_isRegister
-                    ? 'Já tenho conta — entrar'
-                    : 'Não tenho conta — criar'),
+                child: Text(
+                  _isRegister
+                      ? 'Já tenho conta — entrar'
+                      : 'Não tenho conta — criar',
+                ),
               ),
             ],
           ),

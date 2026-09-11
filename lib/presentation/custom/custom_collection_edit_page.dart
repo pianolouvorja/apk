@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
+import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
+import 'package:louvorja_piano_mobile/presentation/custom/custom_music_editor_page.dart';
 
 /// Edição de coletânea própria (v2.1): lista músicas, adicionar/remover,
 /// renomear e excluir. Dono apenas — chamada quando collection.isOwner.
@@ -38,8 +40,10 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
 
   Future<void> _load() async {
     try {
-      final list = await widget.api
-          .fetchCollectionMusics(widget.collection.id, bearerToken: widget.bearerToken);
+      final list = await widget.api.fetchCollectionMusics(
+        widget.collection.id,
+        bearerToken: widget.bearerToken,
+      );
       if (!mounted) return;
       setState(() {
         _musics = list;
@@ -59,11 +63,13 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
         content: Text('Remover "${music.name}" desta coletânea?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remover')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remover'),
+          ),
         ],
       ),
     );
@@ -71,7 +77,9 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     setState(() => _busy = true);
     try {
       await widget.api.removeMusicFromCollection(
-          musicId: music.id, bearerToken: widget.bearerToken);
+        musicId: music.id,
+        bearerToken: widget.bearerToken,
+      );
       await _load();
     } catch (_) {
       if (mounted) _showSnack('Falha ao remover. Tente novamente.');
@@ -93,12 +101,13 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              onPressed: () =>
-                  Navigator.pop(context, controller.text.trim()),
-              child: const Text('Salvar')),
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Salvar'),
+          ),
         ],
       ),
     );
@@ -107,8 +116,11 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     }
     setState(() => _busy = true);
     try {
-      await widget.api.updateCollection(widget.collection.id,
-          name: newName, bearerToken: widget.bearerToken);
+      await widget.api.updateCollection(
+        widget.collection.id,
+        name: newName,
+        bearerToken: widget.bearerToken,
+      );
       if (!mounted) return;
       setState(() => _name = newName);
     } catch (_) {
@@ -124,24 +136,30 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
       builder: (context) => AlertDialog(
         title: const Text('Excluir coletânea'),
         content: Text(
-            'Excluir "$_name" e suas ${_musics?.length ?? 0} músicas? Isso não pode ser desfeito.'),
+          'Excluir "$_name" e suas ${_musics?.length ?? 0} músicas? Isso não pode ser desfeito.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Excluir')),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     try {
-      await widget.api
-          .deleteCollection(widget.collection.id, bearerToken: widget.bearerToken);
+      await widget.api.deleteCollection(
+        widget.collection.id,
+        bearerToken: widget.bearerToken,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(true); // sinaliza exclusão pra lista recarregar
     } catch (_) {
@@ -153,10 +171,27 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  @override
+  Future<void> _openMusicEditor(BuildContext context) async {
+    final fileApi = CustomFileApi();
+    if (!mounted) return;
+    final created = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) => CustomMusicEditorPage(
+          api: widget.api,
+          fileApi: fileApi,
+          collection: widget.collection,
+          bearerToken: widget.bearerToken,
+        ),
+      ),
+    );
+    if (created != null && mounted) _load();
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -174,52 +209,59 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _busy ? null : () => _openMusicEditor(context),
+        icon: const Icon(Icons.music_note),
+        label: const Text('Nova música'),
+      ),
       body: _musics == null && _error == null
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(_error!),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _load,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Tentar novamente'),
-                    ),
-                  ],
-                ))
-              : _musics!.isEmpty
-                  ? Center(
-                      child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'Coletânea vazia.\nToque em "+" para adicionar hinos.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ))
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _musics!.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 4),
-                      itemBuilder: (context, i) {
-                        final m = _musics![i];
-                        return ListTile(
-                          leading: const Icon(Icons.music_note),
-                          title: Text(m.name),
-                          subtitle: m.duration != null ? Text(m.duration!) : null,
-                          trailing: _busy
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Remover',
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () => _removeMusic(m),
-                                ),
-                        );
-                      },
-                    ),
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_error!),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _load,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            )
+          : _musics!.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Coletânea vazia.\nToque em "+" para adicionar hinos.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: _musics!.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 4),
+              itemBuilder: (context, i) {
+                final m = _musics![i];
+                return ListTile(
+                  leading: const Icon(Icons.music_note),
+                  title: Text(m.name),
+                  subtitle: m.duration != null ? Text(m.duration!) : null,
+                  trailing: _busy
+                      ? null
+                      : IconButton(
+                          tooltip: 'Remover',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => _removeMusic(m),
+                        ),
+                );
+              },
+            ),
       // RF-03 (adicionar hino oficial) entra na v2.2 — depende do buscador
       // do catálogo local; a casca do FAB já fica pronta.
     );

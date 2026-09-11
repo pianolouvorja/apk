@@ -53,7 +53,8 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
       apiBaseUrl: _apiBase(),
       filesBaseUrl: ApiConfig.urlFiles,
     );
-    _auth = widget.authController ??
+    _auth =
+        widget.authController ??
         CustomAuthController(
           CustomAuthApiImpl(
             fetch: _dioFetch,
@@ -292,16 +293,18 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                                 : null,
                             onTap: c.isOwner && _auth.isAuthenticated
                                 ? () async {
-                                    final deleted =
-                                        await Navigator.of(context).push<bool>(
-                                      MaterialPageRoute(
-                                        builder: (_) => CustomCollectionEditPage(
-                                          api: _api,
-                                          collection: c,
-                                          bearerToken: _auth.session!.token,
-                                        ),
-                                      ),
-                                    );
+                                    final deleted = await Navigator.of(context)
+                                        .push<bool>(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                CustomCollectionEditPage(
+                                                  api: _api,
+                                                  collection: c,
+                                                  bearerToken:
+                                                      _auth.session!.token,
+                                                ),
+                                          ),
+                                        );
                                     if ((deleted ?? false) && mounted) _load();
                                   }
                                 : null,

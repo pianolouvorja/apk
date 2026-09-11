@@ -25,7 +25,9 @@ class CustomAuthController extends ChangeNotifier {
   Future<void> restore() async {
     final s = await api.me();
     session = s;
-    status = s == null ? CustomAuthStatus.unauthenticated : CustomAuthStatus.authenticated;
+    status = s == null
+        ? CustomAuthStatus.unauthenticated
+        : CustomAuthStatus.authenticated;
     notifyListeners();
   }
 
@@ -33,9 +35,18 @@ class CustomAuthController extends ChangeNotifier {
     return _run(() => api.login(email: email, password: password));
   }
 
-  Future<bool> register(String email, String password, String displayName) async {
+  Future<bool> register(
+    String email,
+    String password,
+    String displayName,
+  ) async {
     return _run(
-        () => api.register(email: email, password: password, displayName: displayName));
+      () => api.register(
+        email: email,
+        password: password,
+        displayName: displayName,
+      ),
+    );
   }
 
   Future<bool> _run(Future<CustomSession> Function() action) async {

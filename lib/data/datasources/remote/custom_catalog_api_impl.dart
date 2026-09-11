@@ -5,18 +5,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
+import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
 
 /// Cliente da API custom (`/v1/custom/*`) para o APK — v1 SOMENTE LEITURA.
 ///
 /// Consumo público (sem auth): lista coletâneas da comunidade, detalhe de
 /// música com letra sincronizada e registro local de "coletâneas baixadas".
 /// Escrita (upload/edição) continua exclusiva do desktop web/Electron.
-typedef CustomFetch = Future<dynamic> Function(
-  String method,
-  String url, {
-  Map<String, dynamic>? body,
-  String? bearerToken,
-});
+typedef CustomFetch =
+    Future<dynamic> Function(
+      String method,
+      String url, {
+      Map<String, dynamic>? body,
+      String? bearerToken,
+    });
 
 class CustomCatalogApiImpl {
   /// Função de rede injetável (Dio por padrão) — facilita testes sem mockar Dio.
@@ -60,9 +62,12 @@ class CustomCatalogApiImpl {
       return dio.request<dynamic>(
         url,
         data: body,
-        options: Options(method: method, headers: {
-          if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
-        }),
+        options: Options(
+          method: method,
+          headers: {
+            if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
+          },
+        ),
       );
     };
   }
@@ -71,8 +76,11 @@ class CustomCatalogApiImpl {
 
   /// Lista coletâneas custom públicas da comunidade.
   Future<List<CustomCollection>> fetchCollections({String? bearerToken}) async {
-    final response =
-        await _fetch('GET', _api('/collections'), bearerToken: bearerToken);
+    final response = await _fetch(
+      'GET',
+      _api('/collections'),
+      bearerToken: bearerToken,
+    );
     final data = _decode(response);
     final list = (data['data'] as List<dynamic>? ?? const []);
     return list
@@ -85,25 +93,30 @@ class CustomCatalogApiImpl {
   Future<CustomMusicDetail> fetchMusicDetail(int musicId) async {
     final response = await _fetch('GET', _api('/musics/$musicId'));
     final data = _decode(response);
-    final lyrics = (data['lyrics'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map((l) => CustomLyricLine(
-              id: (l['id_lyric'] as num).toInt(),
-              text: (l['lyric'] as String?) ?? '',
-              auxText: l['aux_lyric'] as String?,
-              time: (l['time'] as String?) ?? '00:00.000',
-              order: (l['order'] as num?)?.toInt() ?? 0,
-              imageUrl: l['image_url'] as String?,
-            ))
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final lyrics =
+        (data['lyrics'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(
+              (l) => CustomLyricLine(
+                id: (l['id_lyric'] as num).toInt(),
+                text: (l['lyric'] as String?) ?? '',
+                auxText: l['aux_lyric'] as String?,
+                time: (l['time'] as String?) ?? '00:00.000',
+                order: (l['order'] as num?)?.toInt() ?? 0,
+                imageUrl: l['image_url'] as String?,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
 
     return CustomMusicDetail(
       id: (data['id_music'] as num).toInt(),
       collectionId: (data['id_collection'] as num?)?.toInt() ?? 0,
       name: (data['name'] as String?) ?? '',
       durationMs: (data['duration'] as num?)?.toInt(),
-      audioUrl: _resolveFile(data['audio_url'] as String? ?? data['id_file_audio'] as String?),
+      audioUrl: _resolveFile(
+        data['audio_url'] as String? ?? data['id_file_audio'] as String?,
+      ),
       instrumentalUrl: _resolveFile(data['instrumental_url'] as String?),
       lyrics: lyrics,
     );
@@ -124,11 +137,18 @@ class CustomCatalogApiImpl {
     String? authorName,
     String? bearerToken,
   }) async {
-    final response = await _fetch('POST', _api('/collections'), body: {
-      'name': name,
-      if (description != null && description.isNotEmpty) 'description': description,
-      if (authorName != null && authorName.isNotEmpty) 'author_name': authorName,
-    }, bearerToken: bearerToken);
+    final response = await _fetch(
+      'POST',
+      _api('/collections'),
+      body: {
+        'name': name,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+        if (authorName != null && authorName.isNotEmpty)
+          'author_name': authorName,
+      },
+      bearerToken: bearerToken,
+    );
     final data = _decode(response);
     return (data['id_collection'] as num?)?.toInt() ?? 0;
   }
@@ -140,9 +160,12 @@ class CustomCatalogApiImpl {
     required int officialMusicId,
     String? bearerToken,
   }) async {
-    await _fetch('POST', _api('/collections/$collectionId/musics'), body: {
-      'official_music_id': officialMusicId,
-    }, bearerToken: bearerToken);
+    await _fetch(
+      'POST',
+      _api('/collections/$collectionId/musics'),
+      body: {'official_music_id': officialMusicId},
+      bearerToken: bearerToken,
+    );
   }
 
   /// Remove uma música de uma coletânea custom (dono apenas).
@@ -178,17 +201,95 @@ class CustomCatalogApiImpl {
     String? description,
     String? bearerToken,
   }) async {
-    await _fetch('PUT', _api('/collections/$collectionId'), body: {
-      if (name != null) 'name': name,
-      if (description != null) 'description': description,
-    }, bearerToken: bearerToken);
+    await _fetch(
+      'PUT',
+      _api('/collections/$collectionId'),
+      body: {
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+      },
+      bearerToken: bearerToken,
+    );
   }
 
   /// Exclui a coletânea (cascade em músicas; dono apenas).
-  Future<void> deleteCollection(int collectionId,
-      {String? bearerToken}) async {
-    await _fetch('DELETE', _api('/collections/$collectionId'),
-        bearerToken: bearerToken);
+  Future<void> deleteCollection(int collectionId, {String? bearerToken}) async {
+    await _fetch(
+      'DELETE',
+      _api('/collections/$collectionId'),
+      bearerToken: bearerToken,
+    );
+  }
+
+  /// Cria uma música custom com letra (dono da coletânea). Retorna o id.
+  Future<int> createMusic({
+    required int collectionId,
+    required String name,
+    String? lyric,
+    int? idFileAudio,
+    int? durationMs,
+    String? bearerToken,
+  }) async {
+    final response = await _fetch(
+      'POST',
+      _api('/collections/$collectionId/musics'),
+      body: {
+        'name': name,
+        if (lyric != null && lyric.isNotEmpty) 'lyric': lyric,
+        if (idFileAudio != null) 'id_file_audio': idFileAudio,
+        if (durationMs != null) 'duration': durationMs,
+      },
+      bearerToken: bearerToken,
+    );
+    final data = _decode(response);
+    return (data['id_music'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Adiciona uma estrofe com timing numa música custom. Retorna o id.
+  Future<int> addLyric({
+    required int musicId,
+    required String lyric,
+    String? time,
+    int? order,
+    String? auxLyric,
+    String? bearerToken,
+  }) async {
+    final response = await _fetch(
+      'POST',
+      _api('/musics/$musicId/lyrics'),
+      body: {
+        'lyric': lyric,
+        if (time != null) 'time': time,
+        if (order != null) 'order': order,
+        if (auxLyric != null) 'aux_lyric': auxLyric,
+      },
+      bearerToken: bearerToken,
+    );
+    final data = _decode(response);
+    return (data['id_lyric'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Estrofes de uma música custom (ordenadas pela API).
+  Future<List<CustomLyricSlide>> fetchLyrics(
+    int musicId, {
+    String? bearerToken,
+  }) async {
+    final response = await _fetch(
+      'GET',
+      _api('/musics/$musicId/lyrics'),
+      bearerToken: bearerToken,
+    );
+    final data = _decode(response);
+    final list = data['data'] as List<dynamic>? ?? const [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(CustomLyricSlide.fromJson)
+        .toList(growable: false);
+  }
+
+  /// Remove uma estrofe.
+  Future<void> deleteLyric(int lyricId, {String? bearerToken}) async {
+    await _fetch('DELETE', _api('/lyrics/$lyricId'), bearerToken: bearerToken);
   }
 
   /// IDs das coletâneas baixadas localmente.
@@ -200,7 +301,8 @@ class CustomCatalogApiImpl {
         .toSet();
   }
 
-  CustomCollection _mapCollection(Map<String, dynamic> json) => CustomCollection(
+  CustomCollection _mapCollection(Map<String, dynamic> json) =>
+      CustomCollection(
         id: (json['id_collection'] as num).toInt(),
         name: (json['name'] as String?) ?? '',
         description: json['description'] as String?,
@@ -222,6 +324,8 @@ class CustomCatalogApiImpl {
     if (raw is Response) return _decode(raw.data);
     if (raw is Map<String, dynamic>) return raw;
     if (raw is String) return jsonDecode(raw) as Map<String, dynamic>;
-    throw ArgumentError('Resposta inesperada da API custom: ${raw.runtimeType}');
+    throw ArgumentError(
+      'Resposta inesperada da API custom: ${raw.runtimeType}',
+    );
   }
 }

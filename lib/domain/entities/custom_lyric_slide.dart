@@ -1,0 +1,43 @@
+/// Estrofe (slide) de música custom com timing — editor v3.1.
+class CustomLyricSlide {
+  final int id;
+  final String text;
+  final String? auxText;
+
+  /// Tempo no formato do DB/.slja: 'MM:SS.mmm' ou 'HH:MM:SS.mmm'.
+  final String? time;
+  final int order;
+
+  const CustomLyricSlide({
+    required this.id,
+    required this.text,
+    this.auxText,
+    this.time,
+    required this.order,
+  });
+
+  factory CustomLyricSlide.fromJson(Map<String, dynamic> json) =>
+      CustomLyricSlide(
+        id: (json['id_lyric'] as num?)?.toInt() ?? 0,
+        text: (json['lyric'] as String?) ?? '',
+        auxText: json['aux_lyric'] as String?,
+        time: json['time'] as String?,
+        order: (json['order'] as num?)?.toInt() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id_lyric': id,
+        'lyric': text,
+        if (auxText != null) 'aux_lyric': auxText,
+        if (time != null) 'time': time,
+        'order': order,
+      };
+
+  /// Divide o texto colado em estrofes: bloco separado por linha vazia
+  /// = 1 slide (mesma regra do desktop/web).
+  static List<String> splitIntoSlides(String raw) => raw
+      .split(RegExp(r'\n\s*\n'))
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList(growable: false);
+}

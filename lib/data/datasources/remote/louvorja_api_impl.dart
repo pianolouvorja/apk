@@ -54,14 +54,16 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
     required this.apiToken,
     this.languagePrefix = 'pt',
     DateTime Function()? now,
-  })  : _baseUrls = baseUrls,
-        _filesUrls = filesUrls,
-        _now = now ?? DateTime.now,
-        _dio = Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 30),
-          headers: {'Api-Token': apiToken},
-        ));
+  }) : _baseUrls = baseUrls,
+       _filesUrls = filesUrls,
+       _now = now ?? DateTime.now,
+       _dio = Dio(
+         BaseOptions(
+           connectTimeout: const Duration(seconds: 10),
+           receiveTimeout: const Duration(seconds: 30),
+           headers: {'Api-Token': apiToken},
+         ),
+       );
 
   /// Construtor de compatibilidade (uma URL, sem fallback) — usado por
   /// chamadas existentes e testes antigos.
@@ -71,14 +73,13 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
     required String apiToken,
     String languagePrefix = 'pt',
     DateTime Function()? now,
-  }) =>
-      LouvorjaApiImpl(
-        baseUrls: [baseUrl],
-        filesUrls: [filesUrl],
-        apiToken: apiToken,
-        languagePrefix: languagePrefix,
-        now: now,
-      );
+  }) => LouvorjaApiImpl(
+    baseUrls: [baseUrl],
+    filesUrls: [filesUrl],
+    apiToken: apiToken,
+    languagePrefix: languagePrefix,
+    now: now,
+  );
 
   @visibleForTesting
   Dio get dio => _dio;
@@ -112,8 +113,8 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
         } on DioException catch (e) {
           final statusCode = e.response?.statusCode;
           final isNetworkFailure = statusCode == null;
-          final shouldRetry = statusCode == 429 ||
-              (statusCode != null && statusCode >= 500);
+          final shouldRetry =
+              statusCode == 429 || (statusCode != null && statusCode >= 500);
 
           // coverage:ignore-start
           // Falha de rede: proximo host imediatamente.
@@ -122,11 +123,20 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
           final isLastAttempt = attempt >= _maxRetries - 1;
           if (!shouldRetry) {
             if (statusCode == 401 || statusCode == 403) {
-              throw const LouvorjaApiException('errors.authFailed', 'Token inválido ou ausente');
+              throw const LouvorjaApiException(
+                'errors.authFailed',
+                'Token inválido ou ausente',
+              );
             } else if (statusCode == 404) {
-              throw const LouvorjaApiException('errors.notFound', 'Recurso não encontrado');
+              throw const LouvorjaApiException(
+                'errors.notFound',
+                'Recurso não encontrado',
+              );
             }
-            throw LouvorjaApiException('errors.connection', 'Erro de conexão: $e');
+            throw LouvorjaApiException(
+              'errors.connection',
+              'Erro de conexão: $e',
+            );
           }
           // 429/5xx: se esgotou retries neste host, tenta o proximo.
           if (isLastAttempt) break;
@@ -140,7 +150,10 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
           // coverage:ignore-end
         } on Exception catch (e) {
           if (attempt >= _maxRetries - 1) {
-            throw LouvorjaApiException('errors.connection', 'Falha de rede: $e');
+            throw LouvorjaApiException(
+              'errors.connection',
+              'Falha de rede: $e',
+            );
           }
         }
 
@@ -217,19 +230,20 @@ class LouvorjaApiImpl implements LouvorjaApiClient {
     final prefix = languagePrefix == 'es' ? 'es' : 'pt';
     final data = await _fetchJson('${prefix}_bible_version');
     final list = data as List<dynamic>;
-    return list
-        .map((e) {
-          final json = Map<String, dynamic>.from(e as Map<String, dynamic>);
-          // A API ES omite id_language; fixa o prefixo consultado.
-          json['id_language'] = prefix;
-          return BibleVersion.fromJson(json);
-        })
-        .toList();
+    return list.map((e) {
+      final json = Map<String, dynamic>.from(e as Map<String, dynamic>);
+      // A API ES omite id_language; fixa o prefixo consultado.
+      json['id_language'] = prefix;
+      return BibleVersion.fromJson(json);
+    }).toList();
   }
 
   @override
   Future<Map<String, String>> fetchBibleChapter(
-      int versionId, int bookId, int chapter) async {
+    int versionId,
+    int bookId,
+    int chapter,
+  ) async {
     final key = ScriptureFormat.chapterRecordKey(versionId, bookId, chapter);
     final data = await _fetchJson(key);
     final map = data as Map<String, dynamic>;

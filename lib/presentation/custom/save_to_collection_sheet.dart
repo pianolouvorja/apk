@@ -18,18 +18,23 @@ Future<void> showSaveToCollectionSheet(
   required int officialMusicId,
   required String hymnTitle,
 }) async {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 15),
-  ));
+  final dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 15),
+    ),
+  );
   final sessionStore = CustomSessionStore();
   final auth = CustomAuthApiImpl(
     fetch: (method, url, {body, bearerToken}) => dio.request<dynamic>(
       url,
       data: body,
-      options: Options(method: method, headers: {
-        if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
-      }),
+      options: Options(
+        method: method,
+        headers: {
+          if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
+        },
+      ),
     ),
     apiBaseUrl: _apiBase(),
     sessionStore: sessionStore,
@@ -129,7 +134,8 @@ class _CollectionPickerSheetState extends State<_CollectionPickerSheet> {
       setState(() => _adding.remove(c.id));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Falha ao salvar. Você é dono desta coletânea?')),
+          content: Text('Falha ao salvar. Você é dono desta coletânea?'),
+        ),
       );
     }
   }
@@ -153,32 +159,36 @@ class _CollectionPickerSheetState extends State<_CollectionPickerSheet> {
               child: _collections == null && _error == null
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Center(child: Text(_error!))
-                      : _collections!.isEmpty
-                          ? const Center(
-                              child: Text(
-                                  'Nenhuma coletânea ainda.\nCrie uma na aba Coletâneas.'))
-                          : ListView.builder(
-                              itemCount: _collections!.length,
-                              itemBuilder: (context, i) {
-                                final c = _collections![i];
-                                final busy = _adding.contains(c.id);
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text('${c.musicsCount}'),
+                  ? Center(child: Text(_error!))
+                  : _collections!.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhuma coletânea ainda.\nCrie uma na aba Coletâneas.',
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _collections!.length,
+                      itemBuilder: (context, i) {
+                        final c = _collections![i];
+                        final busy = _adding.contains(c.id);
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text('${c.musicsCount}'),
+                          ),
+                          title: Text(c.name),
+                          trailing: busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
-                                  title: Text(c.name),
-                                  trailing: busy
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2))
-                                      : const Icon(Icons.add),
-                                  onTap: busy ? null : () => _addTo(c),
-                                );
-                              },
-                            ),
+                                )
+                              : const Icon(Icons.add),
+                          onTap: busy ? null : () => _addTo(c),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
