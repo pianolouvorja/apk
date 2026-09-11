@@ -1,11 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
-import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 
 /// E2E de ponta a ponta contra a API REAL (http://192.168.1.192:3100).
 /// Fluxo completo: registrar → criar coletânea → criar música → upload
