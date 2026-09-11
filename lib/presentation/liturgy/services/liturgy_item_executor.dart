@@ -35,8 +35,8 @@ class LiturgyItemExecutor {
   LiturgyItemExecutor._();
 
   static final _api = LouvorjaApiImpl(
-    baseUrl: ApiConfig.urlDatabase,
-    filesUrl: ApiConfig.urlFiles,
+    baseUrls: ApiConfig.databaseUrls(),
+    filesUrls: ApiConfig.filesUrls(),
     apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
   );
 

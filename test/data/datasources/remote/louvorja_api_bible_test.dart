@@ -28,7 +28,7 @@ class _OkAdapter implements HttpClientAdapter {
 
 void main() {
   LouvorjaApiImpl createApi(String json) {
-    final api = LouvorjaApiImpl(
+    final api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com/json_db',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'token',

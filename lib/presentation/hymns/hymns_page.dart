@@ -78,8 +78,8 @@ class _HymnsPageState extends State<HymnsPage> {
   Future<void> _initBloc(String languagePrefix) async {
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: ApiConfig.urlDatabase,
-      filesUrl: ApiConfig.urlFiles,
+      baseUrls: ApiConfig.databaseUrls(),
+      filesUrls: ApiConfig.filesUrls(),
       apiToken: _apiToken,
       languagePrefix: languagePrefix,
     );

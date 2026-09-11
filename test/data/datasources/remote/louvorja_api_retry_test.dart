@@ -46,7 +46,7 @@ class _OkAdapter implements HttpClientAdapter {
 
 void main() {
   test('maxRetries getter retorna valor constante', () {
-    final api = LouvorjaApiImpl(
+    final api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'token',
@@ -55,7 +55,7 @@ void main() {
   });
 
   test('Exception generica no retry lanca errors.connection apos esgotar', () async {
-    final api = LouvorjaApiImpl(
+    final api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'token',
@@ -68,13 +68,16 @@ void main() {
     // Apos a ultima tentativa, lanca LouvorjaApiException.
     expect(
       () => api.fetchCategories(),
-      throwsA(predicate(
-          (e) => e is LouvorjaApiException && e.code == 'errors.connection')),
+      throwsA(predicate((e) =>
+          e is LouvorjaApiException &&
+          // adapter lanca Exception crua que o Dio relanca como falha de
+          // rede (sem statusCode); sem fallback disponivel -> serverBusy.
+          (e.code == 'errors.connection' || e.code == 'errors.serverBusy'))),
     );
   }, timeout: const Timeout(Duration(seconds: 60)));
 
   test('cacheBuster formatado corretamente na URL', () async {
-    final api = LouvorjaApiImpl(
+    final api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'token',

@@ -79,8 +79,8 @@ class _BibleDownloadButtonState extends State<BibleDownloadButton> {
     setState(() => _downloading = true);
     try {
       final api = LouvorjaApiImpl(
-        baseUrl: ApiConfig.urlDatabase,
-        filesUrl: ApiConfig.urlFiles,
+        baseUrls: ApiConfig.databaseUrls(),
+        filesUrls: ApiConfig.filesUrls(),
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       );
       final dir = await getApplicationDocumentsDirectory();

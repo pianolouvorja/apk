@@ -16,7 +16,7 @@ void main() {
   /// que não dependem de rede: languagePrefix, resolveMediaUrl, cacheBuster.
 
   setUp(() {
-    api = LouvorjaApiImpl(
+    api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com/json_db',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'test-token',

@@ -259,8 +259,8 @@ class _LiturgyViewState extends State<_LiturgyView> {
     if (musicIds.isNotEmpty) {
       try {
         final api = LouvorjaApiImpl(
-          baseUrl: ApiConfig.urlDatabase,
-          filesUrl: ApiConfig.urlFiles,
+          baseUrls: ApiConfig.databaseUrls(),
+          filesUrls: ApiConfig.filesUrls(),
           apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         );
         final index = await api.fetchMusicIndex();

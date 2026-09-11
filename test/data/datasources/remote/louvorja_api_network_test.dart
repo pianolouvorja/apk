@@ -43,7 +43,7 @@ class _MockAdapter implements HttpClientAdapter {
 
 void main() {
   LouvorjaApiImpl createApi(_MockAdapter adapter) {
-    final api = LouvorjaApiImpl(
+    final api = LouvorjaApiImpl.single(
       baseUrl: 'https://api.example.com/json_db',
       filesUrl: 'https://api.example.com/file',
       apiToken: 'token',

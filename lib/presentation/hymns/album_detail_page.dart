@@ -457,8 +457,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return context.read<HymnsBloc>().repository;
     } catch (_) {
       final api = LouvorjaApiImpl(
-        baseUrl: ApiConfig.urlDatabase,
-        filesUrl: ApiConfig.urlFiles,
+        baseUrls: ApiConfig.databaseUrls(),
+        filesUrls: ApiConfig.filesUrls(),
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         languagePrefix: _languageCode(context),
       );
@@ -548,8 +548,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Fallback: cria repository localmente (nao testavel em unit test)
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: ApiConfig.urlDatabase,
-      filesUrl: ApiConfig.urlFiles,
+      baseUrls: ApiConfig.databaseUrls(),
+      filesUrls: ApiConfig.filesUrls(),
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
     );
 
