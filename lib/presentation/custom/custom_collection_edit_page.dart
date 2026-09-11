@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import 'package:louvorja_piano_mobile/data/datasources/local/local_custom_store.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
@@ -20,13 +21,15 @@ import 'package:louvorja_piano_mobile/presentation/custom/custom_timing_recorder
 class CustomCollectionEditPage extends StatefulWidget {
   final CustomCatalogApiImpl api;
   final CustomCollection collection;
-  final String bearerToken;
+  final String? bearerToken;
+  final LocalCustomStore? localStore;
 
   const CustomCollectionEditPage({
     super.key,
     required this.api,
     required this.collection,
-    required this.bearerToken,
+    this.bearerToken,
+    this.localStore,
   });
 
   @override
@@ -50,10 +53,27 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
   }
 
   Future<void> _load() async {
+    // MODO LOCAL: músicas do store do dispositivo, sem API.
+    if (widget.localStore != null) {
+      final rows = widget.localStore!.listLocalMusics(widget.collection.id);
+      if (!mounted) return;
+      setState(() {
+        _musics = [
+          for (final m in rows)
+            CustomCollectionMusic(
+              id: (m['id'] as num).toInt(),
+              collectionId: widget.collection.id,
+              name: m['name'] as String? ?? '',
+            ),
+        ];
+        _error = null;
+      });
+      return;
+    }
     try {
       final list = await widget.api.fetchCollectionMusics(
         widget.collection.id,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       if (!mounted) return;
       setState(() {
@@ -86,10 +106,16 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     );
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
+    if (widget.localStore != null) {
+      widget.localStore!.deleteLocalMusic(music.id);
+      await _load();
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
     try {
       await widget.api.removeMusicFromCollection(
         musicId: music.id,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       await _load();
     } catch (_) {
@@ -126,11 +152,19 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
       return;
     }
     setState(() => _busy = true);
+    // MODO LOCAL: rename só no store.
+    if (widget.localStore != null) {
+      widget.localStore!.renameLocalCollection(widget.collection.id, newName);
+      if (!mounted) return;
+      setState(() => _name = newName);
+      _showSnack('Renomeada localmente.');
+      return;
+    }
     try {
       await widget.api.updateCollection(
         widget.collection.id,
         name: newName,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       if (!mounted) return;
       setState(() => _name = newName);
@@ -167,9 +201,15 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
     try {
+      if (widget.localStore != null) {
+        widget.localStore!.deleteLocalCollection(widget.collection.id);
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
+        return;
+      }
       await widget.api.deleteCollection(
         widget.collection.id,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       if (!mounted) return;
       Navigator.of(context).pop(true); // sinaliza exclusão pra lista recarregar
@@ -233,7 +273,7 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     try {
       final slides = await widget.api.fetchLyrics(
         music.id,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       if (!mounted) return;
       if (slides.isEmpty) {
@@ -244,7 +284,7 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
         MaterialPageRoute(
           builder: (_) => CustomTimingRecorderPage(
             api: widget.api,
-            bearerToken: widget.bearerToken,
+            bearerToken: widget.bearerToken ?? '',
             musicId: music.id,
             musicName: music.name,
             audioUrl: music.audioUrl!,
@@ -289,7 +329,7 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
         api: widget.api,
         fileApi: CustomFileApi(),
         collection: widget.collection,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
         onDone: _load,
       );
     }
@@ -303,16 +343,24 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null || !mounted) return;
     setState(() => _busy = true);
+    // MODO LOCAL: capa vira caminho local no store (sem upload/API).
+    if (widget.localStore != null) {
+      // persistir cover local é enhancement futuro — por ora só reflete na UI
+      if (!mounted) return;
+      setState(() => _coverUrl = file.path);
+      _showSnack('Capa definida localmente (não sincronizada).');
+      return;
+    }
     try {
       final upload = await CustomFileApi().upload(
         File(file.path),
         kind: 'imagens',
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       await widget.api.updateCollection(
         widget.collection.id,
         coverUrl: upload.url,
-        bearerToken: widget.bearerToken,
+        bearerToken: widget.bearerToken ?? '',
       );
       if (!mounted) return;
       setState(() => _coverUrl = upload.url);
@@ -333,6 +381,7 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
           fileApi: fileApi,
           collection: widget.collection,
           bearerToken: widget.bearerToken,
+          localStore: widget.localStore,
         ),
       ),
     );

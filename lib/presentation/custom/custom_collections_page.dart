@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import 'package:louvorja_piano_mobile/data/datasources/local/custom_session_store.dart';
+import 'package:louvorja_piano_mobile/data/datasources/local/local_custom_store.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_auth_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
@@ -42,6 +43,7 @@ class CustomCollectionsPage extends StatefulWidget {
 class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
   late final CustomCatalogApiImpl _api;
   late final CustomAuthController _auth;
+  late final LocalCustomStore _localStore;
   List<CustomCollection>? _collections;
   String? _error;
 
@@ -53,6 +55,9 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
       apiBaseUrl: _apiBase(),
       filesBaseUrl: ApiConfig.urlFiles,
     );
+    _localStore = LocalCustomStore(
+      null,
+    ); // memória por ora; device dir quando integrar path_provider
     _auth =
         widget.authController ??
         CustomAuthController(
@@ -98,9 +103,23 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
       final collections = await _api.fetchCollections(
         bearerToken: _auth.session?.token,
       );
+      final local = _localStore
+          .listLocalCollections()
+          .map(
+            (c) => CustomCollection(
+              id: (c['id'] as num).toInt(),
+              name: c['name'] as String? ?? '',
+              musicsCount: _localStore
+                  .listLocalMusics((c['id'] as num).toInt())
+                  .length,
+              isOwner: true,
+              authorName: c['author'] as String?,
+            ),
+          )
+          .toList();
       if (!mounted) return;
       setState(() {
-        _collections = collections;
+        _collections = [...local, ...collections];
         _error = null;
       });
     } catch (e) {
@@ -211,6 +230,23 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
 
     final name = nameController.text.trim();
     if (name.isEmpty) return;
+
+    // SEM auth: cria local (fica só neste dispositivo, nunca vai pra API).
+    if (!_auth.isAuthenticated) {
+      _localStore.createLocalCollection(name);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Coletânea "$name" criada neste dispositivo '
+            '(entre na sua conta para compartilhar).',
+          ),
+        ),
+      );
+      _load();
+      return;
+    }
+
     try {
       final token = _auth.session?.token;
       await _api.createCollection(
@@ -269,15 +305,10 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
           ),
         ],
       ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _auth,
-        builder: (context, _) => _auth.isAuthenticated
-            ? FloatingActionButton.extended(
-                onPressed: _createCollection,
-                icon: const Icon(Icons.add),
-                label: const Text('Nova coletânea'),
-              )
-            : const SizedBox.shrink(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createCollection,
+        icon: const Icon(Icons.add),
+        label: const Text('Nova coletânea'),
       ),
       body: _collections == null && _error == null
           ? const Center(child: CircularProgressIndicator())
@@ -330,7 +361,24 @@ class _CustomCollectionsPageState extends State<CustomCollectionsPage> {
                             subtitle: c.authorName != null
                                 ? Text('por ${c.authorName}')
                                 : null,
-                            onTap: c.isOwner && _auth.isAuthenticated
+                            onTap: c.id < 0
+                                ? () async {
+                                    // coletânea LOCAL (sem auth): edição
+                                    // offline, dados só do dispositivo.
+                                    final deleted = await Navigator.of(context)
+                                        .push<bool>(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                CustomCollectionEditPage(
+                                                  api: _api,
+                                                  collection: c,
+                                                  localStore: _localStore,
+                                                ),
+                                          ),
+                                        );
+                                    if ((deleted ?? false) && mounted) _load();
+                                  }
+                                : c.isOwner && _auth.isAuthenticated
                                 ? () async {
                                     final deleted = await Navigator.of(context)
                                         .push<bool>(

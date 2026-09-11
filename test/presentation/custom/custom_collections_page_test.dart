@@ -162,4 +162,48 @@ void main() {
       expect(find.textContaining('Nenhuma coletânea'), findsOneWidget);
     });
   });
+
+  group('CustomCollectionsPage: criação local SEM auth', () {
+    testWidgets('FAB "Nova coletânea" visível sem autenticação', (
+      tester,
+    ) async {
+      final dio = Dio()..httpClientAdapter = _OkAdapter({'data': []});
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomCollectionsPage(dio: dio, authController: _fakeAuth()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nova coletânea'), findsOneWidget);
+    });
+
+    testWidgets('coletânea local (id<0) aparece na lista mesclada', (
+      tester,
+    ) async {
+      final dio = Dio()..httpClientAdapter = _OkAdapter({'data': []});
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CustomCollectionsPage(dio: dio, authController: _fakeAuth()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // cria coletânea local via FAB
+      await tester.tap(find.text('Nova coletânea'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nome').first,
+        'Coletânea Local Teste',
+      );
+      await tester.tap(find.text('Criar'));
+      await tester.pumpAndSettle();
+
+      // aparece na lista (isOwner local) — não precisa de conta
+      expect(find.text('Coletânea Local Teste'), findsOneWidget);
+      expect(find.text('por Este dispositivo'), findsOneWidget);
+    });
+  });
 }

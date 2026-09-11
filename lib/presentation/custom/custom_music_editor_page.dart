@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:file_selector/file_selector.dart';
 
+import 'package:louvorja_piano_mobile/data/datasources/local/local_custom_store.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
@@ -14,18 +15,24 @@ import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
 ///
 /// Fluxo: salvar música → abre gravação de timing (áudio sempre presente).
 /// Fundo por estrofe pode ser escolhido na criação (opcional).
+///
+/// Modo LOCAL (localStore != null): salva no dispositivo sem auth — o
+/// áudio NÃO sobe, fica no arquivo original (caminho local) e as estrofes
+/// vão pro store local. Nunca chama a API.
 class CustomMusicEditorPage extends StatefulWidget {
   final CustomCatalogApiImpl api;
   final CustomFileApi fileApi;
   final CustomCollection collection;
-  final String bearerToken;
+  final String? bearerToken;
+  final LocalCustomStore? localStore;
 
   const CustomMusicEditorPage({
     super.key,
     required this.api,
     required this.fileApi,
     required this.collection,
-    required this.bearerToken,
+    this.bearerToken,
+    this.localStore,
   });
 
   @override
@@ -90,13 +97,46 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
     }
     setState(() => _busy = true);
 
+    // MODO LOCAL (sem auth): salva no dispositivo, sem API, sem upload.
+    if (widget.localStore != null) {
+      try {
+        final saved = widget.localStore!.saveLocalMusic(
+          collectionId: widget.collection.id,
+          name: name,
+          lyric: _lyricController.text.trim(),
+          audioPath: _audioFile!.path,
+          slides: [
+            for (var i = 0; i < slides.length; i++)
+              {'text': slides[i], 'time': '00:00.000', 'order': i},
+          ],
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '"$name" salva neste dispositivo (${slides.length} estrofes).',
+            ),
+          ),
+        );
+        Navigator.of(context).pop((saved['id'] as num).toInt());
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Falha ao salvar: $e')));
+      }
+      return;
+    }
+
     try {
+      final bearer = widget.bearerToken;
       int? idFileAudio;
-      if (_audioFile != null) {
+      if (_audioFile != null && bearer != null) {
         final upload = await widget.fileApi.upload(
           _audioFile!,
           kind: 'audio',
-          bearerToken: widget.bearerToken,
+          bearerToken: bearer,
           onProgress: (p) => setState(() => _uploadProgress = p),
         );
         idFileAudio = upload.idFile;
@@ -117,7 +157,7 @@ class _CustomMusicEditorPageState extends State<CustomMusicEditorPage> {
         final up = await widget.fileApi.upload(
           entry.value,
           kind: 'imagens',
-          bearerToken: widget.bearerToken,
+          bearerToken: bearer!,
           onProgress: (p) => setState(() => _uploadProgress = p),
         );
         bgIds[entry.key] = up.idFile;
