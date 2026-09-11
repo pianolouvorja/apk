@@ -189,8 +189,13 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
 
   /// Tap na música = tocar (NowPlayingPage com slides/timing custom).
   Future<void> _playCustom(CustomCollectionMusic music) async {
+    // Sem áudio (ou sem timing gravado) abre em modo slides manuais —
+    // mensagem explica o porquê em vez de falhar em silêncio.
     if (music.audioUrl == null) {
-      _showSnack('Esta música não tem áudio — a letra abre como slides.');
+      _showSnack(
+        'Sem áudio sincronizado — navegue pelos slides com as setas. '
+        'Grave o timing (⏱) pra sincronizar.',
+      );
     }
     try {
       final hymn = await widget.api.fetchCustomHymn(music.id);

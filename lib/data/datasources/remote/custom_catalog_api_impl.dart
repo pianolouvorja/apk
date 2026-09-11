@@ -201,11 +201,25 @@ class CustomCatalogApiImpl {
         )
         .toList();
     final durationRaw = data['duration'] as String?;
+
+    // Timing real? (algum slide > 00:00). Sem timing, tocar o áudio faria
+    // o indexAt pular pro ÚLTIMO slide (todos t=0 <= posição) — o usuário
+    // veria 'só um slide'. Nesse caso entramos sem áudio: slides manuais
+    // (chevrons), e o timing pode ser gravado depois.
+    final hasRealTiming = lyrics.any((l) {
+      final t = l['time']?.toString() ?? '';
+      final parts = t.split(':');
+      if (parts.length < 2) return false;
+      final sec = double.tryParse(parts.last) ?? 0;
+      final min = int.tryParse(parts[parts.length - 2]) ?? 0;
+      return sec > 0 || min > 0 || parts.length == 3;
+    });
+
     return Hymn(
       id: customIdOffset + ((data['id_music'] as num?)?.toInt() ?? 0),
       title: (data['name'] as String?) ?? '',
       durationMs: _parseCustomDuration(durationRaw),
-      urlMusic: data['audio_url'] as String?,
+      urlMusic: hasRealTiming ? data['audio_url'] as String? : null,
       lyricRaw: lyrics,
       imageUrl: data['image_url'] as String?,
     );
