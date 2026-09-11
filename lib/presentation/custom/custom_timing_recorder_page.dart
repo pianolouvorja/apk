@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
+import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
 
 /// Gravação de timing (v3.1c): toca o áudio e o usuário marca o instante
@@ -45,6 +48,9 @@ class _CustomTimingRecorderPageState extends State<CustomTimingRecorderPage> {
   /// Tempos marcados (índice da estrofe → MM:SS.mmm).
   final Map<int, String> _marked = {};
 
+  /// Imagens de fundo escolhidas (índice → id_file do upload).
+  final Map<int, int> _bgFiles = {};
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +91,43 @@ class _CustomTimingRecorderPageState extends State<CustomTimingRecorderPage> {
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     final mmm = d.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
     return '$mm:$ss.$mmm';
+  }
+
+  /// Escolhe imagem de fundo pra estrofe corrente e salva via PUT.
+  Future<void> _pickBackground() async {
+    if (_current >= _slides.length) return;
+    const typeGroup = XTypeGroup(
+      label: 'Imagem',
+      extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    );
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      final upload = await CustomFileApi().upload(
+        File(file.path),
+        kind: 'imagens',
+        bearerToken: widget.bearerToken,
+      );
+      await widget.api.updateLyric(
+        _slides[_current].id,
+        idFileImage: upload.idFile,
+        bearerToken: widget.bearerToken,
+      );
+      if (!mounted) return;
+      setState(() => _bgFiles[_current] = upload.idFile);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fundo da estrofe ${_current + 1} salvo!')),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Falha ao enviar a imagem.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   /// Marca o tempo atual pra estrofe corrente e avança.
@@ -222,7 +265,17 @@ class _CustomTimingRecorderPageState extends State<CustomTimingRecorderPage> {
                             style: theme.textTheme.titleLarge,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _saving ? null : _pickBackground,
+                            icon: const Icon(Icons.wallpaper),
+                            label: Text(
+                              _bgFiles.containsKey(_current)
+                                  ? 'Fundo definido ✓'
+                                  : 'Fundo desta estrofe (opcional)',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
