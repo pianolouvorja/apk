@@ -5,6 +5,7 @@ import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.da
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/custom_music_editor_page.dart';
+import 'package:louvorja_piano_mobile/presentation/custom/import_slja.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/custom_timing_recorder_page.dart';
 
 /// Edição de coletânea própria (v2.1): lista músicas, adicionar/remover,
@@ -205,6 +206,44 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     }
   }
 
+  Future<void> _showAddMenu() async {
+    final option = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.music_note),
+              title: const Text('Criar música nova'),
+              subtitle: const Text('Digitar a letra aqui no app'),
+              onTap: () => Navigator.pop(sheetContext, 'new'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file),
+              title: const Text('Importar .slja'),
+              subtitle: const Text('Apresentação feita no LouvorJA Delphi/PC'),
+              onTap: () => Navigator.pop(sheetContext, 'slja'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || option == null) return;
+    if (option == 'new') {
+      await _openMusicEditor(context);
+    } else if (option == 'slja') {
+      await importSljaIntoCollection(
+        context,
+        api: widget.api,
+        fileApi: CustomFileApi(),
+        collection: widget.collection,
+        bearerToken: widget.bearerToken,
+        onDone: _load,
+      );
+    }
+  }
+
   Future<void> _openMusicEditor(BuildContext context) async {
     final fileApi = CustomFileApi();
     if (!mounted) return;
@@ -239,9 +278,9 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _busy ? null : () => _openMusicEditor(context),
-        icon: const Icon(Icons.music_note),
-        label: const Text('Nova música'),
+        onPressed: _busy ? null : _showAddMenu,
+        icon: const Icon(Icons.add),
+        label: const Text('Adicionar'),
       ),
       body: _musics == null && _error == null
           ? const Center(child: CircularProgressIndicator())
