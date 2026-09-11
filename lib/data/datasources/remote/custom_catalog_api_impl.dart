@@ -199,6 +199,7 @@ class CustomCatalogApiImpl {
     int collectionId, {
     String? name,
     String? description,
+    String? coverUrl,
     String? bearerToken,
   }) async {
     await _fetch(
@@ -207,6 +208,7 @@ class CustomCatalogApiImpl {
       body: {
         if (name != null) 'name': name,
         if (description != null) 'description': description,
+        if (coverUrl != null) 'cover_url': coverUrl,
       },
       bearerToken: bearerToken,
     );

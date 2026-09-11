@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
@@ -29,6 +33,7 @@ class CustomCollectionEditPage extends StatefulWidget {
 
 class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
   late String _name;
+  String? _coverUrl;
   List<CustomCollectionMusic>? _musics;
   String? _error;
   bool _busy = false;
@@ -37,6 +42,7 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
   void initState() {
     super.initState();
     _name = widget.collection.name;
+    _coverUrl = widget.collection.coverUrl;
     _load();
   }
 
@@ -244,6 +250,34 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     }
   }
 
+  Future<void> _changeCover() async {
+    const typeGroup = XTypeGroup(
+      label: 'Imagem',
+      extensions: ['png', 'jpg', 'jpeg', 'webp'],
+    );
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final upload = await CustomFileApi().upload(
+        File(file.path),
+        kind: 'imagens',
+        bearerToken: widget.bearerToken,
+      );
+      await widget.api.updateCollection(
+        widget.collection.id,
+        coverUrl: upload.url,
+        bearerToken: widget.bearerToken,
+      );
+      if (!mounted) return;
+      setState(() => _coverUrl = upload.url);
+    } catch (_) {
+      if (mounted) _showSnack('Falha ao enviar a capa.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _openMusicEditor(BuildContext context) async {
     final fileApi = CustomFileApi();
     if (!mounted) return;
@@ -265,6 +299,11 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
       appBar: AppBar(
         title: Text(_name),
         actions: [
+          IconButton(
+            tooltip: 'Alterar capa',
+            icon: const Icon(Icons.image),
+            onPressed: _busy ? null : _changeCover,
+          ),
           IconButton(
             tooltip: 'Renomear',
             icon: const Icon(Icons.edit),
@@ -310,36 +349,55 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
                 ),
               ),
             )
-          : ListView.separated(
+          : ListView(
               padding: const EdgeInsets.all(12),
-              itemCount: _musics!.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 4),
-              itemBuilder: (context, i) {
-                final m = _musics![i];
-                return ListTile(
-                  leading: const Icon(Icons.music_note),
-                  title: Text(m.name),
-                  subtitle: m.duration != null ? Text(m.duration!) : null,
-                  trailing: _busy
-                      ? null
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (m.audioUrl != null)
+              children: [
+                // Header de capa (v3.3)
+                if (_coverUrl != null)
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
+                      ),
+                      child: CachedNetworkImage(
+                        imageUrl: _coverUrl!.startsWith('http')
+                            ? _coverUrl!
+                            : '${widget.api.filesBaseUrl}${_coverUrl!.startsWith('/') ? '' : '/'}$_coverUrl',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                ..._musics!.map(
+                  (m) => ListTile(
+                    leading: const Icon(Icons.music_note),
+                    title: Text(m.name),
+                    subtitle: m.duration != null ? Text(m.duration!) : null,
+                    trailing: _busy
+                        ? null
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (m.audioUrl != null)
+                                IconButton(
+                                  tooltip: 'Gravar timing',
+                                  icon: const Icon(Icons.timer),
+                                  onPressed: () => _openTimingRecorder(m),
+                                ),
                               IconButton(
-                                tooltip: 'Gravar timing',
-                                icon: const Icon(Icons.timer),
-                                onPressed: () => _openTimingRecorder(m),
+                                tooltip: 'Remover',
+                                icon: const Icon(Icons.close),
+                                onPressed: () => _removeMusic(m),
                               ),
-                            IconButton(
-                              tooltip: 'Remover',
-                              icon: const Icon(Icons.close),
-                              onPressed: () => _removeMusic(m),
-                            ),
-                          ],
-                        ),
-                );
-              },
+                            ],
+                          ),
+                  ),
+                ),
+              ],
             ),
       // RF-03 (adicionar hino oficial) entra na v2.2 — depende do buscador
       // do catálogo local; a casca do FAB já fica pronta.
