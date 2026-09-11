@@ -36,8 +36,10 @@ class _PalcoConnectDialogState extends State<PalcoConnectDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Abra o app Palco na TV e digite este IP:',
-              style: theme.textTheme.bodyMedium),
+          Text(
+            'Abra o app Palco na TV e digite este IP:',
+            style: theme.textTheme.bodyMedium,
+          ),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -51,19 +53,23 @@ class _PalcoConnectDialogState extends State<PalcoConnectDialog> {
                 Expanded(
                   child: Text(
                     widget.mobileIp,
-                    style: theme.textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(
                   tooltip: 'Copiar',
                   onPressed: () async {
                     await Clipboard.setData(
-                        ClipboardData(text: widget.mobileIp));
+                      ClipboardData(text: widget.mobileIp),
+                    );
                     if (mounted) {
                       setState(() => _copied = true);
-                      Future.delayed(const Duration(seconds: 2),
-                          () => mounted ? setState(() => _copied = false) : null);
+                      Future.delayed(
+                        const Duration(seconds: 2),
+                        () => mounted ? setState(() => _copied = false) : null,
+                      );
                     }
                   },
                   icon: Icon(_copied ? Icons.check : Icons.copy),
@@ -75,8 +81,9 @@ class _PalcoConnectDialogState extends State<PalcoConnectDialog> {
           Text(
             'O receiver da TV conecta sozinho neste celular assim que o IP '
             'for informado. O sender fica ativo aguardando a conexão.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

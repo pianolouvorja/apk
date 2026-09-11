@@ -13,7 +13,7 @@ class CustomSessionStore {
   final FlutterSecureStorage _storage;
 
   CustomSessionStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   Future<void> save(CustomSession session) async {
     await _storage.write(

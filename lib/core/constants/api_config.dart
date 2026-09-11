@@ -46,13 +46,13 @@ class ApiConfig {
   /// Hosts candidatos pra database/json_db: primaria + fallbacks.
   /// Usado por quem precisa tentar hosts em cascata (LouvorjaApiImpl).
   static List<String> databaseUrls() => [
-        urlDatabase,
-        for (final host in fallbackHosts) '$host/json_db',
-      ];
+    urlDatabase,
+    for (final host in fallbackHosts) '$host/json_db',
+  ];
 
   /// Hosts candidatos pra files: primaria + fallbacks.
   static List<String> filesUrls() => [
-        urlFiles,
-        for (final host in fallbackHosts) '$host/file',
-      ];
+    urlFiles,
+    for (final host in fallbackHosts) '$host/file',
+  ];
 }

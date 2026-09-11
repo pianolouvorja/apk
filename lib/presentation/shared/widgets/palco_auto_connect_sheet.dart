@@ -64,10 +64,9 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
     await SlideHttpServer.resolveLocalIp();
     final localIp = SlideHttpServer.localIp;
     if (localIp == null || !mounted) return;
-    final ok = await StageSession.instance.turnOnPalco(PalcoTarget(
-      name: 'Palco (aguardando TV)',
-      ip: localIp,
-    ));
+    final ok = await StageSession.instance.turnOnPalco(
+      PalcoTarget(name: 'Palco (aguardando TV)', ip: localIp),
+    );
     if (mounted) setState(() => _senderOn = ok);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('palco_last_ip', localIp);
@@ -80,11 +79,15 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
     var tvs = <WebosTv>[];
     try {
       tvs = await PalcoMdnsDiscovery.scan();
-    } catch (_) {/* mDNS bloqueado — segue pro fallback */}
+    } catch (_) {
+      /* mDNS bloqueado — segue pro fallback */
+    }
     if (tvs.isEmpty) {
       try {
         tvs = await WebosTvDialProbe.scan();
-      } catch (_) {/* nenhuma TV */}
+      } catch (_) {
+        /* nenhuma TV */
+      }
     }
     if (mounted) {
       setState(() {
@@ -102,10 +105,12 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
         if (_connected || _tvIp == null) return;
         final delivered = await PalcoWake.send(_tvIp!);
         if (delivered && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Abrindo o Palco na TV…'),
-            duration: Duration(seconds: 2),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Abrindo o Palco na TV…'),
+              duration: Duration(seconds: 2),
+            ),
+          );
         }
       });
     }
@@ -122,16 +127,20 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Expanded(
-                child: Text('stage.title'.tr(),
-                    style: theme.textTheme.titleMedium),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'stage.title'.tr(),
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             // estado 1: sender
             _StatusRow(
@@ -179,31 +188,34 @@ class _PalcoAutoConnectSheetState extends State<PalcoAutoConnectSheet> {
             // fallback manual: IP do celular (tecla vermelha na TV)
             Text(
               'Se a TV não conectar: tecla VERMELHA no controle do Palco → digite',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 6),
-            Row(children: [
-              Expanded(
-                child: SelectableText(
-                  localIp,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    localIp,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Copiar IP',
-                icon: const Icon(Icons.copy, size: 20),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: localIp));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('IP copiado: $localIp')),
-                  );
-                },
-              ),
-            ]),
+                IconButton(
+                  tooltip: 'Copiar IP',
+                  icon: const Icon(Icons.copy, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: localIp));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('IP copiado: $localIp')),
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -215,20 +227,28 @@ class _StatusRow extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String text;
-  const _StatusRow(
-      {required this.icon, required this.color, required this.text});
+  const _StatusRow({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(children: [
-      Icon(icon, size: 18, color: color),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(text,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurface)),
-      ),
-    ]);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

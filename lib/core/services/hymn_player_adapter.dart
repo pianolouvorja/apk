@@ -13,7 +13,8 @@ class HymnPlayerAdapter implements HymnPlayerLike {
   final HymnAudioPlayer _player;
   final ValueNotifier<bool> _playing;
 
-  HymnPlayerAdapter(this._player) : _playing = ValueNotifier<bool>(_player.isPlaying) {
+  HymnPlayerAdapter(this._player)
+    : _playing = ValueNotifier<bool>(_player.isPlaying) {
     _player.playingStream.listen((playing) {
       _playing.value = playing;
     });

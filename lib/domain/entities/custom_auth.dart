@@ -11,16 +11,16 @@ class CustomUser {
   });
 
   factory CustomUser.fromJson(Map<String, dynamic> json) => CustomUser(
-        idUser: (json['id_user'] as num?)?.toInt() ?? 0,
-        email: json['email'] as String? ?? '',
-        displayName: json['displayName'] as String? ?? '',
-      );
+    idUser: (json['id_user'] as num?)?.toInt() ?? 0,
+    email: json['email'] as String? ?? '',
+    displayName: json['displayName'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {
-        'id_user': idUser,
-        'email': email,
-        'displayName': displayName,
-      };
+    'id_user': idUser,
+    'email': email,
+    'displayName': displayName,
+  };
 }
 
 /// Sessão ativa: token opaco + dados do usuário.

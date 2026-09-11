@@ -125,9 +125,9 @@ class _LiturgyViewState extends State<_LiturgyView> {
     final file = picked?.files.singleOrNull;
     if (file == null) return;
     if (!file.name.toLowerCase().endsWith('.ja')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('liturgy.importJaInvalid'.tr())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('liturgy.importJaInvalid'.tr())));
       return;
     }
     // withData pode não preencher bytes em alguns providers: lê do path.
@@ -168,19 +168,24 @@ class _LiturgyViewState extends State<_LiturgyView> {
       final target = LiturgyWeekdayJa.fromJaDay(day);
       if (target == null) continue;
       final existing = bloc.repository.loadItems(target);
-      duplicates +=
-          imported[day]!.where((i) => existing.any((e) => isDup(e, i))).length;
+      duplicates += imported[day]!
+          .where((i) => existing.any((e) => isDup(e, i)))
+          .length;
     }
 
     // Duplicados? Pergunta: sobrescrever dias afetados ou só adicionar novos.
     var overwrite = false;
     if (duplicates > 0 && context.mounted) {
-      overwrite = await showDialog<bool>(
+      overwrite =
+          await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text('liturgy.importJaOverwriteTitle'.tr()),
-              content: Text('liturgy.importJaOverwriteAsk'
-                  .tr(namedArgs: {'count': '$duplicates'})),
+              content: Text(
+                'liturgy.importJaOverwriteAsk'.tr(
+                  namedArgs: {'count': '$duplicates'},
+                ),
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -220,17 +225,18 @@ class _LiturgyViewState extends State<_LiturgyView> {
     // Recarrega o dia corrente pra UI refletir a importação.
     if (context.mounted) {
       final state = bloc.state;
-      final current =
-          state is LiturgyLoaded ? state.selectedDay : null;
+      final current = state is LiturgyLoaded ? state.selectedDay : null;
       bloc.add(LiturgyDayChanged(current ?? LiturgyWeekday.saturday));
     }
     messenger.showSnackBar(
       SnackBar(
-        content: Text(overwrite
-            ? 'liturgy.importJaOverwritten'
-                .tr(namedArgs: {'added': '$added'})
-            : 'liturgy.importJaDone'
-                .tr(namedArgs: {'added': '$added', 'skipped': '$skipped'})),
+        content: Text(
+          overwrite
+              ? 'liturgy.importJaOverwritten'.tr(namedArgs: {'added': '$added'})
+              : 'liturgy.importJaDone'.tr(
+                  namedArgs: {'added': '$added', 'skipped': '$skipped'},
+                ),
+        ),
       ),
     );
   }
@@ -303,13 +309,18 @@ class _LiturgyViewState extends State<_LiturgyView> {
     super.dispose();
   }
 
-  Future<void> _confirmDeleteDay(BuildContext context, LiturgyLoaded state) async {
+  Future<void> _confirmDeleteDay(
+    BuildContext context,
+    LiturgyLoaded state,
+  ) async {
     final l10nDay = 'liturgy.days.${state.selectedDay.name}'.tr();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('liturgy.deleteDayTitle'.tr()),
-        content: Text('liturgy.deleteDayConfirm'.tr(namedArgs: {'count': l10nDay})),
+        content: Text(
+          'liturgy.deleteDayConfirm'.tr(namedArgs: {'count': l10nDay}),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -346,61 +357,61 @@ class _LiturgyViewState extends State<_LiturgyView> {
         actions: _isMirroring
             ? const [StageStopVideoButton()]
             : [
-          IconButton(
-            key: const Key('liturgy-import-ja'),
-            tooltip: 'liturgy.importJa'.tr(),
-            icon: const Icon(TablerIcons.fileImport, size: 22),
-            onPressed: () => _importJaFile(context),
-          ),
-          IconButton(
-            key: const Key('liturgy-avulsa-btn'),
-            tooltip: 'liturgy.avulsa.openAvulsa'.tr(),
-            icon: const Icon(TablerIcons.calendarPlus, size: 22),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const LiturgyAvulsaPage(),
-              ),
-            ),
-          ),
-          BlocBuilder<LiturgyBloc, LiturgyState>(
-            builder: (context, state) {
-              final locked = state is LiturgyLoaded && state.locked;
-              return IconButton(
-                key: const Key('liturgy-lock-toggle'),
-                tooltip: locked
-                    ? 'liturgy.unlock'.tr()
-                    : 'liturgy.lock'.tr(),
-                icon: Icon(
-                  locked ? TablerIcons.lock : TablerIcons.lockOpen,
-                  size: 22,
-                  color: locked ? theme.colorScheme.primary : null,
+                IconButton(
+                  key: const Key('liturgy-import-ja'),
+                  tooltip: 'liturgy.importJa'.tr(),
+                  icon: const Icon(TablerIcons.fileImport, size: 22),
+                  onPressed: () => _importJaFile(context),
                 ),
-                onPressed: state is LiturgyLoaded
-                    ? () => context
-                          .read<LiturgyBloc>()
-                          .add(LiturgyLockToggled())
-                    : null,
-              );
-            },
-          ),
-          BlocBuilder<LiturgyBloc, LiturgyState>(
-            builder: (context, state) {
-              final loaded = state is LiturgyLoaded;
-              final hasItems = loaded && state.items.isNotEmpty;
-              final locked = loaded && state.locked;
-              return IconButton(
-                key: const Key('liturgy-delete-day'),
-                tooltip: 'liturgy.deleteDay'.tr(),
-                icon: const Icon(TablerIcons.trash, size: 22),
-                onPressed: hasItems && !locked
-                    ? () => _confirmDeleteDay(context, state)
-                    : null,
-              );
-            },
-          ),
-          const StageClearButton(),
-          const StageCastButton(module: StageModule.liturgy),
-          ],
+                IconButton(
+                  key: const Key('liturgy-avulsa-btn'),
+                  tooltip: 'liturgy.avulsa.openAvulsa'.tr(),
+                  icon: const Icon(TablerIcons.calendarPlus, size: 22),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LiturgyAvulsaPage(),
+                    ),
+                  ),
+                ),
+                BlocBuilder<LiturgyBloc, LiturgyState>(
+                  builder: (context, state) {
+                    final locked = state is LiturgyLoaded && state.locked;
+                    return IconButton(
+                      key: const Key('liturgy-lock-toggle'),
+                      tooltip: locked
+                          ? 'liturgy.unlock'.tr()
+                          : 'liturgy.lock'.tr(),
+                      icon: Icon(
+                        locked ? TablerIcons.lock : TablerIcons.lockOpen,
+                        size: 22,
+                        color: locked ? theme.colorScheme.primary : null,
+                      ),
+                      onPressed: state is LiturgyLoaded
+                          ? () => context.read<LiturgyBloc>().add(
+                              LiturgyLockToggled(),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+                BlocBuilder<LiturgyBloc, LiturgyState>(
+                  builder: (context, state) {
+                    final loaded = state is LiturgyLoaded;
+                    final hasItems = loaded && state.items.isNotEmpty;
+                    final locked = loaded && state.locked;
+                    return IconButton(
+                      key: const Key('liturgy-delete-day'),
+                      tooltip: 'liturgy.deleteDay'.tr(),
+                      icon: const Icon(TablerIcons.trash, size: 22),
+                      onPressed: hasItems && !locked
+                          ? () => _confirmDeleteDay(context, state)
+                          : null,
+                    );
+                  },
+                ),
+                const StageClearButton(),
+                const StageCastButton(module: StageModule.liturgy),
+              ],
       ),
       floatingActionButton: BlocBuilder<LiturgyBloc, LiturgyState>(
         builder: (context, state) {
@@ -480,18 +491,13 @@ class _RemoteLiturgyMirror extends StatelessWidget {
       children.add(
         Padding(
           key: Key('mirror-liturgy-${e.index}'),
-          padding: EdgeInsets.only(
-            left: isCat ? 0 : 32,
-            bottom: isCat ? 0 : 4,
-          ),
+          padding: EdgeInsets.only(left: isCat ? 0 : 32, bottom: isCat ? 0 : 4),
           child: _MirrorItemCard(
             item: item,
             isCategory: isCat,
             theme: theme,
             selected: isSel,
-            onTap: isCat
-                ? null
-                : () => _select(e.index),
+            onTap: isCat ? null : () => _select(e.index),
             onToggleDone: () => _select(e.index, toggleDone: true),
           ),
         ),
@@ -597,11 +603,7 @@ class _MirrorItemCard extends StatelessWidget {
               bottomRight: Radius.circular(8),
             ),
           ),
-          child: Icon(
-            typeMeta.icon,
-            size: isCategory ? 20 : 16,
-            color: accent,
-          ),
+          child: Icon(typeMeta.icon, size: isCategory ? 20 : 16, color: accent),
         ),
         title: Text(
           item.name.isEmpty
@@ -1070,9 +1072,10 @@ class _Timeline extends StatelessWidget {
       proxyDecorator: (child, index, animation) => AnimatedBuilder(
         animation: animation,
         builder: (context, child) {
-          final elevation = Tween<double>(begin: 0, end: 6)
-              .animate(animation)
-              .value;
+          final elevation = Tween<double>(
+            begin: 0,
+            end: 6,
+          ).animate(animation).value;
           return Material(
             elevation: elevation,
             borderRadius: BorderRadius.circular(12),

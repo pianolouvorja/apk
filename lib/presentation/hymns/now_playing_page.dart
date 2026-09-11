@@ -437,8 +437,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                           Expanded(
                             flex: 5,
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: CachedNetworkImage(
@@ -456,13 +457,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                           flex: 4,
                           child: Center(
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
                               child: Text(
                                 slide?.text ?? '',
                                 textAlign: TextAlign.center,
-                                style:
-                                    theme.textTheme.headlineSmall?.copyWith(
+                                style: theme.textTheme.headlineSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                   height: 1.4,

@@ -26,12 +26,12 @@ class CustomLyricSlide {
       );
 
   Map<String, dynamic> toJson() => {
-        'id_lyric': id,
-        'lyric': text,
-        if (auxText != null) 'aux_lyric': auxText,
-        if (time != null) 'time': time,
-        'order': order,
-      };
+    'id_lyric': id,
+    'lyric': text,
+    if (auxText != null) 'aux_lyric': auxText,
+    if (time != null) 'time': time,
+    'order': order,
+  };
 
   /// Divide o texto colado em estrofes: bloco separado por linha vazia
   /// = 1 slide (mesma regra do desktop/web).

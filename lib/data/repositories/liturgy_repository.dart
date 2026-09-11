@@ -120,7 +120,9 @@ class LiturgyRepository {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List<dynamic>;
-      return list.map((e) => LiturgyItem.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => LiturgyItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -135,6 +137,6 @@ class LiturgyRepository {
 
   String _lockKey(LiturgyWeekday day) => '$_lockPrefix${day.name}';
   String _orderKey(LiturgyWeekday day) => '$_orderPrefix${day.name}';
-  String _avulsaKey(DateTime date) => '$_avulsaPrefix${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
-
+  String _avulsaKey(DateTime date) =>
+      '$_avulsaPrefix${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
 }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
+import 'package:louvorja_piano_mobile/domain/entities/hymn.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_lyric_slide.dart';
 
 /// Cliente da API custom (`/v1/custom/*`) para o APK — v1 SOMENTE LEITURA.
@@ -174,6 +175,58 @@ class CustomCatalogApiImpl {
     String? bearerToken,
   }) async {
     await _fetch('DELETE', _api('/musics/$musicId'), bearerToken: bearerToken);
+  }
+
+  /// Detail de música custom como entidade [Hymn] — permite reusar a
+  /// NowPlayingPage (slides, timing, áudio) sem duplicar player.
+  ///
+  /// id da Hymn = 900000 + id_music (namespace offline custom; catálogo
+  /// oficial tem ids < 100000, sem colisão).
+  static const int customIdOffset = 900000;
+
+  Future<Hymn> fetchCustomHymn(int musicId) async {
+    final response = await _fetch('GET', _api('/musics/$musicId'));
+    final data = _decode(response);
+    final lyrics = (data['lyrics'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (l) => {
+            'lyric': l['lyric'],
+            'aux_lyric': l['aux_lyric'],
+            'time': l['time'],
+            'order': l['order'],
+            'show_slide': l['show_slide'],
+            'url_image': l['image_url'],
+          },
+        )
+        .toList();
+    final durationRaw = data['duration'] as String?;
+    return Hymn(
+      id: customIdOffset + ((data['id_music'] as num?)?.toInt() ?? 0),
+      title: (data['name'] as String?) ?? '',
+      durationMs: _parseCustomDuration(durationRaw),
+      urlMusic: data['audio_url'] as String?,
+      lyricRaw: lyrics,
+      imageUrl: data['image_url'] as String?,
+    );
+  }
+
+  /// duration da API custom: 'HH:MM:SS' ou 'MM:SS' → ms.
+  static int? _parseCustomDuration(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.length == 3) {
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = int.tryParse(parts[1]) ?? 0;
+      final s = double.tryParse(parts[2]) ?? 0;
+      return ((h * 3600 + m * 60 + s) * 1000).round();
+    }
+    if (parts.length == 2) {
+      final m = int.tryParse(parts[0]) ?? 0;
+      final s = double.tryParse(parts[1]) ?? 0;
+      return ((m * 60 + s) * 1000).round();
+    }
+    return null;
   }
 
   /// Músicas de uma coletânea (dono ou público).

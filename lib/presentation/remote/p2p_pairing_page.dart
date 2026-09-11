@@ -81,7 +81,8 @@ class _P2pPairingPageState extends State<P2pPairingPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            if (_step == _P2pStep.scan && !kIsWeb && Platform.isAndroid || _step == _P2pStep.scan && !kIsWeb && Platform.isIOS)
+            if (_step == _P2pStep.scan && !kIsWeb && Platform.isAndroid ||
+                _step == _P2pStep.scan && !kIsWeb && Platform.isIOS)
               Expanded(
                 child: MobileScanner(
                   onDetect: (capture) {

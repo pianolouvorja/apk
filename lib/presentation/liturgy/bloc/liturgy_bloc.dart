@@ -134,19 +134,34 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     final items = _repo.loadItems(event.day);
     final notes = _repo.loadNotes(event.day);
     final locked = _repo.isLocked(event.day);
-    emit(LiturgyLoaded(selectedDay: event.day, items: items, notes: notes, locked: locked));
+    emit(
+      LiturgyLoaded(
+        selectedDay: event.day,
+        items: items,
+        notes: notes,
+        locked: locked,
+      ),
+    );
   }
 
   void _onDayChanged(LiturgyDayChanged event, Emitter<LiturgyState> emit) {
     final items = _repo.loadItems(event.day);
     final notes = _repo.loadNotes(event.day);
     final locked = _repo.isLocked(event.day);
-    emit(LiturgyLoaded(selectedDay: event.day, items: items, notes: notes, locked: locked));
+    emit(
+      LiturgyLoaded(
+        selectedDay: event.day,
+        items: items,
+        notes: notes,
+        locked: locked,
+      ),
+    );
   }
 
   void _onAddItem(LiturgyAddItem event, Emitter<LiturgyState> emit) {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     final items = [...state.items, event.item];
     _repo.saveItems(state.selectedDay, items);
     emit(state.copyWith(items: items));
@@ -154,7 +169,8 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
 
   void _onUpdateItem(LiturgyUpdateItem event, Emitter<LiturgyState> emit) {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     final items = state.items
         .map((e) => e.id == event.item.id ? event.item : e)
         .toList();
@@ -164,7 +180,8 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
 
   void _onDeleteItem(LiturgyDeleteItem event, Emitter<LiturgyState> emit) {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     final items = state.items.where((e) => e.id != event.itemId).toList();
     // Tambem remove sub-itens da categoria removida
     final children = items.where((e) => e.categoryId == event.itemId).toList();
@@ -190,7 +207,8 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
 
   void _onReorder(LiturgyReorderItems event, Emitter<LiturgyState> emit) {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     final items = [...state.items];
     final adjustedNew = event.newIndex > event.oldIndex
         ? event.newIndex - 1
@@ -207,7 +225,8 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     Emitter<LiturgyState> emit,
   ) async {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     await _repo.cloneDay(event.from, state.selectedDay);
     final items = _repo.loadItems(state.selectedDay);
     final notes = _repo.loadNotes(state.selectedDay);
@@ -219,17 +238,20 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     Emitter<LiturgyState> emit,
   ) async {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     await _repo.clearDay(state.selectedDay);
     emit(state.copyWith(items: [], notes: ''));
   }
 
   void _onUpdateNotes(LiturgyUpdateNotes event, Emitter<LiturgyState> emit) {
     final state = this.state;
-    if (state is! LiturgyLoaded) return; if (state.locked) return;
+    if (state is! LiturgyLoaded) return;
+    if (state.locked) return;
     _repo.saveNotes(state.selectedDay, event.notes);
     emit(state.copyWith(notes: event.notes));
   }
+
   void _onToggleLock(LiturgyLockToggled event, Emitter<LiturgyState> emit) {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
@@ -238,12 +260,14 @@ class LiturgyBloc extends Bloc<LiturgyEvent, LiturgyState> {
     emit(state.copyWith(locked: locked));
   }
 
-  void _onItemsReordered(LiturgyItemsReordered event, Emitter<LiturgyState> emit) {
+  void _onItemsReordered(
+    LiturgyItemsReordered event,
+    Emitter<LiturgyState> emit,
+  ) {
     final state = this.state;
     if (state is! LiturgyLoaded) return;
     if (state.locked) return;
     _repo.saveItems(state.selectedDay, event.items);
     emit(state.copyWith(items: event.items));
   }
-
 }

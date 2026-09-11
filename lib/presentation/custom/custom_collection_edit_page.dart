@@ -5,10 +5,13 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_catalog_api_impl.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
+import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
 import 'package:louvorja_piano_mobile/data/datasources/remote/custom_file_api.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection.dart';
 import 'package:louvorja_piano_mobile/domain/entities/custom_collection_music.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/custom_music_editor_page.dart';
+import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/import_slja.dart';
 import 'package:louvorja_piano_mobile/presentation/custom/custom_timing_recorder_page.dart';
 
@@ -182,6 +185,43 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Tap na música = tocar (NowPlayingPage com slides/timing custom).
+  Future<void> _playCustom(CustomCollectionMusic music) async {
+    if (music.audioUrl == null) {
+      _showSnack('Esta música não tem áudio — a letra abre como slides.');
+    }
+    try {
+      final hymn = await widget.api.fetchCustomHymn(music.id);
+      if (!mounted) return;
+      // Resolve URL absoluta do áudio (audio_url vem relativo ou absoluto).
+      final rawUrl = hymn.urlMusic;
+      final source = (rawUrl == null || rawUrl.isEmpty)
+          ? null
+          : (rawUrl.startsWith('http')
+                ? rawUrl
+                : '${widget.api.filesBaseUrl}${rawUrl.startsWith('/') ? '' : '/'}$rawUrl');
+
+      final player = HymnAudioPlayer.instance;
+      if (source != null) await player.playUrl(source);
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => NowPlayingPage(
+            detail: hymn,
+            instrumental: false,
+            player: HymnPlayerAdapter(player),
+            filesUrl: widget.api.filesBaseUrl,
+            audioSource: source,
+            audioIsLocal: false,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) _showSnack('Falha ao abrir "${music.name}".');
+    }
   }
 
   Future<void> _openTimingRecorder(CustomCollectionMusic music) async {
@@ -377,6 +417,8 @@ class _CustomCollectionEditPageState extends State<CustomCollectionEditPage> {
                     leading: const Icon(Icons.music_note),
                     title: Text(m.name),
                     subtitle: m.duration != null ? Text(m.duration!) : null,
+                    // Tap = tocar (playback custom via NowPlayingPage).
+                    onTap: () => _playCustom(m),
                     trailing: _busy
                         ? null
                         : Row(

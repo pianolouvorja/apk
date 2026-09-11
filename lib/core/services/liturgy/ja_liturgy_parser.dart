@@ -89,8 +89,7 @@ abstract final class JaLiturgyParser {
   static final _kvRe = RegExp(r'^([^=]+)=(.*)$');
 
   /// Remove sufixo `_d<dia>_i<n>` (referência duplicada em outro dia).
-  static String _baseId(String id) =>
-      id.replaceAll(RegExp(r'_d\d+_i\d+$'), '');
+  static String _baseId(String id) => id.replaceAll(RegExp(r'_d\d+_i\d+$'), '');
 
   static LiturgyItem? _parseItem(String id, Map<String, String> f) {
     final tipo = f['tipo']?.trim().toLowerCase();
@@ -109,6 +108,7 @@ abstract final class JaLiturgyParser {
       final yyyy = now.year.toString();
       return v == '$dd/$mm/$yyyy';
     }
+
     final cor = f['cor'] ?? '';
     final musicId = int.tryParse(f['musica'] ?? '');
 
@@ -128,7 +128,8 @@ abstract final class JaLiturgyParser {
       done: isDoneToday(),
       accentColor: _delphiColor(cor),
       musicId: type == LiturgyItemType.music ? musicId : null,
-      filePath: type != LiturgyItemType.music && type != LiturgyItemType.annotation
+      filePath:
+          type != LiturgyItemType.music && type != LiturgyItemType.annotation
           ? _nonEmpty(f['dir'])
           : null,
     );
@@ -153,10 +154,18 @@ abstract final class JaLiturgyParser {
   static LiturgyItemType _typeFromPath(String path) {
     final p = path.toLowerCase();
     if (p.isEmpty) return LiturgyItemType.otherFiles;
-    if (p.endsWith('.mp4') || p.endsWith('.mkv') || p.endsWith('.avi') ||
-        p.endsWith('.webm') || p.endsWith('.mov')) return LiturgyItemType.video;
-    if (p.endsWith('.jpg') || p.endsWith('.jpeg') || p.endsWith('.png') ||
-        p.endsWith('.gif') || p.endsWith('.bmp') || p.endsWith('.webp')) {
+    if (p.endsWith('.mp4') ||
+        p.endsWith('.mkv') ||
+        p.endsWith('.avi') ||
+        p.endsWith('.webm') ||
+        p.endsWith('.mov'))
+      return LiturgyItemType.video;
+    if (p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.png') ||
+        p.endsWith('.gif') ||
+        p.endsWith('.bmp') ||
+        p.endsWith('.webp')) {
       return LiturgyItemType.images;
     }
     if (p.endsWith('.pdf')) return LiturgyItemType.pdf;

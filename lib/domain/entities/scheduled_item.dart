@@ -43,32 +43,32 @@ class ScheduledItem {
   final String notes;
 
   ScheduledItem copyWith({String? notes, String? filePath}) => ScheduledItem(
-        id: id,
-        categoryId: categoryId,
-        date: date,
-        name: name,
-        filePath: filePath ?? this.filePath,
-        isRelativePath: isRelativePath,
-        notes: notes ?? this.notes,
-      );
+    id: id,
+    categoryId: categoryId,
+    date: date,
+    name: name,
+    filePath: filePath ?? this.filePath,
+    isRelativePath: isRelativePath,
+    notes: notes ?? this.notes,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'categoryId': categoryId,
-        'date': date.toIso8601String(),
-        'name': name,
-        'filePath': filePath,
-        'isRelativePath': isRelativePath,
-        'notes': notes,
-      };
+    'id': id,
+    'categoryId': categoryId,
+    'date': date.toIso8601String(),
+    'name': name,
+    'filePath': filePath,
+    'isRelativePath': isRelativePath,
+    'notes': notes,
+  };
 
   factory ScheduledItem.fromJson(Map<String, dynamic> json) => ScheduledItem(
-        id: json['id'] as String,
-        categoryId: json['categoryId'] as String,
-        date: DateTime.parse(json['date'] as String),
-        name: json['name'] as String,
-        filePath: (json['filePath'] as String?) ?? '',
-        isRelativePath: (json['isRelativePath'] as bool?) ?? false,
-        notes: (json['notes'] as String?) ?? '',
-      );
+    id: json['id'] as String,
+    categoryId: json['categoryId'] as String,
+    date: DateTime.parse(json['date'] as String),
+    name: json['name'] as String,
+    filePath: (json['filePath'] as String?) ?? '',
+    isRelativePath: (json['isRelativePath'] as bool?) ?? false,
+    notes: (json['notes'] as String?) ?? '',
+  );
 }
