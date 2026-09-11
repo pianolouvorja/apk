@@ -17,9 +17,9 @@ void main() {
   final stamp = DateTime.now().millisecondsSinceEpoch;
   final email = 'slja_e2e_$stamp@teste.com';
 
-  late String token;
+  String? token;
   late CustomCatalogApiImpl api;
-  late int collectionId;
+  int? collectionId;
 
   setUpAll(() async {
     try {
@@ -63,17 +63,19 @@ void main() {
     collectionId = await api.createCollection(
       name: 'SLJA E2E $stamp',
       authorName: 'SLJA Bot',
-      bearerToken: token,
+      bearerToken: token!,
     );
   });
 
   test(
     'E2E: .slja.zip → upload áudio → música → estrofes com timing',
     () async {
-      if (token.isEmpty) {
+      final tok = token;
+      if (tok == null || tok.isEmpty) {
         print('--- API offline: teste pulado ---');
         return;
       }
+      final colId = collectionId!;
 
       // 1. fixture .slja.zip (wrapper de WhatsApp: zip contendo o .slja)
       final ini =
@@ -118,7 +120,7 @@ tempo_hms=00:00:25
       final audioBytes = List<int>.filled(1024, 7);
       final upload = await _upload(
         apiBase,
-        token,
+        tok,
         audioBytes,
         'e2e_$stamp.mp3',
         'audio',
@@ -127,11 +129,13 @@ tempo_hms=00:00:25
 
       // 3. criar música + estrofes com tempo (mesma sequência do import)
       final musicId = await api.createMusic(
-        collectionId: collectionId,
+        collectionId: colId,
         name: archive.title,
         idFileAudio: audioId,
-        bearerToken: token,
+        bearerToken: tok,
       );
+      // ignore: avoid_print
+      print('DBG colId=$colId musicId=$musicId');
       expect(musicId, greaterThan(0));
 
       for (var i = 0; i < lyricSlides.length; i++) {
@@ -142,7 +146,7 @@ tempo_hms=00:00:25
           auxLyric: s.auxiliaryLyric,
           time: s.timeMs > 0 ? _msToDbTime(s.timeMs) : '00:00.000',
           order: i,
-          bearerToken: token,
+          bearerToken: tok,
         );
       }
 
@@ -155,17 +159,18 @@ tempo_hms=00:00:25
       expect(detail.lyrics[0].text, contains('Primeira linha'));
 
       // 5. cleanup
-      await api.removeMusicFromCollection(musicId: musicId, bearerToken: token);
-      await api.deleteCollection(collectionId, bearerToken: token);
+      await api.removeMusicFromCollection(musicId: musicId, bearerToken: tok);
+      await api.deleteCollection(colId, bearerToken: tok);
     },
   );
 
   tearDownAll(() async {
-    if (token.isNotEmpty) {
+    final tok = token;
+    if (tok != null && tok.isNotEmpty && collectionId != null) {
       try {
         await http.delete(
           Uri.parse('$apiBase/v1/custom/collections/$collectionId'),
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {'Authorization': 'Bearer $tok'},
         );
       } catch (_) {}
     }

@@ -16,7 +16,7 @@ void main() {
   final stamp = DateTime.now().millisecondsSinceEpoch;
   final email = 'e2e_$stamp@teste.com';
 
-  late String token;
+  String? token;
   late CustomCatalogApiImpl api;
 
   setUpAll(() async {
@@ -62,7 +62,8 @@ void main() {
   test(
     'E2E: coletânea → música → uploads → estrofes → permissões → delete',
     () async {
-      if (token.isEmpty) {
+      final tok = token;
+      if (tok == null || tok.isEmpty) {
         print('--- API offline: teste pulado ---');
         return;
       }
@@ -71,12 +72,12 @@ void main() {
       final collectionId = await api.createCollection(
         name: 'E2E $stamp',
         authorName: 'E2E Bot',
-        bearerToken: token,
+        bearerToken: tok,
       );
       expect(collectionId, greaterThan(0));
 
       // 2. listagem marca como dono
-      final collections = await api.fetchCollections(bearerToken: token);
+      final collections = await api.fetchCollections(bearerToken: tok);
       final mine = collections.firstWhere((c) => c.id == collectionId);
       expect(mine.isOwner, isTrue);
 
@@ -84,7 +85,7 @@ void main() {
       final audioBytes = List<int>.filled(2048, 1);
       final audioUpload = await _uploadFile(
         apiBase,
-        token,
+        tok,
         audioBytes,
         'e2e_$stamp.mp3',
         'audio/mpeg',
@@ -97,7 +98,7 @@ void main() {
         collectionId: collectionId,
         name: 'E2E Música $stamp',
         idFileAudio: audioId,
-        bearerToken: token,
+        bearerToken: tok,
       );
       expect(musicId, greaterThan(0));
 
@@ -114,7 +115,7 @@ void main() {
       ];
       final bgUpload = await _uploadFile(
         apiBase,
-        token,
+        tok,
         pngBytes,
         'e2e_$stamp.png',
         'image/png',
@@ -129,21 +130,21 @@ void main() {
         time: '00:00.000',
         order: 0,
         idFileImage: bgId,
-        bearerToken: token,
+        bearerToken: tok,
       );
       await api.addLyric(
         musicId: musicId,
         lyric: 'Primeira linha|Segunda linha',
         time: '00:05.000',
         order: 1,
-        bearerToken: token,
+        bearerToken: tok,
       );
       await api.addLyric(
         musicId: musicId,
         lyric: 'Terceira estrofe',
         time: '00:12.000',
         order: 2,
-        bearerToken: token,
+        bearerToken: tok,
       );
 
       // 6. áudio associado na criação — validar via detail abaixo
@@ -181,8 +182,8 @@ void main() {
       expect(hack.statusCode, 401);
 
       // 10. cleanup: dono apaga música (DELETE /musics/{id}) e coletânea
-      await api.removeMusicFromCollection(musicId: musicId, bearerToken: token);
-      await api.deleteCollection(collectionId, bearerToken: token);
+      await api.removeMusicFromCollection(musicId: musicId, bearerToken: tok);
+      await api.deleteCollection(collectionId, bearerToken: tok);
       final after = await api.fetchCollections();
       expect(after.any((c) => c.id == collectionId), isFalse);
     },
