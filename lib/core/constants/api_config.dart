@@ -17,12 +17,12 @@ library;
 class ApiConfig {
   static const String urlDatabase = String.fromEnvironment(
     'LOUVORJA_URL_DATABASE',
-    defaultValue: 'https://api.louvorja.com.br/json_db',
+    defaultValue: 'https://api.pianolouvorja.com.br/json_db',
   );
 
   static const String urlFiles = String.fromEnvironment(
     'LOUVORJA_URL_FILES',
-    defaultValue: 'https://api.louvorja.com.br/file',
+    defaultValue: 'https://api.pianolouvorja.com.br/file',
   );
 
   static const String apiToken = String.fromEnvironment(
