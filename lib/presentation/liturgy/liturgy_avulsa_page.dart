@@ -50,7 +50,10 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
   /// Importa itensAgendados(.xml) do Delphi: pede os 2 arquivos em sequência.
   Future<void> _importScheduled(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final picked = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      withData: true,
+    );
     var file = picked?.files.singleOrNull;
     if (file == null) return;
     final fname = file.name.toLowerCase();
@@ -61,31 +64,43 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
       'configpt',
     ];
     if (notPorted.any(fname.startsWith)) {
-      messenger.showSnackBar(SnackBar(
-          content: Text('liturgy.scheduled.notPorted'
-              .tr(namedArgs: {'name': file.name}))));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'liturgy.scheduled.notPorted'.tr(namedArgs: {'name': file.name}),
+          ),
+        ),
+      );
       return;
     }
     if (!fname.endsWith('.xml')) {
-      messenger.showSnackBar(SnackBar(
-          content: Text('liturgy.scheduled.invalidXml'.tr())));
+      messenger.showSnackBar(
+        SnackBar(content: Text('liturgy.scheduled.invalidXml'.tr())),
+      );
       return;
     }
     var data = file.bytes;
     if (data == null && file.path != null) {
-      try { data = await File(file.path!).readAsBytes(); } catch (_) {}
+      try {
+        data = await File(file.path!).readAsBytes();
+      } catch (_) {}
     }
     if (data == null) return;
     final catsXml = String.fromCharCodes(data);
 
     // segundo arquivo: itens (se o usuário cancelar, importa só categorias)
     List<Map<String, String>> itemRows = [];
-    final picked2 = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
+    final picked2 = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      withData: true,
+    );
     final f2 = picked2?.files.singleOrNull;
     if (f2 != null && f2.name.toLowerCase().endsWith('.xml')) {
       var d2 = f2.bytes;
       if (d2 == null && f2.path != null) {
-        try { d2 = await File(f2.path!).readAsBytes(); } catch (_) {}
+        try {
+          d2 = await File(f2.path!).readAsBytes();
+        } catch (_) {}
       }
       if (d2 != null) {
         itemRows = DataPacketParser.parse(String.fromCharCodes(d2));
@@ -94,12 +109,18 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
 
     final catRows = DataPacketParser.parse(catsXml);
     final n = await _scheduled!.importFromDelphi(
-        categories: catRows, items: itemRows);
+      categories: catRows,
+      items: itemRows,
+    );
     if (!mounted) return;
     _load();
-    messenger.showSnackBar(SnackBar(
-        content: Text('liturgy.scheduled.imported'
-            .tr(namedArgs: {'count': '$n'}))));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'liturgy.scheduled.imported'.tr(namedArgs: {'count': '$n'}),
+        ),
+      ),
+    );
   }
 
   void _load() {
@@ -108,10 +129,15 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
       _items = _repo!.loadAvulsa(_date);
       _locked = false;
       _scheduledToday = (_scheduled?.itemsOn(_date) ?? [])
-          .map((s) => ScheduledItemOnDate(item: s,
-              category: _scheduled!.loadCategories()
+          .map(
+            (s) => ScheduledItemOnDate(
+              item: s,
+              category: _scheduled!
+                  .loadCategories()
                   .where((c) => c.id == s.categoryId)
-                  .firstOrNull))
+                  .firstOrNull,
+            ),
+          )
           .toList();
     });
   }
@@ -202,13 +228,13 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
               key: const Key('avulsa-add-item'),
               onPressed: _items.isEmpty
                   ? () => showLiturgyItemDialog(
-                        context,
-                        isCategory: true,
-                        onSubmit: (item) {
-                          setState(() => _items = [..._items, item]);
-                          _persist();
-                        },
-                      )
+                      context,
+                      isCategory: true,
+                      onSubmit: (item) {
+                        setState(() => _items = [..._items, item]);
+                        _persist();
+                      },
+                    )
                   : null,
               child: const Icon(TablerIcons.plus, size: 24),
             ),
@@ -256,23 +282,29 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                 if (_scheduledToday.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.s3, AppSpacing.s2, AppSpacing.s3, 0),
+                      AppSpacing.s3,
+                      AppSpacing.s2,
+                      AppSpacing.s3,
+                      0,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'liturgy.scheduled.title'.tr(),
-                          style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         for (final s in _scheduledToday)
                           Card(
-                            margin:
-                                const EdgeInsets.only(top: AppSpacing.s1),
+                            margin: const EdgeInsets.only(top: AppSpacing.s1),
                             child: ListTile(
                               dense: true,
-                              leading: const Icon(TablerIcons.calendarEvent,
-                                  size: 20),
+                              leading: const Icon(
+                                TablerIcons.calendarEvent,
+                                size: 20,
+                              ),
                               title: Text(s.item.name),
                               subtitle: Text(
                                 s.category?.name ??
@@ -286,8 +318,9 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                     IconButton(
                                       tooltip: 'liturgy.scheduled.notes'.tr(),
                                       icon: const Icon(
-                                          TablerIcons.messageCircle,
-                                          size: 18),
+                                        TablerIcons.messageCircle,
+                                        size: 18,
+                                      ),
                                       onPressed: () => showDialog<void>(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
@@ -297,17 +330,19 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                             TextButton(
                                               onPressed: () =>
                                                   Navigator.pop(ctx),
-                                              child: Text(
-                                                  'common.cancel'.tr()),
+                                              child: Text('common.cancel'.tr()),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
                                   IconButton(
-                                    tooltip: 'liturgy.scheduled.addToLiturgy'.tr(),
-                                    icon: const Icon(TablerIcons.plus,
-                                        size: 18),
+                                    tooltip: 'liturgy.scheduled.addToLiturgy'
+                                        .tr(),
+                                    icon: const Icon(
+                                      TablerIcons.plus,
+                                      size: 18,
+                                    ),
                                     onPressed: _locked
                                         ? null
                                         : () {
@@ -315,17 +350,14 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                               _items = [
                                                 ..._items,
                                                 LiturgyItem(
-                                                  id:
-                                                      'sched_${s.item.id}',
+                                                  id: 'sched_${s.item.id}',
                                                   type: LiturgyItemType
                                                       .otherFiles,
                                                   name: s.item.name,
-                                                  subtitle: s
-                                                      .category?.name
-                                                      ?? '',
-                                                  filePath: s
-                                                      .item.filePath
-                                                      .isNotEmpty
+                                                  subtitle:
+                                                      s.category?.name ?? '',
+                                                  filePath:
+                                                      s.item.filePath.isNotEmpty
                                                       ? s.item.filePath
                                                       : null,
                                                 ),
@@ -343,9 +375,7 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                   ),
                 Expanded(
                   child: _items.isEmpty && _scheduledToday.isEmpty
-                      ? Center(
-                          child: Text('liturgy.avulsa.empty'.tr()),
-                        )
+                      ? Center(child: Text('liturgy.avulsa.empty'.tr()))
                       : ReorderableListView.builder(
                           padding: const EdgeInsets.all(AppSpacing.s3),
                           buildDefaultDragHandles: false,
@@ -369,20 +399,27 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                             final item = _items[i];
                             return Card(
                               key: ValueKey('avulsa-${item.id}'),
-                              margin:
-                                  const EdgeInsets.only(bottom: AppSpacing.s1),
+                              margin: const EdgeInsets.only(
+                                bottom: AppSpacing.s1,
+                              ),
                               child: ListTile(
-                                title: Text(item.name.isEmpty
-                                    ? item.type.name
-                                    : item.name),
+                                title: Text(
+                                  item.name.isEmpty
+                                      ? item.type.name
+                                      : item.name,
+                                ),
                                 subtitle: item.subtitle.isEmpty
                                     ? null
                                     : Text(item.subtitle),
-                                onTap: !_locked &&
+                                onTap:
+                                    !_locked &&
                                         LiturgyItemExecutor.isExecutable(
-                                            item.type)
+                                          item.type,
+                                        )
                                     ? () => LiturgyItemExecutor.execute(
-                                        context, item)
+                                        context,
+                                        item,
+                                      )
                                     : null,
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -394,22 +431,25 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                           TablerIcons.gripVertical,
                                           size: 18,
                                           color: theme
-                                              .colorScheme.onSurfaceVariant,
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
                                       ),
                                     GestureDetector(
                                       onTap: _locked
                                           ? null
                                           : () => setState(() {
-                                                _items = _items
-                                                    .map((e) =>
-                                                        e.id == item.id
-                                                            ? e.copyWith(
-                                                                done: !e.done)
-                                                            : e)
-                                                    .toList();
-                                                _persist();
-                                              }),
+                                              _items = _items
+                                                  .map(
+                                                    (e) => e.id == item.id
+                                                        ? e.copyWith(
+                                                            done: !e.done,
+                                                          )
+                                                        : e,
+                                                  )
+                                                  .toList();
+                                              _persist();
+                                            }),
                                       child: Icon(
                                         item.done
                                             ? TablerIcons.circleCheck
@@ -418,7 +458,8 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                         color: item.done
                                             ? theme.colorScheme.primary
                                             : theme
-                                                .colorScheme.onSurfaceVariant,
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                       ),
                                     ),
                                     if (!_locked)
@@ -427,17 +468,17 @@ class _LiturgyAvulsaPageState extends State<LiturgyAvulsaPage> {
                                           TablerIcons.dotsVertical,
                                           size: 20,
                                         ),
-                                        onPressed: () =>
-                                            showLiturgyItemDialog(
+                                        onPressed: () => showLiturgyItemDialog(
                                           context,
                                           existing: item,
                                           onSubmit: (updated) {
                                             setState(() {
                                               _items = _items
-                                                  .map((e) =>
-                                                      e.id == updated.id
-                                                          ? updated
-                                                          : e)
+                                                  .map(
+                                                    (e) => e.id == updated.id
+                                                        ? updated
+                                                        : e,
+                                                  )
                                                   .toList();
                                             });
                                             _persist();

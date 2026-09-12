@@ -58,14 +58,16 @@ void main() {
     await repo.importFromDelphi(
       categories: [],
       items: [
-        {'ID': 'i1', 'CATEGORIA': 'c1', 'DATA': '12/10/2026', 'NOME': 'Atualizado'},
+        {
+          'ID': 'i1',
+          'CATEGORIA': 'c1',
+          'DATA': '12/10/2026',
+          'NOME': 'Atualizado',
+        },
       ],
     );
     expect(repo.loadItems(), hasLength(2));
-    expect(
-      repo.loadItems().firstWhere((i) => i.id == 'i1').name,
-      'Atualizado',
-    );
+    expect(repo.loadItems().firstWhere((i) => i.id == 'i1').name, 'Atualizado');
   });
 
   test('item com DATA inválida é pulado', () async {
@@ -79,10 +81,13 @@ void main() {
     expect(repo.loadItems(), isEmpty);
   });
   test('datas TDateTime float (serial Delphi) também parseiam', () async {
-    await repo.importFromDelphi(categories: [], items: [
-      {'ID': 'f1', 'DATA': '46023', 'NOME': 'float date'},      // ~2026-01-17
-      {'ID': 'f2', 'DATA': '46023.5', 'NOME': 'float com hora'},
-    ]);
+    await repo.importFromDelphi(
+      categories: [],
+      items: [
+        {'ID': 'f1', 'DATA': '46023', 'NOME': 'float date'}, // ~2026-01-17
+        {'ID': 'f2', 'DATA': '46023.5', 'NOME': 'float com hora'},
+      ],
+    );
     final items = repo.loadItems();
     expect(items, hasLength(2));
     // 46023 dias desde 1899-12-30 — só valida que virou data válida
@@ -91,21 +96,24 @@ void main() {
   });
 
   test('volume: 5000 itens sem quebrar', () async {
-    final items = List.generate(5000, (i) => {
-      'ID': 'v' + i.toString(),
-      'CATEGORIA': 'c1',
-      'DATA': '12/10/2026',
-      'NOME': 'Item número \$i com nome razoavelmente longo para volume',
-      'ARQUIVO': 'C:\\Users\\arquivo\$i.mp4',
-    });
+    final items = List.generate(
+      5000,
+      (i) => {
+        'ID': 'v' + i.toString(),
+        'CATEGORIA': 'c1',
+        'DATA': '12/10/2026',
+        'NOME': 'Item número \$i com nome razoavelmente longo para volume',
+        'ARQUIVO': 'C:\\Users\\arquivo\$i.mp4',
+      },
+    );
     final changed = await repo.importFromDelphi(
-        categories: [
-          {'ID': 'c1', 'NOME': 'Volume'}
-        ],
-        items: items);
+      categories: [
+        {'ID': 'c1', 'NOME': 'Volume'},
+      ],
+      items: items,
+    );
     expect(changed, 5000);
     expect(repo.loadItems(), hasLength(5000));
     expect(repo.itemsOn(DateTime(2026, 10, 12)), hasLength(5000));
   });
-
 }

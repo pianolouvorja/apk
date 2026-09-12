@@ -236,7 +236,8 @@
     "languagePortuguese": "Portuguese (BR)",
     "languageEnglish": "English",
     "languageSpanish": "Espanol",
-    "version": "Version"
+    "version": "Version",
+    "privacyPolicy": "Privacy Policy"
   },
   "timer": {
     "title": "Timer",
@@ -415,5 +416,8 @@
       "empty": "Search by number or name"
     },
     "stopProjection": "Stop projection"
+  },
+  "albums": {
+    "playAll": "Play all"
   }
 }

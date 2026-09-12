@@ -28,28 +28,28 @@ void main() {
     int? numberMax,
     String? namesText,
   }) async {
-    sent.add(RemoteCommand(
-      id: 't',
-      action: action,
-      index: index,
-      volume: volume,
-      versionId: versionId,
-      bookId: bookId,
-      chapter: chapter,
-      verse: verse,
-      durationMs: durationMs,
-      musicId: musicId,
-      mode: mode,
-      query: query,
-      numberMin: numberMin,
-      numberMax: numberMax,
-      namesText: namesText,
-    ));
+    sent.add(
+      RemoteCommand(
+        id: 't',
+        action: action,
+        index: index,
+        volume: volume,
+        versionId: versionId,
+        bookId: bookId,
+        chapter: chapter,
+        verse: verse,
+        durationMs: durationMs,
+        musicId: musicId,
+        mode: mode,
+        query: query,
+        numberMin: numberMin,
+        numberMax: numberMax,
+        namesText: namesText,
+      ),
+    );
   }
 
-  Widget wrap(Widget child) => MaterialApp(
-        home: Scaffold(body: child),
-      );
+  Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
   setUp(() => sent.clear());
 
@@ -76,8 +76,9 @@ void main() {
     ),
   );
 
-  testWidgets('RemoteBiblePanel seleciona livro por nome e navega capítulo',
-      (tester) async {
+  testWidgets('RemoteBiblePanel seleciona livro por nome e navega capítulo', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       wrap(RemoteBiblePanel(send: fakeSend, state: bibleState)),
     );
@@ -94,48 +95,51 @@ void main() {
     expect(sent.single.verse, 2);
   });
 
-  testWidgets('RemoteHymnsPanel busca via media.search e abre com hit do desktop',
-      (tester) async {
-    const state = RemotePlayerState(
-      playing: false,
-      position: Duration.zero,
-      duration: Duration.zero,
-      slideIndex: 0,
-      slideCount: 0,
-      volume: 0,
-      canPrevious: false,
-      canNext: false,
-      mediaModule: RemoteMediaState(
-        searchResults: [
-          RemoteMusicHit(musicId: 42, name: 'Ao Pé da Cruz', track: 160),
-        ],
-      ),
-    );
-    await tester.pumpWidget(
-      wrap(RemoteHymnsPanel(send: fakeSend, state: state)),
-    );
+  testWidgets(
+    'RemoteHymnsPanel busca via media.search e abre com hit do desktop',
+    (tester) async {
+      const state = RemotePlayerState(
+        playing: false,
+        position: Duration.zero,
+        duration: Duration.zero,
+        slideIndex: 0,
+        slideCount: 0,
+        volume: 0,
+        canPrevious: false,
+        canNext: false,
+        mediaModule: RemoteMediaState(
+          searchResults: [
+            RemoteMusicHit(musicId: 42, name: 'Ao Pé da Cruz', track: 160),
+          ],
+        ),
+      );
+      await tester.pumpWidget(
+        wrap(RemoteHymnsPanel(send: fakeSend, state: state)),
+      );
 
-    await tester.enterText(
-      find.byKey(const Key('remote-hymns-query')),
-      'Cruz',
-    );
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(sent.single.action, RemoteAction.mediaSearch);
-    expect(sent.single.query, 'Cruz');
+      await tester.enterText(
+        find.byKey(const Key('remote-hymns-query')),
+        'Cruz',
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(sent.single.action, RemoteAction.mediaSearch);
+      expect(sent.single.query, 'Cruz');
 
-    // troca modo p/ playback e abre o hit (id do DESKTOP)
-    await tester.tap(find.byKey(const Key('remote-hymns-mode-instrumental')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('remote-hymns-result-0')));
-    await tester.pump();
+      // troca modo p/ playback e abre o hit (id do DESKTOP)
+      await tester.tap(find.byKey(const Key('remote-hymns-mode-instrumental')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote-hymns-result-0')));
+      await tester.pump();
 
-    expect(sent.last.action, RemoteAction.mediaOpen);
-    expect(sent.last.musicId, 42);
-    expect(sent.last.mode, 'instrumental');
-  });
+      expect(sent.last.action, RemoteAction.mediaOpen);
+      expect(sent.last.musicId, 42);
+      expect(sent.last.mode, 'instrumental');
+    },
+  );
 
-  testWidgets('RemoteTimePanel renderiza timer + countdown e envia ações',
-      (tester) async {
+  testWidgets('RemoteTimePanel renderiza timer + countdown e envia ações', (
+    tester,
+  ) async {
     const state = RemotePlayerState(
       playing: false,
       position: Duration.zero,

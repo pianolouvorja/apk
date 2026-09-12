@@ -43,8 +43,12 @@ void main() {
 
     // Sábado = Escola Sabatina
     expect(sab, isNotEmpty);
-    expect(sab.any((i) => i.name.toLowerCase().contains('escola sabatina')), isTrue,
-        reason: 'sábado deve ter Escola Sabatina, tem: ${sab.take(3).map((e) => e.name)}');
+    expect(
+      sab.any((i) => i.name.toLowerCase().contains('escola sabatina')),
+      isTrue,
+      reason:
+          'sábado deve ter Escola Sabatina, tem: ${sab.take(3).map((e) => e.name)}',
+    );
     // Domingo = Momentos de Louvor / Somos Teus
     expect(dom, isNotEmpty);
     expect(dom.first.name, contains('Momentos de Louvor'));

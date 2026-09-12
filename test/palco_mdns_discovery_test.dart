@@ -35,10 +35,14 @@ void main() {
 
     test('IPs diferentes produzem 2 entradas', () {
       final results = <String, WebosTv>{};
-      results.putIfAbsent('192.168.1.50',
-          () => WebosTv(ip: '192.168.1.50', friendlyName: 'A'));
-      results.putIfAbsent('192.168.1.60',
-          () => WebosTv(ip: '192.168.1.60', friendlyName: 'B'));
+      results.putIfAbsent(
+        '192.168.1.50',
+        () => WebosTv(ip: '192.168.1.50', friendlyName: 'A'),
+      );
+      results.putIfAbsent(
+        '192.168.1.60',
+        () => WebosTv(ip: '192.168.1.60', friendlyName: 'B'),
+      );
       expect(results.length, 2);
     });
   });

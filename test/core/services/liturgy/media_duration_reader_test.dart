@@ -8,8 +8,7 @@ import 'package:louvorja_piano_mobile/core/services/liturgy/media_duration_reade
 void main() {
   // b-cdn.mp4 real: 567.262ms (confirmado via ffprobe)
   test('mp4 real lê duração próxima do ffprobe', () async {
-    const path =
-        '/media/rafaelejosi/NovoVolume/nvme-mint/Downloads/b-cdn.mp4';
+    const path = '/media/rafaelejosi/NovoVolume/nvme-mint/Downloads/b-cdn.mp4';
     if (!File(path).existsSync()) {
       // ignore: avoid_print
       print('skip: arquivo de teste ausente');

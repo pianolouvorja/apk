@@ -354,11 +354,7 @@ class RemoteTimerState {
 
 /// Resultado de busca de hinos no catálogo do ALVO (ids corretos).
 class RemoteMusicHit {
-  const RemoteMusicHit({
-    required this.musicId,
-    required this.name,
-    this.track,
-  });
+  const RemoteMusicHit({required this.musicId, required this.name, this.track});
 
   final int musicId;
   final String name;
@@ -680,8 +676,9 @@ class RemoteProtocol {
                 type: e['type'] as String,
                 title: e['title'] is String ? e['title'] as String? : null,
                 done: e['done'] == true,
-                subtitle:
-                    e['subtitle'] is String ? e['subtitle'] as String? : null,
+                subtitle: e['subtitle'] is String
+                    ? e['subtitle'] as String?
+                    : null,
                 isCategory: e['isCategory'] == true,
                 accentColor: e['accentColor'] is String
                     ? e['accentColor'] as String?
@@ -730,7 +727,9 @@ class RemoteProtocol {
                         ? (e['musicId'] as num).toInt()
                         : 0,
                     name: e['name'] is String ? e['name'] as String : '',
-                    track: e['track'] is num ? (e['track'] as num).toInt() : null,
+                    track: e['track'] is num
+                        ? (e['track'] as num).toInt()
+                        : null,
                   ),
                 )
                 .where((h) => h.musicId > 0)
@@ -798,9 +797,7 @@ class RemoteProtocol {
       books: rawBooks is List
           ? rawBooks
                 .whereType<Map>()
-                .where(
-                  (b) => b['id'] is num && b['name'] is String,
-                )
+                .where((b) => b['id'] is num && b['name'] is String)
                 .map(
                   (b) => RemoteBibleBook(
                     id: (b['id'] as num).toInt(),

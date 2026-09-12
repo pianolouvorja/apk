@@ -17,10 +17,11 @@ import 'package:louvorja_piano_mobile/core/services/palco/palco_controller.dart'
 /// - palco desligado: playHymnAudio degrada para local sem erro
 void main() {
   Future<(StageSession, StreamIterator<Map<String, dynamic>>, FakeReceiverRx)>
-      setUpPalco() async {
+  setUpPalco() async {
     final stage = StageSession.instance;
     final ok = await stage.turnOnPalco(
-        PalcoTarget(name: 'TV teste', ip: '127.0.0.1', wsPort: 0));
+      PalcoTarget(name: 'TV teste', ip: '127.0.0.1', wsPort: 0),
+    );
     // turnOnPalco usa PalcoController com portas FIXAS — em teste precisamos
     // de efêmeras. Como StageSession cria o controller interno, montamos o
     // cenário via o controller exposto (palco) quando disponível.
@@ -60,8 +61,12 @@ void main() {
     });
 
     stage.audioRoute = PalcoAudioRoute.tv;
-    final route = stage.playHymnAudio('https://x/a.mp3',
-        title: 'Hino', subtitle: 'Harpa', cover: 'https://x/c.jpg');
+    final route = stage.playHymnAudio(
+      'https://x/a.mp3',
+      title: 'Hino',
+      subtitle: 'Harpa',
+      cover: 'https://x/c.jpg',
+    );
     expect(route, PalcoAudioRoute.tv);
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -113,7 +118,8 @@ class FakeReceiverRx {
 }
 
 Future<StreamIterator<Map<String, dynamic>>> _iter(
-    Stream<Map<String, dynamic>> s) async {
+  Stream<Map<String, dynamic>> s,
+) async {
   final it = StreamIterator<Map<String, dynamic>>(s);
   return it;
 }

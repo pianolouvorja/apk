@@ -28,8 +28,8 @@ import 'package:louvorja_piano_mobile/core/services/hymn_audio_player.dart';
 import 'package:louvorja_piano_mobile/core/services/hymn_player_adapter.dart';
 import 'package:louvorja_piano_mobile/core/services/now_playing.dart';
 import 'package:louvorja_piano_mobile/presentation/hymns/now_playing_page.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import 'bloc/hymns_bloc.dart';
-import 'package:louvorja_piano_mobile/presentation/shared/widgets/stage_cast_button.dart';
 
 const _apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
@@ -78,8 +78,8 @@ class _HymnsPageState extends State<HymnsPage> {
   Future<void> _initBloc(String languagePrefix) async {
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: 'https://api.louvorja.com.br/json_db',
-      filesUrl: 'https://api.louvorja.com.br/file',
+      baseUrls: ApiConfig.databaseUrls(),
+      filesUrls: ApiConfig.filesUrls(),
       apiToken: _apiToken,
       languagePrefix: languagePrefix,
     );
@@ -140,9 +140,10 @@ class _HymnsViewState extends State<_HymnsView> {
   List<Hymn> _searchResults = const [];
   bool _searchLoading = false;
   bool _downloadingAll = false;
-  int? _downloadAllProgress; // 0..100
-  int? _downloadAllCurrent;
-  int? _downloadAllTotal;
+  int? _downloadAllProgress; // 0..100 (músicas, não álbuns)
+  int? _downloadAllCurrent; // músicas concluídas
+  int? _downloadAllTotal; // total de músicas no lote
+  String? _downloadAllAlbum; // álbum em curso
 
   Timer? _debounce;
 
@@ -218,7 +219,7 @@ class _HymnsViewState extends State<_HymnsView> {
             detail: detail,
             instrumental: false,
             player: adapter,
-            filesUrl: 'https://api.louvorja.com.br/file',
+            filesUrl: ApiConfig.urlFiles,
           ),
         ),
       );
@@ -250,52 +251,97 @@ class _HymnsViewState extends State<_HymnsView> {
     }
 
     final repo = context.read<HymnsBloc>().repository;
+
+    // Pré-conta músicas p/ progresso por FAIXA (o contador por álbum era
+    // vago: um álbum de 70 músicas não mudava o número por minutos).
+    // Músicas JÁ baixadas saem do lote — re-baixar o que tá salvo era o
+    // feedback do Rafael ('se já foi baixado não quero baixar de novo').
+    var totalMusics = 0;
+    final alreadyOffline = <int>{};
+    for (final album in albums) {
+      try {
+        final hymns = await repo.getHymnsByAlbum(album.id);
+        for (final hymn in hymns) {
+          if (await offline.localPathFor(hymn.id) != null) {
+            alreadyOffline.add(hymn.id);
+          } else {
+            totalMusics++;
+          }
+        }
+      } catch (_) {}
+    }
+    if (totalMusics == 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Tudo já está baixado!')));
+        setState(() => _downloadingAll = false);
+      }
+      return;
+    }
+
     setState(() {
       _downloadingAll = true;
       _downloadAllProgress = 0;
       _downloadAllCurrent = 0;
-      _downloadAllTotal = albums.length;
+      _downloadAllTotal = totalMusics;
     });
 
     var done = 0;
     var failed = 0;
     for (final album in albums) {
+      if (mounted) {
+        setState(() => _downloadAllAlbum = album.name);
+      }
       try {
         final hymns = await repo.getHymnsByAlbum(album.id);
         for (final hymn in hymns) {
-          final detail = await repo.getHymnDetails(hymn.id);
-          final url = detail.urlMusic ?? '';
-          if (url.isNotEmpty) {
-            // URL encodada: paths da API tem espacos/acento e o request
-            // quebra sem encoding (bug dos downloads 100% falhando).
-            await offline.download(
-              musicId: hymn.id,
-              url: DownloadUrlBuilder.build(url),
-            );
-            final OfflineMusicPort offlinePort = offline;
-            if (offlinePort is OfflineLibraryPort) {
-              await (offlinePort as OfflineLibraryPort).saveMetadata(
+          if (alreadyOffline.contains(hymn.id)) continue; // já salvo: pula
+          try {
+            final detail = await repo.getHymnDetails(hymn.id);
+            final url = detail.urlMusic ?? '';
+            if (url.isNotEmpty) {
+              // URL encodada: paths da API tem espacos/acento e o request
+              // quebra sem encoding (bug dos downloads 100% falhando).
+              await offline.download(
                 musicId: hymn.id,
-                title: hymn.title ?? 'Hino #${hymn.id}',
-                number: hymn.number?.toString(),
-                albumId: album.id,
-                albumName: album.name,
+                url: DownloadUrlBuilder.build(url),
               );
+              final OfflineMusicPort offlinePort = offline;
+              if (offlinePort is OfflineLibraryPort) {
+                await (offlinePort as OfflineLibraryPort).saveMetadata(
+                  musicId: hymn.id,
+                  title: hymn.title ?? 'Hino #${hymn.id}',
+                  number: hymn.number?.toString(),
+                  albumId: album.id,
+                  albumName: album.name,
+                );
+              }
             }
+          } catch (_) {
+            failed++; // falha de música não aborta o lote
           }
+          done++;
           // Pausa entre faixas: respeita rate limiting da API.
           await Future<void>.delayed(const Duration(milliseconds: 400));
+          if (mounted && done % 3 == 0) {
+            setState(() {
+              _downloadAllCurrent = done;
+              _downloadAllProgress = (done * 100 ~/ totalMusics);
+            });
+          }
         }
       } catch (_) {
         failed++;
       }
-      done++;
-      if (mounted) {
-        setState(() {
-          _downloadAllCurrent = done;
-          _downloadAllProgress = (done * 100 ~/ albums.length);
-        });
-      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _downloadAllCurrent = done;
+        _downloadAllProgress =
+            (done * 100 ~/ (totalMusics == 0 ? 1 : totalMusics));
+      });
     }
 
     if (mounted) {
@@ -339,6 +385,18 @@ class _HymnsViewState extends State<_HymnsView> {
               )
             : Text('hymns.title'.tr()),
         actions: [
+          // Playlists (seleção de hinos do acervo, local)
+          IconButton(
+            icon: const Icon(Icons.queue_music),
+            tooltip: 'Playlists',
+            onPressed: () => context.push('/hymns/playlists'),
+          ),
+          // Coletâneas da comunidade (custom da API)
+          IconButton(
+            icon: const Icon(Icons.groups),
+            tooltip: 'Coletâneas da Comunidade',
+            onPressed: () => context.push('/hymns/custom'),
+          ),
           BlocBuilder<HymnsBloc, HymnsState>(
             builder: (context, state) {
               if (state is! HymnsLoaded) return const SizedBox.shrink();
@@ -347,6 +405,7 @@ class _HymnsViewState extends State<_HymnsView> {
                 progress: _downloadAllProgress,
                 current: _downloadAllCurrent,
                 total: _downloadAllTotal,
+                album: _downloadAllAlbum,
                 onPressed: () => _downloadEverything(state.categories),
               );
             },
@@ -365,9 +424,6 @@ class _HymnsViewState extends State<_HymnsView> {
               });
             },
           ),
-          // Cast no AppBar dos hinos: operador configura o Palco (TV,
-          // rota de áudio, BG) ANTES de projetar o culto.
-          const StageCastButton(),
         ],
       ),
       body: BlocBuilder<HymnsBloc, HymnsState>(
@@ -541,7 +597,7 @@ class _AlbumCard extends StatelessWidget {
     final isAsset = hasCover && coverUrl.startsWith('asset:');
     final assetName = isAsset ? coverUrl.substring('asset:'.length) : null;
     final fullCoverUrl = hasCover && !isAsset
-        ? 'https://api.louvorja.com.br/file/$coverUrl'
+        ? DownloadUrlBuilder.build(coverUrl)
         : null;
     // coverage:ignore-end
 
@@ -679,6 +735,7 @@ class _DownloadAllButton extends StatelessWidget {
   final int? progress;
   final int? current;
   final int? total;
+  final String? album;
   final VoidCallback onPressed;
 
   const _DownloadAllButton({
@@ -687,19 +744,44 @@ class _DownloadAllButton extends StatelessWidget {
     required this.current,
     required this.total,
     required this.onPressed,
+    this.album,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (downloading) {
-      return Center(
-        child: Text(
-          '$current/$total',
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
+      // Banner compacto: contador de músicas + barra + álbum em curso.
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (album != null)
+              Text(
+                album!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+              ),
+            Text(
+              '$current/$total',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(
+              width: 88,
+              child: LinearProgressIndicator(
+                value: (progress ?? 0) / 100,
+                minHeight: 3,
+              ),
+            ),
+          ],
         ),
       );
     }

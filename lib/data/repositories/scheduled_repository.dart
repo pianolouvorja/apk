@@ -57,10 +57,12 @@ class ScheduledRepository {
 
   /// Itens de uma data (qualquer categoria).
   List<ScheduledItem> itemsOn(DateTime date) => loadItems()
-      .where((i) =>
-          i.date.year == date.year &&
-          i.date.month == date.month &&
-          i.date.day == date.day)
+      .where(
+        (i) =>
+            i.date.year == date.year &&
+            i.date.month == date.month &&
+            i.date.day == date.day,
+      )
       .toList();
 
   /// Importa DATAPACKETs já parseados. Categorias por id; itens cuja
@@ -121,8 +123,11 @@ class ScheduledRepository {
     // TDateTime float (ex: "46023" ou "46023.5")
     final days = double.tryParse(v);
     if (days != null && days > 0 && days < 3000000) {
-      return DateTime(1899, 12, 30).add(Duration(
-          milliseconds: (days * 86400000).round()));
+      return DateTime(
+        1899,
+        12,
+        30,
+      ).add(Duration(milliseconds: (days * 86400000).round()));
     }
     return null;
   }

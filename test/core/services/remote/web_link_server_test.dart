@@ -19,18 +19,18 @@ void main() {
   });
 
   RemotePlayerState sampleState() => const RemotePlayerState(
-        hymnId: 15,
-        title: 'Rocha Eterna',
-        mode: 'audio',
-        playing: true,
-        position: Duration(seconds: 34),
-        duration: Duration(minutes: 3),
-        slideIndex: 2,
-        slideCount: 5,
-        volume: 80,
-        canPrevious: true,
-        canNext: false,
-      );
+    hymnId: 15,
+    title: 'Rocha Eterna',
+    mode: 'audio',
+    playing: true,
+    position: Duration(seconds: 34),
+    duration: Duration(minutes: 3),
+    slideIndex: 2,
+    slideCount: 5,
+    volume: 80,
+    canPrevious: true,
+    canNext: false,
+  );
 
   test('start expõe porta e URL ws com token na query', () async {
     final url = await server.start(token: 'ABC123');
@@ -63,10 +63,7 @@ void main() {
     expect(url, isNotNull);
     final badUrl = url!.replaceFirst('t=CERTO', 't=ERRADO');
 
-    await expectLater(
-      WebSocket.connect(badUrl),
-      throwsA(anything),
-    );
+    await expectLater(WebSocket.connect(badUrl), throwsA(anything));
     expect(server.hasClient, isFalse);
   });
 
@@ -134,9 +131,7 @@ void main() {
   test('sendCommand sem cliente → false (não lança)', () async {
     await server.start(token: 'T');
     expect(
-      server.sendCommand(
-        RemoteCommand(id: 'x', action: RemoteAction.play),
-      ),
+      server.sendCommand(RemoteCommand(id: 'x', action: RemoteAction.play)),
       isFalse,
     );
   });
@@ -212,32 +207,38 @@ void main() {
     await client.close();
   });
 
-  test('web desconecta → clientEvents false; novo cliente pode conectar', () async {
-    final url = await server.start(token: 'T');
-    final first = await WebSocket.connect(url!);
-    final events = <bool>[];
-    final down = Completer<void>();
-    server.clientEvents.listen((b) {
-      events.add(b);
-      if (!b && !down.isCompleted) down.complete();
-    });
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    await first.close();
-    await down.future.timeout(const Duration(seconds: 5));
+  test(
+    'web desconecta → clientEvents false; novo cliente pode conectar',
+    () async {
+      final url = await server.start(token: 'T');
+      final first = await WebSocket.connect(url!);
+      final events = <bool>[];
+      final down = Completer<void>();
+      server.clientEvents.listen((b) {
+        events.add(b);
+        if (!b && !down.isCompleted) down.complete();
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await first.close();
+      await down.future.timeout(const Duration(seconds: 5));
 
-    final second = await WebSocket.connect(url);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    expect(server.hasClient, isTrue);
-    await second.close();
-  });
+      final second = await WebSocket.connect(url);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(server.hasClient, isTrue);
+      await second.close();
+    },
+  );
 
   test('stop fecha servidor e derruba cliente', () async {
     final url = await server.start(token: 'T');
     final client = await WebSocket.connect(url!);
     final closed = Completer<void>();
-    client.listen((_) {}, onDone: () {
-      if (!closed.isCompleted) closed.complete();
-    });
+    client.listen(
+      (_) {},
+      onDone: () {
+        if (!closed.isCompleted) closed.complete();
+      },
+    );
     await Future<void>.delayed(const Duration(milliseconds: 200));
 
     await server.stop();

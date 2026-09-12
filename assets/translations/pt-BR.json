@@ -235,7 +235,8 @@
     "languagePortuguese": "Portugues (BR)",
     "languageEnglish": "English",
     "languageSpanish": "Espanol",
-    "version": "Versao"
+    "version": "Versao",
+    "privacyPolicy": "Política de Privacidade"
   },
   "timer": {
     "title": "Cronômetro",
@@ -414,5 +415,8 @@
       "empty": "Busque pelo número ou nome"
     },
     "stopProjection": "Parar projeção"
+  },
+  "albums": {
+    "playAll": "Tocar tudo"
   }
 }

@@ -39,7 +39,11 @@ void main() {
     });
 
     test('timer countdown', () {
-      final m = PalcoMessage.timer(action: 'start', duration: 300, label: 'Sermão');
+      final m = PalcoMessage.timer(
+        action: 'start',
+        duration: 300,
+        label: 'Sermão',
+      );
       final json = m.toJson();
       expect(json['duration'], 300);
       expect(json['mode'], 'countdown');
@@ -73,12 +77,20 @@ void main() {
     });
 
     test('remote-key expõe key', () {
-      final back = PalcoMessage.fromJson({'v': 2, 'type': 'remote-key', 'key': 'next'});
+      final back = PalcoMessage.fromJson({
+        'v': 2,
+        'type': 'remote-key',
+        'key': 'next',
+      });
       expect(back.remoteKey, 'next');
     });
 
     test('ended expõe media', () {
-      final back = PalcoMessage.fromJson({'v': 2, 'type': 'ended', 'media': 'audio'});
+      final back = PalcoMessage.fromJson({
+        'v': 2,
+        'type': 'ended',
+        'media': 'audio',
+      });
       expect(back.endedMedia, 'audio');
     });
   });
