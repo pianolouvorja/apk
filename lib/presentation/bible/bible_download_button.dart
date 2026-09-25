@@ -13,6 +13,7 @@ import 'package:louvorja_piano_mobile/data/datasources/local/catalog_cache.dart'
 import 'package:louvorja_piano_mobile/data/datasources/remote/louvorja_api_impl.dart';
 import 'package:louvorja_piano_mobile/data/repositories/bible_repository_impl.dart';
 import 'package:louvorja_piano_mobile/presentation/bible/bloc/bible_bloc.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 /// Indica se uma versão da Bíblia já foi baixada completamente.
 class BibleVersionDownloadMark {
@@ -78,8 +79,8 @@ class _BibleDownloadButtonState extends State<BibleDownloadButton> {
     setState(() => _downloading = true);
     try {
       final api = LouvorjaApiImpl(
-        baseUrl: 'https://api.louvorja.com.br/json_db',
-        filesUrl: 'https://api.louvorja.com.br/file',
+        baseUrl: ApiConfig.urlDatabase,
+        filesUrl: ApiConfig.urlFiles,
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       );
       final dir = await getApplicationDocumentsDirectory();

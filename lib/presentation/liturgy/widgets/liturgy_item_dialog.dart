@@ -17,6 +17,7 @@ import 'package:louvorja_piano_mobile/domain/entities/liturgy_item.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/bloc/liturgy_bloc.dart';
 import 'package:louvorja_piano_mobile/presentation/liturgy/widgets/scheduled_datetime_card.dart';
 import 'package:louvorja_piano_mobile/presentation/shared/widgets/hymn_search_delegate.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 
 /// Converte camelCase enum para snake_case i18n key.
 String _typeToKey(dynamic type) {
@@ -323,8 +324,8 @@ void showLiturgyItemDialog(
                           context: context,
                           delegate: HymnSearchDelegate(() async {
                             final api = LouvorjaApiImpl(
-                              baseUrl: 'https://api.louvorja.com.br/json_db',
-                              filesUrl: 'https://api.louvorja.com.br/file',
+                              baseUrl: ApiConfig.urlDatabase,
+                              filesUrl: ApiConfig.urlFiles,
                               apiToken: const String.fromEnvironment(
                                 'API_TOKEN',
                                 defaultValue: '',

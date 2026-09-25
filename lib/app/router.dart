@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import '../core/services/global_search_service.dart';
 import '../core/services/hymn_catalog_provider.dart';
 import '../core/services/search_sources.dart';
@@ -103,8 +104,8 @@ final appRouter = GoRouter(
 
 HymnRepositoryImpl _searchHymnRepo() {
   final api = LouvorjaApiImpl(
-    baseUrl: 'https://api.louvorja.com.br/json_db',
-    filesUrl: 'https://api.louvorja.com.br/file',
+    baseUrl: ApiConfig.urlDatabase,
+    filesUrl: ApiConfig.urlFiles,
     apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
   );
   return HymnRepositoryImpl(api, CatalogCache.noop());
@@ -118,8 +119,8 @@ Future<List<BibleVerseRef>> _searchVerses() => SearchSources.loadBibleSources(
   repository: _BibleRepoAdapter(
     BibleRepositoryImpl(
       LouvorjaApiImpl(
-        baseUrl: 'https://api.louvorja.com.br/json_db',
-        filesUrl: 'https://api.louvorja.com.br/file',
+        baseUrl: ApiConfig.urlDatabase,
+        filesUrl: ApiConfig.urlFiles,
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       ),
       CatalogCache.noop(),

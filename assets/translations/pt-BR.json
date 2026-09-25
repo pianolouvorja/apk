@@ -414,5 +414,8 @@
       "empty": "Busque pelo número ou nome"
     },
     "stopProjection": "Parar projeção"
+  },
+  "albums": {
+    "playAll": "Tocar tudo"
   }
 }
