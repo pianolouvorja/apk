@@ -1,6 +1,7 @@
 // Entry point do LouvorJA PIANO Mobile.
 library;
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +15,14 @@ import 'core/services/settings_controller.dart';
 void main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+
+  // RF-003: Firebase (login unificado). Falha de init não derruba o app —
+  // login fica indisponível mas o resto funciona (offline-first).
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase indisponível: $e');
+  }
 
   if (!kIsWeb) {
     FlutterNativeSplash.preserve(widgetsBinding: binding);

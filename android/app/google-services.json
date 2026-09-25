@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "267038930810",
+    "project_id": "pianolouvorja",
+    "storage_bucket": "pianolouvorja.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267038930810:android:8eef2a09bbf7a4ef3548c3",
+        "android_client_info": {
+          "package_name": "com.louvorja.louvorja_piano_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "267038930810-8mtja04gcncc0d54mji1qeqqcpv7ao5g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjWU9hTVUO1xCa5kBlYv26yg8xwzqEOZ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "267038930810-8mtja04gcncc0d54mji1qeqqcpv7ao5g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267038930810:android:9f10a92e6e2086cf3548c3",
+        "android_client_info": {
+          "package_name": "com.louvorja.piano.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "267038930810-8mtja04gcncc0d54mji1qeqqcpv7ao5g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjWU9hTVUO1xCa5kBlYv26yg8xwzqEOZ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "267038930810-8mtja04gcncc0d54mji1qeqqcpv7ao5g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
