@@ -15,6 +15,7 @@ import '../../core/services/settings_controller.dart';
 import '../../core/services/sync/sync_file_service.dart';
 import '../../core/services/update_service.dart';
 import 'widgets/remote/remote_section.dart';
+import 'widgets/stage_section.dart';
 import 'widgets/sync_section.dart';
 
 /// SettingsPage — tela de configuracoes (tab "Mais").
@@ -150,6 +151,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 32),
+
+            // --- Palco (cast) — RF-01/02 spec palco-v2 ---
+            _SectionHeader(
+              icon: TablerIcons.cast,
+              title: 'Palco',
+            ),
+            const SizedBox(height: 12),
+            const StageSection(),
             const SizedBox(height: 32),
 
             // --- Geral ---

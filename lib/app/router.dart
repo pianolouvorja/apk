@@ -3,8 +3,10 @@
 /// 4 tabs: Inicio, Hinos, Ferramentas, Mais.
 /// Usa StatefulShellRoute.indexedStack para preservar estado de cada tab.
 library;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:louvorja_piano_mobile/core/constants/api_config.dart';
 import '../core/services/global_search_service.dart';
 import '../core/services/hymn_catalog_provider.dart';
 import '../core/services/search_sources.dart';
@@ -35,10 +37,7 @@ final appRouter = GoRouter(
         // Tab 0: Inicio
         StatefulShellBranch(
           routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => const HomePage(),
-            ),
+            GoRoute(path: '/', builder: (context, state) => const HomePage()),
           ],
         ),
         // Tab 1: Hinos
@@ -51,7 +50,9 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: ':albumId',
                   builder: (context, state) => AlbumDetailPage(
-                    albumId: int.tryParse(state.pathParameters['albumId'] ?? '') ?? 0,
+                    albumId:
+                        int.tryParse(state.pathParameters['albumId'] ?? '') ??
+                        0,
                   ),
                 ),
               ],
@@ -103,30 +104,29 @@ final appRouter = GoRouter(
 
 HymnRepositoryImpl _searchHymnRepo() {
   final api = LouvorjaApiImpl(
-    baseUrl: 'https://api.louvorja.com.br/json_db',
-    filesUrl: 'https://api.louvorja.com.br/file',
+    baseUrl: ApiConfig.urlDatabase,
+    filesUrl: ApiConfig.urlFiles,
     apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
   );
   return HymnRepositoryImpl(api, CatalogCache.noop());
 }
 
 Future<List<Hymn>> _searchHymns() => SearchSources.loadHymnSources(
-      repository: _HymnRepoAdapter(_searchHymnRepo()),
-    );
+  repository: _HymnRepoAdapter(_searchHymnRepo()),
+);
 
 Future<List<BibleVerseRef>> _searchVerses() => SearchSources.loadBibleSources(
-      repository: _BibleRepoAdapter(
-        BibleRepositoryImpl(
-          LouvorjaApiImpl(
-            baseUrl: 'https://api.louvorja.com.br/json_db',
-            filesUrl: 'https://api.louvorja.com.br/file',
-            apiToken:
-                const String.fromEnvironment('API_TOKEN', defaultValue: ''),
-          ),
-          CatalogCache.noop(),
-        ),
+  repository: _BibleRepoAdapter(
+    BibleRepositoryImpl(
+      LouvorjaApiImpl(
+        baseUrl: ApiConfig.urlDatabase,
+        filesUrl: ApiConfig.urlFiles,
+        apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       ),
-    );
+      CatalogCache.noop(),
+    ),
+  ),
+);
 
 class _HymnRepoAdapter implements HymnRepositoryView {
   final HymnRepositoryImpl _repo;
@@ -166,6 +166,5 @@ class _BibleRepoAdapter implements BibleRepositoryView {
     int versionId,
     int bookId,
     int chapter,
-  ) =>
-      _repo.getChapter(versionId, bookId, chapter);
+  ) => _repo.getChapter(versionId, bookId, chapter);
 }

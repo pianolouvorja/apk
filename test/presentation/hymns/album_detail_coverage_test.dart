@@ -133,7 +133,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.alertCircle), findsOneWidget);
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.byType(FilledButton).last);
     await tester.pumpAndSettle();
   });
 }
