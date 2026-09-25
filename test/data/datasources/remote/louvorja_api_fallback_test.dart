@@ -140,21 +140,36 @@ void main() {
   });
 
   group('ApiConfig cadeia de fallback', () {
-    test('databaseUrls/filesUrls incluem primaria + 2 fallbacks na ordem', () {
+    test('cascata só reflete --dart-define (zero hardcoded)', () {
       final dbs = ApiConfig.databaseUrls();
-      expect(dbs.first, ApiConfig.urlDatabase);
-      expect(dbs, contains('https://api.louvorja.com.br/json_db'));
-      expect(dbs, contains('https://api.louvorja.workers.dev/json_db'));
-      // primaria vem primeiro
-      expect(
-        dbs.indexOf('https://api.louvorja.com.br/json_db'),
-        lessThan(dbs.indexOf('https://api.louvorja.workers.dev/json_db')),
-      );
-
       final files = ApiConfig.filesUrls();
-      expect(files.first, ApiConfig.urlFiles);
-      expect(files, contains('https://api.louvorja.com.br/file'));
-      expect(files, contains('https://api.louvorja.workers.dev/file'));
+
+      for (final url in dbs) {
+        expect(url.isNotEmpty, isTrue);
+        expect(url.endsWith('/json_db'), isTrue, reason: url);
+      }
+      for (final url in files) {
+        expect(url.isNotEmpty, isTrue);
+        expect(url.endsWith('/file'), isTrue, reason: url);
+      }
+
+      if (ApiConfig.urlDatabase.isNotEmpty) {
+        expect(dbs.first, ApiConfig.urlDatabase);
+      } else if (ApiConfig.fallbackHosts.isEmpty) {
+        expect(dbs, isEmpty);
+      }
+
+      if (ApiConfig.urlFiles.isNotEmpty) {
+        expect(files.first, ApiConfig.urlFiles);
+      } else if (ApiConfig.fallbackHosts.isEmpty) {
+        expect(files, isEmpty);
+      }
+
+      // Fallbacks só entram se LOUVORJA_FALLBACK_URLS estiver no build.
+      for (final host in ApiConfig.fallbackHosts) {
+        expect(dbs, contains('$host/json_db'));
+        expect(files, contains('$host/file'));
+      }
     });
   });
 }
