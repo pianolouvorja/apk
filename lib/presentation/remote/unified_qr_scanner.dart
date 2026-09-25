@@ -109,9 +109,15 @@ class _P2pPairingFromScanPageState extends State<P2pPairingFromScanPage> {
   void initState() {
     super.initState();
     _client = P2pRemoteClient(
-      onOpen: () { if (mounted) setState(() => _log = 'liturgy.p2p.connected'.tr()); },
-      onClose: () { if (mounted) setState(() => _log = 'liturgy.p2p.disconnected'.tr()); },
-      onMessage: (m) { if (mounted) setState(() => _log = '← ${m['action'] ?? m}'); },
+      onOpen: () {
+        if (mounted) setState(() => _log = 'liturgy.p2p.connected'.tr());
+      },
+      onClose: () {
+        if (mounted) setState(() => _log = 'liturgy.p2p.disconnected'.tr());
+      },
+      onMessage: (m) {
+        if (mounted) setState(() => _log = '← ${m['action'] ?? m}');
+      },
     );
     _negotiate();
   }
@@ -160,12 +166,18 @@ class _P2pPairingFromScanPageState extends State<P2pPairingFromScanPage> {
                   padding: const EdgeInsets.all(8),
                   child: Column(
                     children: [
-                      Text('liturgy.p2p.copyFallback'.tr(),
-                          style: theme.textTheme.labelSmall),
-                      SelectableText(_answerJson!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              fontFamily: 'monospace', fontSize: 10),
-                          maxLines: 3),
+                      Text(
+                        'liturgy.p2p.copyFallback'.tr(),
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      SelectableText(
+                        _answerJson!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                        ),
+                        maxLines: 3,
+                      ),
                     ],
                   ),
                 ),
@@ -173,11 +185,14 @@ class _P2pPairingFromScanPageState extends State<P2pPairingFromScanPage> {
             if (_log.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text(_log,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  _log,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
           ],
         ),

@@ -137,10 +137,12 @@ void main() {
     );
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(
-      bloc,
-      AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
-    ));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     // Primeiro frame: loading visível antes de qualquer dado chegar.
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -158,7 +160,12 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Hino A'), findsOneWidget);
@@ -171,7 +178,12 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(hymns: []), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playlist), findsOneWidget);
@@ -181,7 +193,12 @@ void main() {
     final repo = HymnRepositoryImpl(_MockApi(fail: true), CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.alertCircle), findsOneWidget);
@@ -192,7 +209,12 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.search), findsOneWidget);
@@ -210,7 +232,12 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Botao play (row + botao Tocar tudo do AppBar usam o mesmo icone)
@@ -230,7 +257,12 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byIcon(TablerIcons.playerPlayFilled), findsAtLeastNWidgets(1));
@@ -283,7 +315,12 @@ void main() {
     final repo = HymnRepositoryImpl(api, CatalogCache.noop());
     final bloc = HymnsBloc(repo);
 
-    await tester.pumpWidget(_wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort())));
+    await tester.pumpWidget(
+      _wrap(
+        bloc,
+        AlbumDetailPage(albumId: 100, offlineService: _FakeOfflinePort()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Primeira linha\nSegunda linha'), findsNothing);
@@ -336,7 +373,9 @@ class _FakeOfflinePort implements OfflineMusicPort {
 
 void _offlineGroup() {
   group('AlbumDetailPage offline', () {
-    testWidgets('faixa baixada toca do arquivo local (sem API)', (tester) async {
+    testWidgets('faixa baixada toca do arquivo local (sem API)', (
+      tester,
+    ) async {
       final offline = _FakeOfflinePort();
       offline.local.add(1);
       final player = _FakePlayer();
@@ -349,44 +388,56 @@ void _offlineGroup() {
       final repo = HymnRepositoryImpl(api, CatalogCache.noop());
       final bloc = HymnsBloc(repo);
 
-      await tester.pumpWidget(_wrap(
-        bloc,
-        AlbumDetailPage(
-          albumId: 100,
-          audioPlayer: player,
-          offlineService: offline,
+      await tester.pumpWidget(
+        _wrap(
+          bloc,
+          AlbumDetailPage(
+            albumId: 100,
+            audioPlayer: player,
+            offlineService: offline,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Reproduzir'));
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(player.playedUrl, '/local/1.mp3',
-          reason: 'baixado deve tocar do disco sem consultar a API');
-      expect(api.fetchMusicCalls, 0,
-          reason: 'play offline não deve requisitar o detalhe na API');
+      expect(
+        player.playedUrl,
+        '/local/1.mp3',
+        reason: 'baixado deve tocar do disco sem consultar a API',
+      );
+      expect(
+        api.fetchMusicCalls,
+        0,
+        reason: 'play offline não deve requisitar o detalhe na API',
+      );
     });
 
-    testWidgets('icone de baixado aparece ao abrir pagina com faixa no disco',
-        (tester) async {
+    testWidgets('icone de baixado aparece ao abrir pagina com faixa no disco', (
+      tester,
+    ) async {
       final offline = _FakeOfflinePort();
       offline.local.add(1);
 
       final api = _MockApi(
-          hymns: [const Hymn(id: 1, title: 'Hino Salvo', number: 1)]);
+        hymns: [const Hymn(id: 1, title: 'Hino Salvo', number: 1)],
+      );
       final repo = HymnRepositoryImpl(api, CatalogCache.noop());
       final bloc = HymnsBloc(repo);
 
-      await tester.pumpWidget(_wrap(
-        bloc,
-        AlbumDetailPage(albumId: 100, offlineService: offline),
-      ));
+      await tester.pumpWidget(
+        _wrap(bloc, AlbumDetailPage(albumId: 100, offlineService: offline)),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(TablerIcons.checks), findsOneWidget,
-          reason: 'faixa baixada deve exibir check de baixado');
+      expect(
+        find.byIcon(TablerIcons.checks),
+        findsOneWidget,
+        reason: 'faixa baixada deve exibir check de baixado',
+      );
     });
   });
 }
@@ -395,32 +446,40 @@ void _offlineGroup() {
 // Bug: o filtro offline rodava também ONLINE e escondia as não baixadas.
 void _onlineFullListGroup() {
   group('AlbumDetailPage online (regressão)', () {
-    testWidgets('online com downloads ainda lista faixas NÃO baixadas',
-        (tester) async {
+    testWidgets('online com downloads ainda lista faixas NÃO baixadas', (
+      tester,
+    ) async {
       final offline = _FakeOfflinePort();
       offline.local.add(1); // só a faixa 1 está no disco
 
       // Catálogo tem 1 (baixada) e 2 (NÃO baixada).
-      final api = _MockApi(hymns: const [
-        Hymn(id: 1, title: 'Hino Baixado', number: 1),
-        Hymn(id: 2, title: 'Hino Só Online', number: 2),
-      ]);
+      final api = _MockApi(
+        hymns: const [
+          Hymn(id: 1, title: 'Hino Baixado', number: 1),
+          Hymn(id: 2, title: 'Hino Só Online', number: 2),
+        ],
+      );
       final repo = HymnRepositoryImpl(api, CatalogCache.noop());
       final bloc = HymnsBloc(repo);
 
-      await tester.pumpWidget(_wrap(
-        bloc,
-        AlbumDetailPage(
-          albumId: 100,
-          offlineService: offline,
-          audioPlayer: _FakePlayer(),
+      await tester.pumpWidget(
+        _wrap(
+          bloc,
+          AlbumDetailPage(
+            albumId: 100,
+            offlineService: offline,
+            audioPlayer: _FakePlayer(),
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Hino Baixado'), findsOneWidget);
-      expect(find.text('Hino Só Online'), findsOneWidget,
-          reason: 'online deve listar tudo, não só o que está no disco');
+      expect(
+        find.text('Hino Só Online'),
+        findsOneWidget,
+        reason: 'online deve listar tudo, não só o que está no disco',
+      );
     });
   });
 }

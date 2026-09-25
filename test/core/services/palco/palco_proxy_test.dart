@@ -5,7 +5,8 @@ void main() {
   group('PalcoProxyHeaders.forUrl', () {
     test('MP3 da API ganha UA Web0S + Accept áudio + Referer', () {
       final h = PalcoProxyHeaders.forUrl(
-          'https://api.louvorja.com.br/file/musics/pt/hino.mp3');
+        'https://api.louvorja.com.br/file/musics/pt/hino.mp3',
+      );
       expect(h['User-Agent'], contains('Web0S'));
       expect(h['Accept'], startsWith('audio/mpeg'));
       expect(h['Referer'], 'https://api.louvorja.com.br/');
@@ -13,7 +14,8 @@ void main() {
 
     test('JSON da API ganha Accept application/json', () {
       final h = PalcoProxyHeaders.forUrl(
-          'https://api.louvorja.com.br/json_db/music_1');
+        'https://api.louvorja.com.br/json_db/music_1',
+      );
       expect(h['Accept'], 'application/json');
     });
 
@@ -23,7 +25,9 @@ void main() {
     });
 
     test('Imagem genérica', () {
-      final h = PalcoProxyHeaders.forUrl('https://api.louvorja.com.br/file/images/a.jpg');
+      final h = PalcoProxyHeaders.forUrl(
+        'https://api.louvorja.com.br/file/images/a.jpg',
+      );
       expect(h['Accept'], '*/*');
       expect(h.containsKey('Referer'), isFalse);
     });
@@ -32,7 +36,8 @@ void main() {
   group('PalcoProxyHeaders.reencodePath', () {
     test('acentos e espaços são encodados', () {
       final out = PalcoProxyHeaders.reencodePath(
-          'https://api.louvorja.com.br/file/musics/pt/1992 - Brilha Jesus/Nosso Sol É Jesus.mp3');
+        'https://api.louvorja.com.br/file/musics/pt/1992 - Brilha Jesus/Nosso Sol É Jesus.mp3',
+      );
       expect(out, contains('%20'));
       expect(out, contains('%C3%89')); // É
       expect(Uri.parse(out).path.contains(' '), isFalse);
@@ -47,14 +52,20 @@ void main() {
   group('PalcoProxyHeaders wrap/unwrap', () {
     test('round-trip preserva a URL', () {
       const original = 'https://api.louvorja.com.br/file/images/hasd_132B.jpg';
-      final wrapped = PalcoProxyHeaders.wrapForProxy('http://192.168.1.5:7080', original);
+      final wrapped = PalcoProxyHeaders.wrapForProxy(
+        'http://192.168.1.5:7080',
+        original,
+      );
       expect(wrapped, startsWith('http://192.168.1.5:7080/proxy?url='));
       final query = wrapped.split('?url=')[1];
       expect(PalcoProxyHeaders.unwrapFromProxy('url=$query'), original);
     });
 
     test('base com barra final não duplica', () {
-      final wrapped = PalcoProxyHeaders.wrapForProxy('http://1.2.3.4:7080/', 'http://x/a.mp3');
+      final wrapped = PalcoProxyHeaders.wrapForProxy(
+        'http://1.2.3.4:7080/',
+        'http://x/a.mp3',
+      );
       expect(wrapped, startsWith('http://1.2.3.4:7080/proxy?url='));
       expect(wrapped.contains('//proxy'), isFalse);
     });
@@ -83,7 +94,11 @@ void main() {
     });
 
     test('Range com fim → 206 parcial', () {
-      final r = PalcoRangeResponse.forRange('bytes=0-999', 2204842, 'video/mp4');
+      final r = PalcoRangeResponse.forRange(
+        'bytes=0-999',
+        2204842,
+        'video/mp4',
+      );
       expect(r.status, 206);
       expect(r.contentLength, 1000);
       expect(r.contentRange, 'bytes 0-999/2204842');

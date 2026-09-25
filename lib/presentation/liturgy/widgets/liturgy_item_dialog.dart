@@ -324,8 +324,8 @@ void showLiturgyItemDialog(
                           context: context,
                           delegate: HymnSearchDelegate(() async {
                             final api = LouvorjaApiImpl(
-                              baseUrl: ApiConfig.urlDatabase,
-                              filesUrl: ApiConfig.urlFiles,
+                              baseUrls: ApiConfig.databaseUrls(),
+                              filesUrls: ApiConfig.filesUrls(),
                               apiToken: const String.fromEnvironment(
                                 'API_TOKEN',
                                 defaultValue: '',

@@ -46,8 +46,8 @@ class BiblePage extends StatelessWidget {
     }
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: ApiConfig.urlDatabase,
-      filesUrl: ApiConfig.urlFiles,
+      baseUrls: ApiConfig.databaseUrls(),
+      filesUrls: ApiConfig.filesUrls(),
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
       // API possui catálogo espanhol; EN faz fallback para catálogo PT.
       languagePrefix: context.locale.languageCode == 'es' ? 'es' : 'pt',

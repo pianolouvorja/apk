@@ -10,11 +10,13 @@ void main() {
     expect(ok, isFalse);
   });
 
-  test('RF-003: WAKE em porta fechada da LAN retorna false sem lançar',
-      () async {
-    // o próprio gateway da rede de teste pode não ter :7082 — se tiver,
-    // algum serviço responde e o teste ainda valida que não explode
-    final ok = await PalcoWake.send('127.0.0.1');
-    expect(ok, anyOf(isFalse, isTrue));
-  });
+  test(
+    'RF-003: WAKE em porta fechada da LAN retorna false sem lançar',
+    () async {
+      // o próprio gateway da rede de teste pode não ter :7082 — se tiver,
+      // algum serviço responde e o teste ainda valida que não explode
+      final ok = await PalcoWake.send('127.0.0.1');
+      expect(ok, anyOf(isFalse, isTrue));
+    },
+  );
 }

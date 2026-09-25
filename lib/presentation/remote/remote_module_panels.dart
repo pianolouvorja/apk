@@ -12,53 +12,73 @@ import 'package:louvorja_piano_mobile/app/theme/app_spacing.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_protocol.dart';
 import 'package:louvorja_piano_mobile/core/services/remote/remote_session.dart';
 
-typedef RemoteSend = Future<void> Function(
-  RemoteAction action, {
-  int? numberMin,
-  int? numberMax,
-  String? namesText,
-  int? index,
-  int? volume,
-  int? versionId,
-  int? bookId,
-  int? chapter,
-  int? verse,
-  int? durationMs,
-  String? name,
-  String? style,
-  bool? showSeconds,
-  bool? format24h,
-  int? musicId,
-  String? mode,
-  String? query,
-});
+typedef RemoteSend =
+    Future<void> Function(
+      RemoteAction action, {
+      int? numberMin,
+      int? numberMax,
+      String? namesText,
+      int? index,
+      int? volume,
+      int? versionId,
+      int? bookId,
+      int? chapter,
+      int? verse,
+      int? durationMs,
+      String? name,
+      String? style,
+      bool? showSeconds,
+      bool? format24h,
+      int? musicId,
+      String? mode,
+      String? query,
+    });
 
-RemoteSend _defaultSend = (action,
-    {index, volume, versionId, bookId, chapter, verse, durationMs, name, style, showSeconds, format24h, musicId, mode, query, numberMin, numberMax, namesText}) {
-  return RemoteSession.instance.send(
-    RemoteCommand(
-      id: 'm${DateTime.now().microsecondsSinceEpoch}',
-      action: action,
-      numberMin: numberMin,
-      numberMax: numberMax,
-      namesText: namesText,
-      index: index,
-      volume: volume,
-      versionId: versionId,
-      bookId: bookId,
-      chapter: chapter,
-      verse: verse,
-      durationMs: durationMs,
-      name: name,
-      style: style,
-      showSeconds: showSeconds,
-      format24h: format24h,
-      musicId: musicId,
-      mode: mode,
-      query: query,
-    ),
-  );
-};
+RemoteSend _defaultSend =
+    (
+      action, {
+      index,
+      volume,
+      versionId,
+      bookId,
+      chapter,
+      verse,
+      durationMs,
+      name,
+      style,
+      showSeconds,
+      format24h,
+      musicId,
+      mode,
+      query,
+      numberMin,
+      numberMax,
+      namesText,
+    }) {
+      return RemoteSession.instance.send(
+        RemoteCommand(
+          id: 'm${DateTime.now().microsecondsSinceEpoch}',
+          action: action,
+          numberMin: numberMin,
+          numberMax: numberMax,
+          namesText: namesText,
+          index: index,
+          volume: volume,
+          versionId: versionId,
+          bookId: bookId,
+          chapter: chapter,
+          verse: verse,
+          durationMs: durationMs,
+          name: name,
+          style: style,
+          showSeconds: showSeconds,
+          format24h: format24h,
+          musicId: musicId,
+          mode: mode,
+          query: query,
+        ),
+      );
+    };
 
 /// Painel Bíblia: seleção de versão, livro por NOME (dropdown), navegação
 /// de capítulo/versículo por chevron — dados do catálogo do desktop.
@@ -70,8 +90,7 @@ class RemoteBiblePanel extends StatelessWidget {
 
   RemoteSend get _send => send ?? _defaultSend;
 
-  void _open(RemoteBibleState bible,
-      {int? bookId, int? chapter, int? verse}) {
+  void _open(RemoteBibleState bible, {int? bookId, int? chapter, int? verse}) {
     _send(
       RemoteAction.bibleOpen,
       versionId: bible.versionId ?? 1,
@@ -87,8 +106,10 @@ class RemoteBiblePanel extends StatelessWidget {
     final bible = state?.bibleModule;
     if (bible == null) {
       return Center(
-        child: Text('remote.bible.waiting'.tr(),
-            style: theme.textTheme.bodySmall),
+        child: Text(
+          'remote.bible.waiting'.tr(),
+          style: theme.textTheme.bodySmall,
+        ),
       );
     }
     final books = bible.books;
@@ -120,10 +141,12 @@ class RemoteBiblePanel extends StatelessWidget {
             ],
             onChanged: (id) {
               if (id != null) {
-                _send(RemoteAction.bibleOpen,
-                    versionId: id,
-                    bookId: bible.bookId ?? 1,
-                    chapter: chapter);
+                _send(
+                  RemoteAction.bibleOpen,
+                  versionId: id,
+                  bookId: bible.bookId ?? 1,
+                  chapter: chapter,
+                );
               }
             },
           ),
@@ -173,13 +196,13 @@ class RemoteBiblePanel extends StatelessWidget {
           // Sem seleção no estado: usa o primeiro livro do catálogo (não
           // desabilita — operador espera que "abrir" sempre abra algo).
           onPressed: () => _open(
-                bible,
-                bookId: bible.bookId ?? (books.isNotEmpty ? books.first.id : 1),
-                chapter: bible.chapter ?? 1,
-                verse: bible.selectedVerses.isNotEmpty
-                    ? bible.selectedVerses.last
-                    : 1,
-              ),
+            bible,
+            bookId: bible.bookId ?? (books.isNotEmpty ? books.first.id : 1),
+            chapter: bible.chapter ?? 1,
+            verse: bible.selectedVerses.isNotEmpty
+                ? bible.selectedVerses.last
+                : 1,
+          ),
           icon: const Icon(TablerIcons.book),
           label: Text('remote.bible.open'.tr()),
         ),
@@ -273,8 +296,7 @@ class RemoteTimePanel extends StatelessWidget {
           onPause: () => _send(RemoteAction.timerPause),
           onReset: () => _send(RemoteAction.timerReset),
           onSaveMark: () => _send(RemoteAction.timerSaveMark),
-          onToggleProjection: () =>
-              _send(RemoteAction.timerToggleProjection),
+          onToggleProjection: () => _send(RemoteAction.timerToggleProjection),
         ),
         const SizedBox(height: AppSpacing.s4),
         _CountdownCard(
@@ -335,15 +357,12 @@ class _CountdownCardState extends State<_CountdownCard> {
       tag: 'countdown',
       isProjecting: cd?.isProjecting ?? false,
       onStart: () => (widget.send ?? _defaultSend)(RemoteAction.countdownStart),
-      onPause: () =>
-          (widget.send ?? _defaultSend)(RemoteAction.countdownPause),
-      onReset: () =>
-          (widget.send ?? _defaultSend)(RemoteAction.countdownReset),
+      onPause: () => (widget.send ?? _defaultSend)(RemoteAction.countdownPause),
+      onReset: () => (widget.send ?? _defaultSend)(RemoteAction.countdownReset),
       onSaveMark: () =>
           (widget.send ?? _defaultSend)(RemoteAction.countdownSaveMark),
-      onToggleProjection: () => (widget.send ?? _defaultSend)(
-        RemoteAction.countdownToggleProjection,
-      ),
+      onToggleProjection: () =>
+          (widget.send ?? _defaultSend)(RemoteAction.countdownToggleProjection),
       // edição de duração + botão projetar/parar
       extra: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -446,8 +465,9 @@ class _TimeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final running = status == 'running';
-    final remaining =
-        totalMs != null ? (totalMs! - elapsedMs).clamp(0, totalMs!) : null;
+    final remaining = totalMs != null
+        ? (totalMs! - elapsedMs).clamp(0, totalMs!)
+        : null;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.s4),
@@ -503,9 +523,7 @@ class _TimeCard extends StatelessWidget {
               children: [
                 IconButton.filled(
                   key: Key('remote-$tag-toggle'),
-                  tooltip: running
-                      ? 'remote.pause'.tr()
-                      : 'remote.play'.tr(),
+                  tooltip: running ? 'remote.pause'.tr() : 'remote.play'.tr(),
                   onPressed: running ? onPause : onStart,
                   icon: Icon(
                     running ? TablerIcons.playerPause : TablerIcons.playerPlay,
@@ -529,7 +547,6 @@ class _TimeCard extends StatelessWidget {
     );
   }
 }
-
 
 class RemoteClockRandomPanel extends StatelessWidget {
   const RemoteClockRandomPanel({super.key, this.clock, this.random});
@@ -572,23 +589,23 @@ class _ClockCard extends StatelessWidget {
                 const Icon(TablerIcons.clock),
                 const SizedBox(width: AppSpacing.s2),
                 Expanded(child: Text('remote.clock.title'.tr())),
-                Text(
-                  c == null
-                      ? '—'
-                      : (c.format24h ? '24h' : '12h'),
-                ),
+                Text(c == null ? '—' : (c.format24h ? '24h' : '12h')),
               ],
             ),
             const SizedBox(height: AppSpacing.s3),
             OutlinedButton.icon(
               key: const Key('remote-clock-projection'),
               onPressed: () => send(RemoteAction.clockToggleProjection),
-              icon: Icon(c?.isProjecting == true
-                  ? TablerIcons.square
-                  : TablerIcons.deviceTv),
-              label: Text(c?.isProjecting == true
-                  ? 'remote.stopProjection'.tr()
-                  : 'remote.project'.tr()),
+              icon: Icon(
+                c?.isProjecting == true
+                    ? TablerIcons.square
+                    : TablerIcons.deviceTv,
+              ),
+              label: Text(
+                c?.isProjecting == true
+                    ? 'remote.stopProjection'.tr()
+                    : 'remote.project'.tr(),
+              ),
             ),
           ],
         ),
@@ -667,8 +684,7 @@ class _RandomCardState extends State<_RandomCard> {
                   Expanded(
                     child: TextField(
                       key: const Key('remote-random-min'),
-                      controller: _minCtrl
-                        ..text = '${r?.numberMin ?? 1}',
+                      controller: _minCtrl..text = '${r?.numberMin ?? 1}',
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'remote.random.min'.tr(),
@@ -680,8 +696,7 @@ class _RandomCardState extends State<_RandomCard> {
                   Expanded(
                     child: TextField(
                       key: const Key('remote-random-max'),
-                      controller: _maxCtrl
-                        ..text = '${r?.numberMax ?? 100}',
+                      controller: _maxCtrl..text = '${r?.numberMax ?? 100}',
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'remote.random.max'.tr(),
@@ -697,8 +712,11 @@ class _RandomCardState extends State<_RandomCard> {
                 onPressed: () {
                   final min = int.tryParse(_minCtrl.text) ?? 1;
                   final max = int.tryParse(_maxCtrl.text) ?? 100;
-                  widget.send(RemoteAction.randomSetNumberRange,
-                      numberMin: min, numberMax: max);
+                  widget.send(
+                    RemoteAction.randomSetNumberRange,
+                    numberMin: min,
+                    numberMax: max,
+                  );
                 },
                 icon: const Icon(TablerIcons.check),
                 label: Text('remote.random.applyRange'.tr()),
@@ -743,9 +761,11 @@ class _RandomCardState extends State<_RandomCard> {
                   ? null
                   : () => widget.send(RemoteAction.randomStartDraw),
               icon: const Icon(TablerIcons.dice),
-              label: Text(r?.isDrawing == true
-                  ? 'remote.random.drawing'.tr()
-                  : 'remote.draw'.tr()),
+              label: Text(
+                r?.isDrawing == true
+                    ? 'remote.random.drawing'.tr()
+                    : 'remote.draw'.tr(),
+              ),
             ),
             const SizedBox(height: AppSpacing.s2),
             Row(
@@ -755,20 +775,23 @@ class _RandomCardState extends State<_RandomCard> {
                     key: const Key('remote-random-projection'),
                     onPressed: () =>
                         widget.send(RemoteAction.randomToggleProjection),
-                    icon: Icon(r?.isProjecting == true
-                        ? TablerIcons.square
-                        : TablerIcons.deviceTv),
-                    label: Text(r?.isProjecting == true
-                        ? 'remote.stopProjection'.tr()
-                        : 'remote.project'.tr()),
+                    icon: Icon(
+                      r?.isProjecting == true
+                          ? TablerIcons.square
+                          : TablerIcons.deviceTv,
+                    ),
+                    label: Text(
+                      r?.isProjecting == true
+                          ? 'remote.stopProjection'.tr()
+                          : 'remote.project'.tr(),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s2),
                 Expanded(
                   child: OutlinedButton.icon(
                     key: const Key('remote-random-stop'),
-                    onPressed: () =>
-                        widget.send(RemoteAction.randomCancelDraw),
+                    onPressed: () => widget.send(RemoteAction.randomCancelDraw),
                     icon: const Icon(TablerIcons.playerStop),
                     label: Text('remote.stop'.tr()),
                   ),
@@ -779,8 +802,10 @@ class _RandomCardState extends State<_RandomCard> {
               const SizedBox(height: AppSpacing.s3),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('remote.random.drawnList'.tr(),
-                    style: Theme.of(context).textTheme.labelMedium),
+                child: Text(
+                  'remote.random.drawnList'.tr(),
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
               ),
               for (var i = 0; i < r!.drawn.length; i++)
                 ListTile(
@@ -791,9 +816,8 @@ class _RandomCardState extends State<_RandomCard> {
                     key: Key('remote-random-undraw-$i'),
                     icon: const Icon(TablerIcons.arrowBackUp),
                     tooltip: 'remote.random.returnName'.tr(),
-                    onPressed: () => widget.send(
-                        RemoteAction.randomRemoveDrawn,
-                        index: i),
+                    onPressed: () =>
+                        widget.send(RemoteAction.randomRemoveDrawn, index: i),
                   ),
                 ),
             ],
@@ -849,10 +873,7 @@ class _RemoteHymnsPanelState extends State<RemoteHymnsPanel> {
     _debounce = Timer(const Duration(milliseconds: 400), () {
       if (query == _lastQuery) return; // já buscou esse termo
       _lastQuery = query;
-      (widget.send ?? _defaultSend)(
-        RemoteAction.mediaSearch,
-        query: query,
-      );
+      (widget.send ?? _defaultSend)(RemoteAction.mediaSearch, query: query);
       // Resultados chegam no próximo state (media.searchResults).
       if (mounted) setState(() => _searching = false);
     });

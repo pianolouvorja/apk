@@ -10,6 +10,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:louvorja_piano_mobile/data/datasources/local/playlist_storage.dart';
+import 'package:louvorja_piano_mobile/presentation/custom/save_to_collection_sheet.dart';
+
 import '../../core/services/now_playing.dart';
 import '../../core/services/palco/palco_foreground.dart';
 import '../../core/services/pip_controller.dart';
@@ -305,6 +308,95 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
     return '${widget.filesUrl}/$img'.replaceAll('//images', '/images');
   }
 
+  /// Sheet de "Adicionar à playlist": lista playlists existentes + criar
+  /// nova inline. Playlist = seleção de hinos do acervo (local, sem auth).
+  Future<void> _addToPlaylist(BuildContext context) async {
+    final storage = PlaylistStorage();
+    final playlists = await storage.list();
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Adicionar à playlist',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (playlists.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Nenhuma playlist ainda — crie a primeira.'),
+              ),
+            for (final p in playlists)
+              ListTile(
+                leading: const Icon(Icons.queue_music),
+                title: Text(p.name),
+                subtitle: Text('${p.items.length} hinos'),
+                onTap: () => Navigator.pop(sheetContext, p.id),
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Criar nova playlist'),
+              onTap: () => Navigator.pop(sheetContext, '__new__'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    String playlistId = selected;
+    if (selected == '__new__') {
+      final controller = TextEditingController();
+      final name = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Nova playlist'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Nome'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Criar'),
+            ),
+          ],
+        ),
+      );
+      if (name == null || name.trim().isEmpty || !mounted) return;
+      final created = await storage.create(name);
+      playlistId = created.id;
+    }
+    final result = await storage.addItem(
+      playlistId,
+      PlaylistItem(
+        musicId: widget.detail.id,
+        title: widget.detail.title ?? 'Hino',
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result != null && result.added
+              ? '"${widget.detail.title ?? 'Hino'}" adicionada à playlist.'
+              : 'Já é a última faixa da playlist.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -376,6 +468,29 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                       ),
                     ),
                     const StageStopVideoButton(),
+                    // Salvar este hino numa coletânea custom (conteúdo do usuário).
+                    IconButton(
+                      tooltip: 'Salvar em coletânea',
+                      icon: const Icon(
+                        TablerIcons.playlistAdd,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => showSaveToCollectionSheet(
+                        context,
+                        officialMusicId: widget.detail.id,
+                        hymnTitle: widget.detail.title ?? 'Hino',
+                      ),
+                    ),
+                    // Adicionar a uma PLAYLIST (seleção de hinos do acervo,
+                    // salva localmente — paridade com a /media do web).
+                    IconButton(
+                      tooltip: 'Adicionar à playlist',
+                      icon: const Icon(
+                        TablerIcons.playlist,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => _addToPlaylist(context),
+                    ),
                     // Cast só no AppBar (hinos/sub-módulos) — nunca abaixo.
                     // Configura uma vez; cada hino não repete o controle.
                     if (widget.detail.hasInstrumental)
@@ -422,8 +537,9 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                           Expanded(
                             flex: 5,
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: CachedNetworkImage(
@@ -441,13 +557,13 @@ class _NowPlayingPageState extends State<NowPlayingPage> {
                           flex: 4,
                           child: Center(
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
                               child: Text(
                                 slide?.text ?? '',
                                 textAlign: TextAlign.center,
-                                style:
-                                    theme.textTheme.headlineSmall?.copyWith(
+                                style: theme.textTheme.headlineSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
                                   height: 1.4,

@@ -47,8 +47,7 @@ void main() {
   });
 
   test('row minúscula também aceita', () {
-    const xml =
-        '<ROWDATA><row ID="x1" NOME="min"/></ROWDATA>';
+    const xml = '<ROWDATA><row ID="x1" NOME="min"/></ROWDATA>';
     final rows = DataPacketParser.parse(xml);
     expect(rows.first['NOME'], 'min');
   });

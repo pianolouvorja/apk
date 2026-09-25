@@ -78,6 +78,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   final Set<int> _downloadingIds = {};
   bool _batchDownloading = false;
   String? _batchTrackTitle;
+  int? _batchTrackIndex; // posição na fila (1-based)
+  int? _batchTrackTotalCount; // tamanho do lote
   int _batchTrackReceived = 0;
   int _batchTrackTotal = 0;
 
@@ -428,6 +430,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       _batchTrackTitle = null;
       _batchTrackReceived = 0;
       _batchTrackTotal = 0;
+      _batchTrackIndex = null;
+      _batchTrackTotalCount = null;
     });
     if (failed > 0) {
       messenger.showSnackBar(
@@ -449,6 +453,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       _batchTrackTitle = p.title;
       _batchTrackReceived = p.received;
       _batchTrackTotal = p.total;
+      _batchTrackIndex = p.queueIndex;
+      _batchTrackTotalCount = p.queueTotal;
     });
   }
 
@@ -457,8 +463,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       return context.read<HymnsBloc>().repository;
     } catch (_) {
       final api = LouvorjaApiImpl(
-        baseUrl: ApiConfig.urlDatabase,
-        filesUrl: ApiConfig.urlFiles,
+        baseUrls: ApiConfig.databaseUrls(),
+        filesUrls: ApiConfig.filesUrls(),
         apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
         languagePrefix: _languageCode(context),
       );
@@ -548,8 +554,8 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     // Fallback: cria repository localmente (nao testavel em unit test)
     // coverage:ignore-start
     final api = LouvorjaApiImpl(
-      baseUrl: ApiConfig.urlDatabase,
-      filesUrl: ApiConfig.urlFiles,
+      baseUrls: ApiConfig.databaseUrls(),
+      filesUrls: ApiConfig.filesUrls(),
       apiToken: const String.fromEnvironment('API_TOKEN', defaultValue: ''),
     );
 
@@ -622,15 +628,52 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                    Text(
-                      _batchTrackTotal > 0
-                          ? '${(_batchTrackReceived / 1024 / 1024).toStringAsFixed(1)} / ${(_batchTrackTotal / 1024 / 1024).toStringAsFixed(1)} MB'
-                          : 'downloads.downloading'.tr(),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                    // Contador de faixas ('12/75') — contexto do lote inteiro,
+                    // não só da faixa corrente.
+                    if (_batchTrackIndex != null &&
+                        _batchTrackTotalCount != null)
+                      Text(
+                        '${_batchTrackIndex!}/${_batchTrackTotalCount!}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
+                    // Barra dupla: micro = faixa corrente (bytes), macro = lote.
+                    if (_batchTrackTotal > 0)
+                      SizedBox(
+                        width: 96,
+                        child: LinearProgressIndicator(
+                          value: _batchTrackReceived / _batchTrackTotal,
+                          minHeight: 3,
+                        ),
+                      ),
+                    if (_batchTrackIndex != null &&
+                        _batchTrackTotalCount != null &&
+                        _batchTrackTotalCount! > 0)
+                      SizedBox(
+                        width: 96,
+                        child: LinearProgressIndicator(
+                          value: _batchTrackIndex! / _batchTrackTotalCount!,
+                          minHeight: 3,
+                        ),
+                      ),
+                    if (_batchTrackTotal > 0)
+                      Text(
+                        '${(_batchTrackReceived / 1024 / 1024).toStringAsFixed(1)} / ${(_batchTrackTotal / 1024 / 1024).toStringAsFixed(1)} MB',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else
+                      Text(
+                        'downloads.downloading'.tr(),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                   ],
                 ),
               ),
